@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Use class-based dark mode */
+:root {
+  --bg: #f8fafc; /* light background */
+  --card: #ffffff;
+  --muted: #6b7280;
+  --text: #0f1724;
+  --accent: #4f46e5; /* indigo */
+  --accent-2: #06b6d4; /* teal */
+}
+
+.dark {
+  --bg: #0b1220;
+  --card: #071026;
+  --muted: #94a3b8;
+  --text: #e6eef8;
+  --accent: #7c5cff;
+  --accent-2: #06b6d4;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+}
+
+body {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  color: var(--text);
+}
+
+/* small utilities used by components */
+.brand-accent {
+  color: var(--accent);
+}
+.sidebar-bg {
+  background: linear-gradient(180deg, #0f1724, #071026);
+}
+.card-soft {
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(12, 18, 30, 0.06);
+}
+
+/* :root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+} */
+
+/* Responsive type scale */
+html {
+  font-size: 14px;
+}
+@media (min-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}
+@media (min-width: 1024px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* container helper for centering content */
+.app-container {
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* mobile header niceties */
+.mobile-header {
+  background: white;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
