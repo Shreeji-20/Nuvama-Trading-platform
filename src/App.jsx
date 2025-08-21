@@ -6,6 +6,9 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Stratergies from "./pages/Stratergies";
 import OptionChains from "./pages/OptionChain";
 import SpreadPage from "./pages/CustomOptionChain";
+import MultiLegSpread from "./pages/MultiLegSpread";
+import AdvancedOptionsForm from "./pages/AdvancedOptionsForm";
+import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
 function App() {
   const [count, setCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,7 +37,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen flex dark:bg-gray-900">
+      <div className="min-h-screen flex bg-light-primary dark:bg-gray-900">
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         {/* backdrop for mobile when sidebar is open */}
@@ -46,17 +49,17 @@ function App() {
         />
 
         <div
-          className={`flex-1 flex flex-col bg-gray-100 dark:bg-gray-900 transition-all duration-200 overflow-hidden ${
+          className={`flex-1 flex flex-col bg-light-primary dark:bg-gray-900 transition-all duration-200 overflow-hidden ${
             sidebarOpen ? "md:ml-64" : "ml-0"
           }`}
         >
           {/* Header always visible */}
-          <header className="mobile-header p-2 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <header className="mobile-header p-2 flex items-center justify-between bg-light-surface dark:bg-gray-800 border-b border-light-border dark:border-gray-700">
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleSidebar}
                 aria-label="Open menu"
-                className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                className="p-2 rounded hover:bg-light-card-hover dark:hover:bg-gray-700 text-light-text-primary dark:text-white"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -73,7 +76,7 @@ function App() {
                   />
                 </svg>
               </button>
-              <div className="font-bold text-gray-900 dark:text-white">
+              <div className="font-bold text-light-text-primary dark:text-white">
                 Nuvama
               </div>
             </div>
@@ -83,7 +86,7 @@ function App() {
                 onClick={() =>
                   setTheme((t) => (t === "light" ? "dark" : "light"))
                 }
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-gray-900 dark:text-white"
+                className="p-2 rounded-lg bg-light-elevated dark:bg-gray-700 hover:bg-light-card-hover dark:hover:bg-gray-600 transition-colors duration-200 text-light-text-primary dark:text-white"
                 aria-label="Toggle theme"
                 title={
                   theme === "light"
@@ -135,6 +138,15 @@ function App() {
                 <Route path="/stratergies" element={<Stratergies />} />
                 <Route path="/optionchain" element={<OptionChains />} />
                 <Route path="/optionchaincustom" element={<SpreadPage />} />
+                <Route path="/multilegspread" element={<MultiLegSpread />} />
+                <Route
+                  path="/advanced-options"
+                  element={<AdvancedOptionsForm />}
+                />
+                <Route
+                  path="/advanced-options-table"
+                  element={<AdvancedOptionsTable />}
+                />
               </Routes>
             </div>
           </main>

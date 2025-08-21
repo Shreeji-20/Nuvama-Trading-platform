@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import IndexCards from "../components/IndexCards";
 
 /** ---------- Config ---------- */
@@ -7,6 +13,27 @@ const DEV_BASE_URL = "http://localhost:8000"; // change if needed
 const BASE_URL = DEV_BASE_URL; // use DEV by default
 const SYMBOLS = ["NIFTY", "SENSEX"];
 const EXPIRIES = ["0", "1", "2", "3"];
+
+// Fetch LTP for a symbol (same logic as IndexCards)
+async function fetchLTP(symbol) {
+  try {
+    const response = await fetch(`${DEV_BASE_URL}/index/${symbol}`);
+    if (!response.ok) throw new Error(`Failed to fetch ${symbol} LTP`);
+    const data = await response.json();
+    return data?.response?.data?.ltp || data.ltp || data.current_price || 0;
+  } catch (err) {
+    console.error(`Error fetching LTP for ${symbol}:`, err);
+    return 0;
+  }
+}
+
+// Calculate ATM strike based on LTP
+function calculateATMStrike(ltp, symbol) {
+  if (!ltp || ltp === 0) return null;
+
+  const step = symbol === "NIFTY" ? 50 : 100; // NIFTY: 50 points, SENSEX: 100 points
+  return Math.round(ltp / step) * step;
+}
 
 async function fetchOptionChain(symbol, expiry) {
   const res = await fetch(`${BASE_URL}/optiondata`);
@@ -47,28 +74,33 @@ async function fetchOptionChain(symbol, expiry) {
       }, {})
   );
 
+  // Fetch LTP for ATM calculation
+  const ltp = await fetchLTP(symbol);
+
   return {
     underlying: Number(data.underlying ?? 0),
+    ltp,
     rows,
   };
 }
 
 /** ---------- Table Component ---------- */
-function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
+function OptionChainTable({ defaultSymbol = "NIFTY" }) {
   const [mobileView, setMobileView] = useState(false);
   const allFields = [
-    { key: "strike", label: "Strike" },
-    { key: "ceBid", label: "CE Bid" },
     { key: "ceAsk", label: "CE Ask" },
+    { key: "ceBid", label: "CE Bid" },
+    { key: "strike", label: "Strike" },
     { key: "peBid", label: "PE Bid" },
     { key: "peAsk", label: "PE Ask" },
     { key: "BidSpread", label: "Bid Spread" },
     { key: "AskSpread", label: "Ask Spread" },
   ];
   const [mobileFields, setMobileFields] = useState([
-    "strike",
+    "ceAsk",
     "ceBid",
-    "BidSpread",
+    "strike",
+    "peBid",
   ]);
 
   // mobile spread mode: 'Bid' => show ceBid/peBid/BidSpread, 'Ask' => ceAsk/peAsk/AskSpread
@@ -93,9 +125,11 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [underlying, setUnderlying] = useState(0);
+  const [ltp, setLtp] = useState(0);
   const [rows, setRows] = useState([]);
   const [expiry, setExpiry] = useState("0");
   const prevRowsRef = React.useRef(new Map());
+  const atmRowRef = useRef(null);
 
   // Sorting
   const [sort, setSort] = useState({ key: "strike", dir: "asc" }); // dir: 'asc' | 'desc'
@@ -124,58 +158,96 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
       try {
         if (showLoading) setLoading(true);
         setError("");
-        const { underlying, rows: fetchedRows } = await fetchOptionChain(
-          sym,
-          exp
-        );
-        setUnderlying(underlying || 0);
+        const {
+          underlying,
+          ltp,
+          rows: fetchedRows,
+        } = await fetchOptionChain(sym, exp);
 
-        // Merge incoming rows with previous rows to preserve object identity
-        const prevMap = prevRowsRef.current || new Map();
-        const merged = (fetchedRows || []).map((r) => {
-          const key = r.strike;
-          const prev = prevMap.get(key);
-          if (
-            prev &&
-            prev.ceBid === r.ceBid &&
-            prev.ceAsk === r.ceAsk &&
-            prev.peBid === r.peBid &&
-            prev.peAsk === r.peAsk
-          ) {
-            return prev; // reuse previous object if values unchanged
-          }
-          return r;
+        // Use functional updates to prevent unnecessary re-renders
+        setUnderlying((prev) => {
+          const newValue = underlying || 0;
+          return prev === newValue ? prev : newValue;
         });
 
-        setRows(merged);
-        // update ref map
-        prevRowsRef.current = new Map((merged || []).map((r) => [r.strike, r]));
+        setLtp((prev) => {
+          const newValue = ltp || 0;
+          return prev === newValue ? prev : newValue;
+        });
+
+        // Merge incoming rows with previous rows to preserve object identity
+        setRows((prevRows) => {
+          const prevMap = prevRowsRef.current || new Map();
+          const merged = (fetchedRows || []).map((r) => {
+            const key = r.strike;
+            const prev = prevMap.get(key);
+            if (
+              prev &&
+              prev.ceBid === r.ceBid &&
+              prev.ceAsk === r.ceAsk &&
+              prev.peBid === r.peBid &&
+              prev.peAsk === r.peAsk
+            ) {
+              return prev; // reuse previous object if values unchanged
+            }
+            return r;
+          });
+
+          // Only update if there are actual changes
+          const hasChanges =
+            merged.length !== prevRows.length ||
+            merged.some((row, index) => {
+              const prevRow = prevRows[index];
+              return (
+                !prevRow ||
+                prevRow.strike !== row.strike ||
+                prevRow.ceBid !== row.ceBid ||
+                prevRow.ceAsk !== row.ceAsk ||
+                prevRow.peBid !== row.peBid ||
+                prevRow.peAsk !== row.peAsk
+              );
+            });
+
+          if (!hasChanges) {
+            return prevRows; // Return same reference if no changes
+          }
+
+          // update ref map
+          prevRowsRef.current = new Map(merged.map((r) => [r.strike, r]));
+          return merged;
+        });
       } catch (e) {
         console.error(e);
         setError(e.message || "Failed to load data");
         setRows([]);
         setUnderlying(0);
+        setLtp(0);
       } finally {
         if (showLoading) setLoading(false);
       }
     },
-    [symbol, expiry]
+    [] // Remove dependencies to prevent unnecessary recreations
   );
 
   useEffect(() => {
+    // Clear previous data when symbol/expiry changes
+    prevRowsRef.current = new Map();
+
     // initial load (show loading UI)
     load(symbol, expiry, true);
-    // poll every 1s without toggling loading UI
+
+    // Set up polling interval
     const id = setInterval(() => {
       load(symbol, expiry, false);
     }, 1000);
+
     return () => clearInterval(id);
-  }, [symbol, expiry, load]);
+  }, [symbol, expiry]); // Only depend on symbol and expiry
 
   // Keep rows identity stable; compute spreads on-demand where needed
   const withComputed = useMemo(() => rows, [rows]);
 
-  const computeSpread = (r, type) => {
+  const computeSpread = useCallback((r, type) => {
     if (!r) return null;
     if (type === "BidSpread") {
       return r.ceBid != null && r.peBid != null
@@ -188,22 +260,44 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
         : null;
     }
     return r[type];
-  };
+  }, []);
 
   const atmStrike = useMemo(() => {
-    if (!underlying || !withComputed.length) return null;
-    // nearest strike to underlying
+    if (!ltp || ltp === 0 || !withComputed.length) return null;
+
+    // Calculate ATM strike based on LTP and symbol
+    const calculatedATM = calculateATMStrike(ltp, symbol);
+
+    // Find the closest available strike to the calculated ATM
+    if (calculatedATM) {
+      const availableStrikes = withComputed
+        .map((r) => r.strike)
+        .sort((a, b) => a - b);
+      let closest = availableStrikes[0];
+      let minDiff = Math.abs(availableStrikes[0] - calculatedATM);
+
+      for (const strike of availableStrikes) {
+        const diff = Math.abs(strike - calculatedATM);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = strike;
+        }
+      }
+      return closest;
+    }
+
+    // Fallback to nearest strike to LTP
     let best = withComputed[0]?.strike ?? null;
-    let bestDiff = best != null ? Math.abs(best - underlying) : Infinity;
+    let bestDiff = best != null ? Math.abs(best - ltp) : Infinity;
     for (const r of withComputed) {
-      const d = Math.abs(r.strike - underlying);
+      const d = Math.abs(r.strike - ltp);
       if (d < bestDiff) {
         bestDiff = d;
         best = r.strike;
       }
     }
     return best;
-  }, [underlying, withComputed]);
+  }, [ltp, symbol, withComputed]);
 
   const filterFn = useCallback(
     (list) => {
@@ -261,6 +355,24 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
     }
     return arr;
   }, [filtered, sort]);
+
+  // Auto-scroll to ATM row when atmStrike changes (debounced)
+  useEffect(() => {
+    if (atmStrike != null && atmRowRef.current && sorted.length > 0) {
+      // Longer delay and only scroll if ATM actually changed
+      const timer = setTimeout(() => {
+        if (atmRowRef.current) {
+          atmRowRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+        }
+      }, 300); // Increased delay to reduce frequent scrolling
+
+      return () => clearTimeout(timer);
+    }
+  }, [atmStrike]); // Remove sorted.length dependency to prevent frequent triggers
   const memoOnHeaderClick = useCallback(onHeaderClick, []);
 
   const th = (label, key) => {
@@ -315,7 +427,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
 
   // Memoized row components to avoid full re-renders when only values change
   const DesktopRow = React.memo(
-    ({ r, memoFmt, isATM }) => {
+    React.forwardRef(({ r, memoFmt, isATM }, ref) => {
       const getValueColor = (value, type) => {
         if (value == null || Number.isNaN(value)) return "";
         const num = Number(value);
@@ -333,32 +445,15 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
 
       return (
         <tr
+          ref={isATM ? ref : null}
           className={`transition-all duration-200 hover:bg-gray-50 dark:hover:bg-dark-surface ${
             isATM
-              ? "bg-blue-50 dark:bg-dark-accent/20 border-l-4 border-blue-500 dark:border-dark-accent"
+              ? "bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-400 shadow-lg"
               : "bg-white dark:bg-dark-card-gradient"
           }`}
         >
           <td
-            className={`p-4 text-center font-bold border-r border-gray-200 dark:border-dark-border ${
-              isATM
-                ? "text-blue-800 dark:text-dark-accent"
-                : "text-gray-900 dark:text-dark-text-primary"
-            }`}
-          >
-            {formatCurrency(r.strike)}
-          </td>
-          <td
-            className={`p-4 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
-              r.ceBid != null
-                ? "text-green-700 dark:text-green-400"
-                : "text-gray-400 dark:text-gray-500"
-            }`}
-          >
-            {r.ceBid != null ? formatCurrency(r.ceBid) : "-"}
-          </td>
-          <td
-            className={`p-4 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
+            className={`p-2 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
               r.ceAsk != null
                 ? "text-green-700 dark:text-green-400"
                 : "text-gray-400 dark:text-gray-500"
@@ -367,7 +462,25 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
             {r.ceAsk != null ? formatCurrency(r.ceAsk) : "-"}
           </td>
           <td
-            className={`p-4 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
+            className={`p-2 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
+              r.ceBid != null
+                ? "text-green-700 dark:text-green-400"
+                : "text-gray-400 dark:text-gray-500"
+            }`}
+          >
+            {r.ceBid != null ? formatCurrency(r.ceBid) : "-"}
+          </td>
+          <td
+            className={`p-2 text-center font-bold border-r border-gray-200 dark:border-dark-border ${
+              isATM
+                ? "text-yellow-800 dark:text-yellow-300 bg-yellow-200 dark:bg-yellow-800/40"
+                : "text-gray-900 dark:text-dark-text-primary"
+            }`}
+          >
+            {formatCurrency(r.strike)}
+          </td>
+          <td
+            className={`p-2 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
               r.peBid != null
                 ? "text-red-700 dark:text-red-400"
                 : "text-gray-400 dark:text-gray-500"
@@ -376,7 +489,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
             {r.peBid != null ? formatCurrency(r.peBid) : "-"}
           </td>
           <td
-            className={`p-4 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
+            className={`p-2 text-center border-r border-gray-200 dark:border-gray-600 font-medium ${
               r.peAsk != null
                 ? "text-red-700 dark:text-red-400"
                 : "text-gray-400 dark:text-gray-500"
@@ -384,7 +497,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
           >
             {r.peAsk != null ? formatCurrency(r.peAsk) : "-"}
           </td>
-          <td className="p-4 text-center border-r border-gray-200 dark:border-gray-600">
+          <td className="p-2 text-center border-r border-gray-200 dark:border-gray-600">
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                 computeSpread(r, "BidSpread") != null
@@ -397,7 +510,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
                 : "-"}
             </span>
           </td>
-          <td className="p-4 text-center">
+          <td className="p-2 text-center">
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                 computeSpread(r, "AskSpread") != null
@@ -412,7 +525,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
           </td>
         </tr>
       );
-    },
+    }),
     (prev, next) => {
       const a = prev.r;
       const b = next.r;
@@ -430,7 +543,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
   );
 
   const MobileRow = React.memo(
-    ({ r, memoFmt, isATM, cols }) => {
+    React.forwardRef(({ r, memoFmt, isATM, cols }, ref) => {
       const formatCurrency = (val) => {
         if (val == null || Number.isNaN(val)) return "-";
         return `₹${Number(val).toLocaleString()}`;
@@ -438,9 +551,10 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
 
       return (
         <tr
+          ref={isATM ? ref : null}
           className={`transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
             isATM
-              ? "bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 border-l-4 border-yellow-400 dark:border-yellow-500"
+              ? "bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-400 shadow-lg"
               : "bg-white dark:bg-gray-800"
           }`}
         >
@@ -468,7 +582,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
             return (
               <td
                 key={c}
-                className={`p-3 text-center font-medium text-sm border-r border-gray-200 dark:border-gray-600 last:border-r-0 ${getColumnColor(
+                className={`p-1.5 text-center font-medium text-xs border-r border-gray-200 dark:border-gray-600 last:border-r-0 ${getColumnColor(
                   c,
                   val
                 )}`}
@@ -491,7 +605,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
           })}
         </tr>
       );
-    },
+    }),
     (prev, next) => {
       const a = prev.r;
       const b = next.r;
@@ -508,14 +622,14 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
   );
 
   return (
-    <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border transition-all duration-300">
+    <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl border border-light-border dark:border-dark-border transition-all duration-300">
       {/* Header Section */}
-      <div className="bg-gray-50 dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border rounded-t-xl px-6 py-4">
+      <div className="bg-light-secondary dark:bg-dark-surface border-b border-light-border dark:border-dark-border rounded-t-xl px-6 py-4">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-100 dark:bg-dark-accent/20 rounded-lg p-2">
+            <div className="bg-light-accent/10 dark:bg-dark-accent/20 rounded-lg p-2">
               <svg
-                className="w-6 h-6 text-blue-600 dark:text-dark-accent"
+                className="w-6 h-6 text-light-accent dark:text-dark-accent"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -529,12 +643,22 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-dark-text-primary">
-                {title}
+              <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+                {symbol} Option Chain
               </h2>
-              <div className="flex items-center gap-2 text-gray-600 dark:text-dark-text-secondary">
-                <span className="text-sm">Underlying:</span>
-                <span className="font-semibold bg-blue-100 dark:bg-dark-accent/20 px-2 py-1 rounded-md text-blue-800 dark:text-dark-accent">
+              <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1">
+                {expiry === "0"
+                  ? "Current Week"
+                  : `${expiry} Week${expiry !== "1" ? "s" : ""} Expiry`}{" "}
+                • Real-time Option Data
+              </p>
+              <div className="flex items-center gap-2 text-light-text-secondary dark:text-dark-text-secondary mt-2">
+                <span className="text-sm">LTP:</span>
+                <span className="font-semibold bg-light-accent/10 dark:bg-dark-accent/20 px-2 py-1 rounded-md text-light-accent dark:text-dark-accent">
+                  {ltp ? `₹${ltp.toLocaleString()}` : "-"}
+                </span>
+                <span className="text-sm">| Underlying:</span>
+                <span className="font-semibold bg-light-accent/10 dark:bg-dark-accent/20 px-2 py-1 rounded-md text-light-accent dark:text-dark-accent">
                   {underlying ? `₹${underlying.toLocaleString()}` : "-"}
                 </span>
                 {loading && (
@@ -950,20 +1074,20 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
         <div className="bg-white dark:bg-dark-card-gradient border border-gray-200 dark:border-dark-border overflow-hidden">
           {/* mobile compact 4-column table */}
           {mobileView ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin scrollbar-track-gray-100 dark:scrollbar-track-gray-800 scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
+              <table className="w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-dark-surface sticky top-0">
                   <tr className="text-gray-700 dark:text-dark-text-secondary">
                     {/* compute mobile columns based on spreadMode */}
                     {(() => {
                       const cols =
                         spreadMode === "Bid"
-                          ? ["strike", "ceBid", "peBid", "BidSpread"]
-                          : ["strike", "ceAsk", "peAsk", "AskSpread"];
+                          ? ["ceAsk", "ceBid", "strike", "peBid"]
+                          : ["ceAsk", "ceBid", "strike", "peAsk"];
                       return cols.map((c, idx) => (
                         <th
                           key={c}
-                          className="p-3 text-center font-semibold text-xs border-r border-gray-300 dark:border-dark-border last:border-r-0"
+                          className="p-1.5 text-center font-semibold text-xs border-r border-gray-300 dark:border-dark-border last:border-r-0"
                         >
                           {allFields.find((a) => a.key === c)?.label || c}
                         </th>
@@ -1037,11 +1161,12 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
                       const isATM = atmStrike != null && r.strike === atmStrike;
                       const cols =
                         spreadMode === "Bid"
-                          ? ["strike", "ceBid", "peBid", "BidSpread"]
-                          : ["strike", "ceAsk", "peAsk", "AskSpread"];
+                          ? ["ceAsk", "ceBid", "strike", "peBid"]
+                          : ["ceAsk", "ceBid", "strike", "peAsk"];
                       return (
                         <MobileRow
                           key={r.strike}
+                          ref={isATM ? atmRowRef : null}
                           r={r}
                           memoFmt={memoFmt}
                           isATM={isATM}
@@ -1054,14 +1179,14 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
               </table>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin scrollbar-track-gray-100 dark:scrollbar-track-gray-800 scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
+              <table className="w-full text-xs min-w-[800px]">
                 <thead className="bg-gray-50 dark:bg-dark-surface sticky top-0">
                   <tr className="text-gray-700 dark:text-dark-text-secondary">
                     {[
-                      { key: "strike", label: "Strike", color: "yellow" },
-                      { key: "ceBid", label: "CE Bid", color: "green" },
                       { key: "ceAsk", label: "CE Ask", color: "green" },
+                      { key: "ceBid", label: "CE Bid", color: "green" },
+                      { key: "strike", label: "Strike", color: "yellow" },
                       { key: "peBid", label: "PE Bid", color: "red" },
                       { key: "peAsk", label: "PE Ask", color: "red" },
                       {
@@ -1094,7 +1219,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
                       return (
                         <th
                           key={key}
-                          className={`p-4 cursor-pointer select-none font-semibold border-r border-gray-300 dark:border-dark-border last:border-r-0 hover:bg-gray-100 dark:hover:bg-dark-surface transition-all duration-200 ${
+                          className={`p-2 cursor-pointer select-none font-semibold border-r border-gray-300 dark:border-dark-border last:border-r-0 hover:bg-gray-100 dark:hover:bg-dark-surface transition-all duration-200 ${
                             active ? "bg-blue-50 dark:bg-dark-accent/20" : ""
                           }`}
                           onClick={() => memoOnHeaderClick(key)}
@@ -1197,6 +1322,7 @@ function OptionChainTable({ title, defaultSymbol = "NIFTY" }) {
                       return (
                         <DesktopRow
                           key={r.strike}
+                          ref={isATM ? atmRowRef : null}
                           r={r}
                           memoFmt={memoFmt}
                           isATM={isATM}
@@ -1302,9 +1428,9 @@ export default function OptionChains() {
 
       {/* Option Chain Tables */}
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          <OptionChainTable title="NIFTY Chain" defaultSymbol="NIFTY" />
-          <OptionChainTable title="SENSEX Chain" defaultSymbol="SENSEX" />
+        <div className="space-y-8">
+          <OptionChainTable defaultSymbol="NIFTY" />
+          {/* <OptionChainTable defaultSymbol="SENSEX" /> */}
         </div>
       </div>
     </div>

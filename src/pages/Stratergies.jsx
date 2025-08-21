@@ -14,33 +14,94 @@ export default function Stratergies() {
   const BID_ASK_AVG_OPTIONS = [1, 2, 3, 4, 5];
   const ORDER_TYPE = ["LIMIT", "MARKET"];
 
-  // Assuming lot size 75 based on your sample; adjust as needed
-  const LOT = 75;
-  const QUANTITY_OPTIONS = [1, 2, 3, 4, 5].map((lots) => lots * LOT); // 75,150,225...
-  const SLICES_OPTIONS = [1, 2, 3, 4, 5].map((lots) => lots * LOT); // lot-wise slicing values
-
   // ----- Form state -----
   const [form, setForm] = useState({
     symbol: "NIFTY",
     order_type: "limit",
-    quantity: 75 * 5,
-    slices: 2 * 75, // lot-wise slicing (value in qty)
+    quantity: 75, // Will be updated when lot sizes are fetched
+    slices: 75, // Will be updated when lot sizes are fetched
     base_leg: "CE",
     // IOC removed
-    IOC_timeout: 5000, // keep if your backend expects it; remove if not needed
+    IOC_timeout: 1, // keep if your backend expects it; remove if not needed
     call_strike: 24900,
     put_strike: 24400,
     desired_spread: 0,
     start_price: 0,
     user_ids: [], // <- multiple
     expiry: 0,
-    no_of_bid_ask_average: 2,
+    no_of_bid_ask_average: 5,
     action: "buy",
     exit_start: 140.5,
     exit_desired_spread: 140.6,
+    exit_price_gap: 1,
     note: "",
     run_state: 3,
   });
+
+  // State for storing lot sizes from API
+  const [lotSizes, setLotSizes] = useState({
+    NIFTY: 75,
+    BANKNIFTY: 25,
+    FINNIFTY: 40,
+    SENSEX: 10,
+  });
+
+  useEffect(() => {
+    fetch(`${DEV_BASE_URL}/lotsizes`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        // Process the fetched data - assuming data structure like:
+        // { NIFTY: 75, BANKNIFTY: 25, FINNIFTY: 40, SENSEX: 10 }
+        // or [{ symbol: "NIFTY", lotsize: 75 }, ...]
+        if (data && typeof data === "object") {
+          if (Array.isArray(data)) {
+            // If data is array format
+            const lotSizeMap = {};
+            data.forEach((item) => {
+              if (item.symbol && item.lotsize) {
+                lotSizeMap[item.symbol] = item.lotsize;
+              }
+            });
+            if (Object.keys(lotSizeMap).length > 0) {
+              setLotSizes((prev) => ({ ...prev, ...lotSizeMap }));
+            }
+          } else {
+            // If data is object format
+            setLotSizes((prev) => ({ ...prev, ...data }));
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching lot sizes:", error);
+      });
+  }, []);
+
+  // Get current symbol's lot size
+  const getCurrentLotSize = () => {
+    return lotSizes[form.symbol] || 75; // fallback to 75 if not found
+  };
+
+  // Update form quantities when lot sizes are fetched
+  useEffect(() => {
+    const currentLotSize = getCurrentLotSize();
+    setForm((prev) => ({
+      ...prev,
+      quantity: currentLotSize,
+      slices: currentLotSize,
+    }));
+  }, [lotSizes, form.symbol]);
+
+  // Dynamic quantity and slices options based on current symbol
+  const QUANTITY_OPTIONS = useMemo(() => {
+    const LOT = getCurrentLotSize();
+    return [1, 2, 3, 4, 5].map((lots) => lots * LOT);
+  }, [form.symbol, lotSizes]);
+
+  const SLICES_OPTIONS = useMemo(() => {
+    const LOT = getCurrentLotSize();
+    return [1, 2, 3, 4, 5].map((lots) => lots * LOT);
+  }, [form.symbol, lotSizes]);
 
   // temp input for adding user_ids
   const [userIdInput, setUserIdInput] = useState("");
@@ -65,6 +126,7 @@ export default function Stratergies() {
     "expiry",
     "exit_start",
     "exit_desired_spread",
+    "exit_price_gap",
     "no_of_bid_ask_average",
   ]);
 
@@ -91,10 +153,21 @@ export default function Stratergies() {
   }
 
   const handleSelectChange = (name, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [name]: numericFields.has(name) ? Number(value) : value,
-    }));
+    setForm((prev) => {
+      const newForm = {
+        ...prev,
+        [name]: numericFields.has(name) ? Number(value) : value,
+      };
+
+      // If symbol changes, update quantity and slices to use new lot size
+      if (name === "symbol") {
+        const newLotSize = lotSizes[value] || 75;
+        newForm.quantity = newLotSize; // Set to 1 lot of new symbol
+        newForm.slices = newLotSize; // Set slices to 1 lot as well
+      }
+
+      return newForm;
+    });
   };
 
   const addUserId = () => {
@@ -315,7 +388,7 @@ export default function Stratergies() {
     );
     if (!match) return null;
     const d = match.response.data;
-    // if order type is buy -> use ask average; if sell -> use bid average
+    // if order type is buy -> use ask average; if sell -> bid average
     if ((optionOrderType || o.action) === "buy") {
       return avgFirstN(d.askValues, n);
     }
@@ -366,26 +439,26 @@ export default function Stratergies() {
 
   // ----- UI -----
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:bg-dark-gradient p-2 md:p-6 transition-colors duration-300 overflow-hidden">
+    <div className="min-h-screen bg-light-gradient dark:bg-dark-gradient p-2 md:p-6 transition-colors duration-300 overflow-hidden">
       <div className="max-w-7xl mx-auto overflow-hidden">
         {/* Header */}
-        <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl p-6 mb-6 border border-gray-200 dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 mb-6 border border-light-border dark:border-dark-border">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-2">
+              <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
                 Trading Strategies
               </h1>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
+              <p className="text-light-text-secondary dark:text-dark-text-secondary">
                 Manage your option trading strategies
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="bg-green-100 dark:bg-dark-success/20 text-green-800 dark:text-dark-success px-3 py-1 rounded-full text-sm font-medium border dark:border-dark-success/30">
+              <div className="bg-light-success/10 dark:bg-dark-success/20 text-light-success dark:text-dark-success px-3 py-1 rounded-full text-sm font-medium border border-light-success/20 dark:border-dark-success/30">
                 {orders.length} Active
               </div>
               <button
                 onClick={fetchOrders}
-                className="bg-blue-600 hover:bg-blue-700 dark:bg-dark-accent dark:hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl dark:shadow-dark-lg"
+                className="bg-light-accent hover:bg-blue-700 dark:bg-dark-accent dark:hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-light-lg hover:shadow-light-xl dark:shadow-dark-lg"
               >
                 <svg
                   className="w-4 h-4"
@@ -407,19 +480,16 @@ export default function Stratergies() {
         </div>
 
         {/* Index Cards */}
-        <IndexCards
-          indices={["NIFTY", "SENSEX", "BANKNIFTY", "FINNIFTY"]}
-          className="mb-6"
-        />
+        <IndexCards indices={["NIFTY", "SENSEX"]} className="mb-6" />
 
         {/* Form */}
-        <div className="bg-white dark:bg-dark-card-gradient shadow-lg dark:shadow-dark-xl rounded-xl p-6 mb-6 border border-gray-200 dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient shadow-light-lg dark:shadow-dark-xl rounded-xl p-6 mb-6 border border-light-border dark:border-dark-border">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary">
+            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
               {editingIndex !== null ? "Edit Strategy" : "Create New Strategy"}
             </h2>
             {editingIndex !== null && (
-              <div className="bg-blue-100 dark:bg-dark-accent/20 text-blue-800 dark:text-dark-accent px-3 py-1 rounded-full text-sm font-medium border dark:border-dark-accent/30">
+              <div className="bg-light-accent/10 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent px-3 py-1 rounded-full text-sm font-medium border border-light-accent/20 dark:border-dark-accent/30">
                 ID: {form.id}
               </div>
             )}
@@ -428,11 +498,11 @@ export default function Stratergies() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {/* symbol */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+              <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary">
                 Symbol
               </label>
               <select
-                className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200 bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
+                className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent transition-colors duration-200 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
                 value={form.symbol}
                 onChange={(e) => handleSelectChange("symbol", e.target.value)}
               >
@@ -476,6 +546,9 @@ export default function Stratergies() {
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                 Quantity
+                <span className="ml-1 text-xs text-gray-500 dark:text-dark-text-muted">
+                  (Lot Size: {getCurrentLotSize()})
+                </span>
               </label>
               <select
                 className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200 bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
@@ -488,7 +561,8 @@ export default function Stratergies() {
                     value={q}
                     className="dark:bg-dark-surface dark:text-dark-text-primary"
                   >
-                    {q} ({q / LOT} lot)
+                    {q} ({q / getCurrentLotSize()} lot
+                    {q / getCurrentLotSize() !== 1 ? "s" : ""})
                   </option>
                 ))}
               </select>
@@ -498,6 +572,9 @@ export default function Stratergies() {
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                 Slices
+                <span className="ml-1 text-xs text-gray-500 dark:text-dark-text-muted">
+                  (Per Slice)
+                </span>
               </label>
               <select
                 className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200 bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
@@ -510,7 +587,8 @@ export default function Stratergies() {
                     value={s}
                     className="dark:bg-dark-surface dark:text-dark-text-primary"
                   >
-                    {s} ( {s / LOT} lot slice )
+                    {s} ({s / getCurrentLotSize()} lot
+                    {s / getCurrentLotSize() !== 1 ? "s" : ""} per slice)
                   </option>
                 ))}
               </select>
@@ -632,6 +710,13 @@ export default function Stratergies() {
               label="Exit Desired Spread"
               name="exit_desired_spread"
               value={form.exit_desired_spread}
+              onChange={handleChange}
+              step="0.01"
+            />
+            <LabeledNumber
+              label="Exit Price Gap (in percentage)"
+              name="exit_price_gap"
+              value={form.exit_price_gap}
               onChange={handleChange}
               step="0.01"
             />
@@ -767,21 +852,21 @@ export default function Stratergies() {
         </div>
 
         {/* Strategies Table */}
-        <div className="bg-white dark:bg-dark-card-gradient shadow-lg dark:shadow-dark-xl rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-dark-elevated dark:to-dark-surface border-b border-gray-200 dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient shadow-light-lg dark:shadow-dark-xl rounded-xl border border-light-border dark:border-dark-border overflow-hidden">
+          <div className="px-6 py-4 bg-light-secondary dark:bg-dark-elevated border-b border-light-border dark:border-dark-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary">
+                <h3 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
                   Active Strategies
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
+                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1">
                   Manage and monitor your trading strategies
                 </p>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
                   Total:{" "}
-                  <span className="font-semibold text-gray-800 dark:text-dark-text-primary">
+                  <span className="font-semibold text-light-text-primary dark:text-dark-text-primary">
                     {orders.length}
                   </span>
                 </div>
@@ -792,8 +877,8 @@ export default function Stratergies() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center space-x-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-dark-accent"></div>
-                <span className="text-gray-600 dark:text-dark-text-secondary">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-accent dark:border-dark-accent"></div>
+                <span className="text-light-text-secondary dark:text-dark-text-secondary">
                   Loading strategies...
                 </span>
               </div>
@@ -903,7 +988,11 @@ export default function Stratergies() {
                                 {o.quantity}
                               </div>
                               <div className="text-gray-500 dark:text-dark-text-secondary">
-                                ({Math.round(o.quantity / LOT)} lots)
+                                (
+                                {Math.round(
+                                  o.quantity / (lotSizes[o.symbol] || 75)
+                                )}{" "}
+                                lots)
                               </div>
                             </div>
                           )}
@@ -934,7 +1023,11 @@ export default function Stratergies() {
                                 {o.slices}
                               </div>
                               <div className="text-gray-500 dark:text-dark-text-secondary">
-                                ({Math.round(o.slices / LOT)} slice)
+                                (
+                                {Math.round(
+                                  o.slices / (lotSizes[o.symbol] || 75)
+                                )}{" "}
+                                slice)
                               </div>
                             </div>
                           )}
@@ -1319,6 +1412,8 @@ export default function Stratergies() {
                                   ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 dark:border-green-700/30"
                                   : o.run_state === 1
                                   ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 dark:border-yellow-700/30"
+                                  : o.run_state === 3
+                                  ? "dark:bg-gray-700 dark:text-dark-text-secondary"
                                   : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 dark:border-red-700/30"
                               }`}
                             >
@@ -1326,6 +1421,8 @@ export default function Stratergies() {
                                 ? "Running"
                                 : o.run_state === 1
                                 ? "Paused"
+                                : o.run_state === 3
+                                ? "Not yet started"
                                 : "Exited"}
                             </span>
                             <div className="flex space-x-1">
@@ -1404,7 +1501,7 @@ export default function Stratergies() {
                 {orders.map((o, i) => (
                   <div
                     key={i}
-                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+                    className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg shadow-sm dark:shadow-dark-lg hover:shadow-md dark:hover:shadow-dark-xl transition-shadow duration-200"
                   >
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -1466,7 +1563,7 @@ export default function Stratergies() {
                             </div>
 
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
                                 Start Price
                               </label>
                               <input
@@ -1605,61 +1702,64 @@ export default function Stratergies() {
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Quantity:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                                {o.quantity} ({Math.round(o.quantity / LOT)}{" "}
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+                                {o.quantity} (
+                                {Math.round(
+                                  o.quantity / (lotSizes[o.symbol] || 75)
+                                )}{" "}
                                 lots)
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Expiry:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                                 {o.expiry}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Call Strike:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                                 {o.call_strike}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Put Strike:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                                 {o.put_strike}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Start Price:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                                 {o.start_price ?? "-"}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Exit Start:
                               </span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                                 {o.exit_start ?? "-"}
                               </span>
                             </div>
                           </div>
 
                           <div className="text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">
+                            <span className="text-gray-600 dark:text-dark-text-secondary">
                               Live Spread:
                             </span>
-                            <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                            <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
                               {(() => {
                                 const s = computeSpreadForOrder(o);
                                 return s == null ? "-" : Number(s).toFixed(2);
@@ -1669,22 +1769,24 @@ export default function Stratergies() {
 
                           {o.note && (
                             <div className="text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <span className="text-gray-600 dark:text-dark-text-secondary">
                                 Note:
                               </span>
-                              <span className="ml-2 text-gray-700 dark:text-gray-300">
+                              <span className="ml-2 text-gray-700 dark:text-dark-text-secondary">
                                 {o.note}
                               </span>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-dark-border">
                             <span
                               className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
                                 o.run_state === 0
                                   ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 dark:border-green-700/30"
                                   : o.run_state === 1
                                   ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 dark:border-yellow-700/30"
+                                  : o.run_state === 3
+                                  ? "bg-gray-100 dark:bg-gray-700/30 text-gray-800 dark:text-gray-300 dark:border-gray-600/30"
                                   : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 dark:border-red-700/30"
                               }`}
                             >
@@ -1692,40 +1794,42 @@ export default function Stratergies() {
                                 ? "Running"
                                 : o.run_state === 1
                                 ? "Paused"
+                                : o.run_state === 3
+                                ? "Not yet started"
                                 : "Exited"}
                             </span>
 
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => startEdit(i)}
-                                className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors duration-200"
+                                className="px-3 py-1 rounded bg-blue-600 dark:bg-blue-700 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors duration-200"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => updateOrderState(i, 0)}
-                                className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700 transition-colors duration-200"
+                                className="px-2 py-1 rounded bg-green-600 dark:bg-green-700 text-white text-sm hover:bg-green-700 dark:hover:bg-green-800 transition-colors duration-200"
                                 title="Start"
                               >
                                 ▶
                               </button>
                               <button
                                 onClick={() => updateOrderState(i, 1)}
-                                className="px-2 py-1 rounded bg-yellow-500 text-white text-sm hover:bg-yellow-600 transition-colors duration-200"
+                                className="px-2 py-1 rounded bg-yellow-500 dark:bg-yellow-600 text-white text-sm hover:bg-yellow-600 dark:hover:bg-yellow-700 transition-colors duration-200"
                                 title="Pause"
                               >
                                 ⏸
                               </button>
                               <button
                                 onClick={() => updateOrderState(i, 2)}
-                                className="px-2 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors duration-200"
+                                className="px-2 py-1 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-colors duration-200"
                                 title="Exit"
                               >
                                 ⏹
                               </button>
                               <button
                                 onClick={() => deleteOrder(i)}
-                                className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors duration-200"
+                                className="px-3 py-1 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-colors duration-200"
                               >
                                 Delete
                               </button>

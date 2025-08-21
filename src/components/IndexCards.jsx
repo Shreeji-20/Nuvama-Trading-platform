@@ -145,23 +145,23 @@ const IndexCard = ({ indexData }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6">
+    <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl border border-light-border dark:border-dark-border p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`${theme.bg} rounded-lg p-3`}>
             <div className={theme.icon}>{icon}</div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+            <h3 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
               {name || symbol}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
               {exchange}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-gray-900 dark:text-dark-text-primary">
+          <div className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
             {price
               ? price.toLocaleString("en-IN", { minimumFractionDigits: 2 })
               : "--"}
@@ -192,24 +192,30 @@ const IndexCard = ({ indexData }) => {
       </div>
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
-          <p className="text-gray-600 dark:text-dark-text-secondary">High</p>
-          <p className="font-semibold text-gray-900 dark:text-dark-text-primary">
+          <p className="text-light-text-secondary dark:text-dark-text-secondary">
+            High
+          </p>
+          <p className="font-semibold text-light-text-primary dark:text-dark-text-primary">
             {high
               ? high.toLocaleString("en-IN", { minimumFractionDigits: 2 })
               : "--"}
           </p>
         </div>
         <div>
-          <p className="text-gray-600 dark:text-dark-text-secondary">Low</p>
-          <p className="font-semibold text-gray-900 dark:text-dark-text-primary">
+          <p className="text-light-text-secondary dark:text-dark-text-secondary">
+            Low
+          </p>
+          <p className="font-semibold text-light-text-primary dark:text-dark-text-primary">
             {low
               ? low.toLocaleString("en-IN", { minimumFractionDigits: 2 })
               : "--"}
           </p>
         </div>
         <div>
-          <p className="text-gray-600 dark:text-dark-text-secondary">Volume</p>
-          <p className="font-semibold text-gray-900 dark:text-dark-text-primary">
+          <p className="text-light-text-secondary dark:text-dark-text-secondary">
+            Volume
+          </p>
+          <p className="font-semibold text-light-text-primary dark:text-dark-text-primary">
             {volume ? formatNumber(volume) : "--"}
           </p>
         </div>
@@ -241,13 +247,20 @@ const IndexCards = ({ indices = [], className = "" }) => {
             const data = await response.json();
             return {
               symbol,
-              name: data.name || symbol,
-              price: data.price || data.ltp || data.current_price,
-              change: data.change || data.net_change,
-              changePercent: data.changePercent || data.percent_change,
-              high: data.high || data.day_high,
-              low: data.low || data.day_low,
-              volume: data.volume || data.total_volume,
+              name: symbol,
+              price:
+                data?.response?.data?.ltp || data.ltp || data.current_price,
+              change:
+                data?.response?.data?.ltp - data?.response?.data?.c ||
+                data.net_change,
+              changePercent:
+                ((data?.response?.data?.ltp - data?.response?.data?.c) * 100) /
+                  (data?.response?.data?.ltp ||
+                    data.ltp ||
+                    data.current_price) || data.percent_change,
+              high: data?.response?.data?.h || data.day_high,
+              low: data?.response?.data?.l || data.day_low,
+              volume: data?.response?.data?.vol || data.total_volume,
             };
           } catch (err) {
             console.error(`Error fetching ${symbol}:`, err);
@@ -287,7 +300,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchIndexData();
-    }, 30000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [indices]);

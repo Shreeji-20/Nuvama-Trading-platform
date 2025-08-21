@@ -5,6 +5,29 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Comfortable light theme colors
+        light: {
+          primary: "#fefefe", // Pure white with slight warmth
+          secondary: "#f8fafc", // Very light gray
+          tertiary: "#f1f5f9", // Light gray
+          surface: "#ffffff", // Pure white surface
+          elevated: "#f9fafb", // Slightly elevated surface
+          border: "#e2e8f0", // Soft border color
+          accent: "#3b82f6", // Blue accent (same as dark)
+          success: "#059669", // Green (slightly darker for better contrast)
+          warning: "#d97706", // Orange (adjusted for light background)
+          error: "#dc2626", // Red (adjusted for light background)
+          text: {
+            primary: "#1e293b", // Dark blue-gray for main text
+            secondary: "#475569", // Medium gray for secondary text
+            muted: "#64748b", // Muted gray for less important text
+          },
+          card: {
+            primary: "#ffffff", // White cards
+            secondary: "#f8fafc", // Light gray cards
+            hover: "#f1f5f9", // Hover state
+          },
+        },
         // Enhanced dark theme colors
         dark: {
           primary: "#0f0f23", // Deep dark blue
@@ -31,12 +54,28 @@ module.exports = {
         textMuted: "#a1a1aa",
       },
       backgroundImage: {
+        // Light theme gradients
+        "light-gradient":
+          "linear-gradient(135deg, #fefefe 0%, #f8fafc 50%, #f1f5f9 100%)",
+        "light-card-gradient":
+          "linear-gradient(145deg, #ffffff 0%, #f9fafb 100%)",
+        // Dark theme gradients
         "dark-gradient":
           "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)",
         "dark-card-gradient":
           "linear-gradient(145deg, #1e293b 0%, #0e1628 100%)",
       },
       boxShadow: {
+        // Light theme shadows - soft and subtle
+        "light-sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "light-md":
+          "0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+        "light-lg":
+          "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03)",
+        "light-xl":
+          "0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.02)",
+        "light-inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)",
+        // Dark theme shadows
         "dark-lg":
           "0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2)",
         "dark-xl":
