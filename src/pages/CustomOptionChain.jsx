@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMemo, useCallback } from "react";
 import IndexCards from "../components/IndexCards";
-// import { useRef } from "react";
-// const BASE_URL = "https://r4np4x2t-8000.inc1.devtunnels.ms"; // change if needed
-const DEV_BASE_URL = "http://localhost:8000"; // change if needed
-const BASE_URL = DEV_BASE_URL;
+import config from "../config/api";
 
 async function fetchLegPrice(
   symbol,
@@ -61,7 +58,7 @@ const SpreadPage = () => {
     // Fetch optiondata once
     let optionData = [];
     try {
-      const res = await fetch(`${BASE_URL}/optiondata`);
+      const res = await fetch(config.buildUrl(config.ENDPOINTS.OPTIONDATA));
       if (!res.ok) throw new Error("Failed to fetch optiondata");
       optionData = await res.json();
     } catch (err) {
@@ -132,7 +129,7 @@ const SpreadPage = () => {
   useEffect(() => {
     const loadSpreads = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/spreads`);
+        const res = await fetch(config.buildUrl(config.ENDPOINTS.SPREADS));
         if (!res.ok) throw new Error("Failed to fetch spreads");
         const data = await res.json();
         console.log("Data : ", data);
@@ -147,7 +144,7 @@ const SpreadPage = () => {
   // ✅ POST new spread to server
   const saveSpread = async (spread) => {
     try {
-      const res = await fetch(`${BASE_URL}/spreads`, {
+      const res = await fetch(config.buildUrl(config.ENDPOINTS.SPREADS), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(spread),
@@ -203,7 +200,9 @@ const SpreadPage = () => {
     (index) => {
       const this_row = rows[index];
       // Optionally send DELETE request to backend
-      fetch(`${BASE_URL}/spreads/${this_row.id}`, { method: "DELETE" });
+      fetch(config.buildUrl(`${config.ENDPOINTS.SPREADS}/${this_row.id}`), {
+        method: "DELETE",
+      });
       setRows((prev) => prev.filter((_, i) => i !== index));
     },
     [rows]

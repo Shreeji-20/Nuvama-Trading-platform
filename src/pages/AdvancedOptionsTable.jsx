@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-const DEV_BASE_URL = "http://localhost:8000";
+import config from "../config/api";
 
 const AdvancedOptionsTable = () => {
   const [strategies, setStrategies] = useState([]);
@@ -48,7 +47,9 @@ const AdvancedOptionsTable = () => {
   const fetchStrategies = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${DEV_BASE_URL}/advanced-options`);
+      const response = await fetch(
+        config.buildUrl(config.ENDPOINTS.ADVANCED_OPTIONS)
+      );
       if (response.ok) {
         const data = await response.json();
         const strategiesArray = data.strategies || [];
@@ -69,7 +70,7 @@ const AdvancedOptionsTable = () => {
   // Fetch users for dropdown
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${DEV_BASE_URL}/users`);
+      const response = await fetch(config.buildUrl(config.ENDPOINTS.USERS));
       if (response.ok) {
         const users = await response.json();
         setUsersForDropdown(Array.isArray(users) ? users : []);
@@ -102,7 +103,9 @@ const AdvancedOptionsTable = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${DEV_BASE_URL}/advanced-options/${editingStrategy}`,
+        config.buildUrl(
+          `${config.ENDPOINTS.ADVANCED_OPTIONS}/${editingStrategy}`
+        ),
         {
           method: "PUT",
           headers: {
@@ -147,12 +150,53 @@ const AdvancedOptionsTable = () => {
     }));
   };
 
+  // Handle action change with automatic leg reversal
+  const handleActionChange = (newAction) => {
+    setEditValues((prev) => {
+      const updatedValues = {
+        ...prev,
+        action: newAction,
+      };
+
+      // Helper function to reverse action
+      const reverseAction = (action) => {
+        return action === "BUY" ? "SELL" : "BUY";
+      };
+
+      // Reverse all strategy legs actions
+      Object.keys(prev).forEach((key) => {
+        if (
+          key.startsWith("leg") &&
+          prev[key] &&
+          typeof prev[key] === "object"
+        ) {
+          if (prev[key].action) {
+            updatedValues[key] = {
+              ...prev[key],
+              action: reverseAction(prev[key].action),
+            };
+          }
+        }
+      });
+
+      // Reverse bidding leg action if it exists
+      if (prev.bidding_leg && prev.bidding_leg.action) {
+        updatedValues.bidding_leg = {
+          ...prev.bidding_leg,
+          action: reverseAction(prev.bidding_leg.action),
+        };
+      }
+
+      return updatedValues;
+    });
+  };
+
   // Delete strategy
   const deleteStrategy = async (strategyId) => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${DEV_BASE_URL}/advanced-options/${strategyId}`,
+        config.buildUrl(`${config.ENDPOINTS.ADVANCED_OPTIONS}/${strategyId}`),
         {
           method: "DELETE",
         }
@@ -182,7 +226,7 @@ const AdvancedOptionsTable = () => {
 
       const updatedStrategy = { ...strategy, run_state: newState };
       const response = await fetch(
-        `${DEV_BASE_URL}/advanced-options/${strategyId}`,
+        config.buildUrl(`${config.ENDPOINTS.ADVANCED_OPTIONS}/${strategyId}`),
         {
           method: "PUT",
           headers: {
@@ -343,22 +387,25 @@ const AdvancedOptionsTable = () => {
 
                   {/* Card Body */}
                   <div className="p-6">
-                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                      {/* Legs Section - Takes 2 columns on XL screens */}
-                      <div className="xl:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-6 gap-6">
+                      {/* Legs Section - Takes 3 columns on XL screens */}
+                      <div className="xl:col-span-3 space-y-4">
                         <h4 className="text-md font-semibold text-light-text-primary dark:text-dark-text-primary border-b border-light-border dark:border-dark-border pb-2">
                           Strategy Legs
                         </h4>
                         {(() => {
-                          // Extract legs from currentValues (leg1, leg2, leg3, etc.)
+                          // Extract only base legs (excluding bidding leg)
                           const legs = {};
-                          Object.keys(currentValues).forEach((key) => {
+                          const baseLegs = currentValues.base_legs || [];
+
+                          // Only include legs that are in the base_legs array
+                          baseLegs.forEach((legKey) => {
                             if (
-                              key.startsWith("leg") &&
-                              typeof currentValues[key] === "object" &&
-                              currentValues[key] !== null
+                              currentValues[legKey] &&
+                              typeof currentValues[legKey] === "object" &&
+                              currentValues[legKey] !== null
                             ) {
-                              legs[key] = currentValues[key];
+                              legs[legKey] = currentValues[legKey];
                             }
                           });
 
@@ -385,7 +432,7 @@ const AdvancedOptionsTable = () => {
                                         Expiry
                                       </th>
                                       <th className="text-left py-2 px-2 font-medium text-light-text-secondary dark:text-dark-text-secondary">
-                                        Action
+                                        Forward
                                       </th>
                                       <th className="text-left py-2 px-2 font-medium text-light-text-secondary dark:text-dark-text-secondary">
                                         Qty
@@ -575,6 +622,12 @@ const AdvancedOptionsTable = () => {
                                     <th className="text-left py-1 px-2 font-medium text-blue-600 dark:text-blue-300">
                                       Expiry
                                     </th>
+                                    <th className="text-left py-1 px-2 font-medium text-blue-600 dark:text-blue-300">
+                                      Forward
+                                    </th>
+                                    <th className="text-left py-1 px-2 font-medium text-blue-600 dark:text-blue-300">
+                                      Quantity
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -677,6 +730,61 @@ const AdvancedOptionsTable = () => {
                                         </span>
                                       )}
                                     </td>
+                                    <td className="py-1 px-2">
+                                      {isEditing ? (
+                                        <select
+                                          value={
+                                            currentValues.bidding_leg?.action ||
+                                            ""
+                                          }
+                                          onChange={(e) =>
+                                            handleFieldChange("bidding_leg", {
+                                              ...currentValues.bidding_leg,
+                                              action: e.target.value,
+                                            })
+                                          }
+                                          className="w-full px-1 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                        >
+                                          <option value="BUY">BUY</option>
+                                          <option value="SELL">SELL</option>
+                                        </select>
+                                      ) : (
+                                        <span
+                                          className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
+                                            currentValues.bidding_leg
+                                              ?.action === "BUY"
+                                              ? "bg-light-success/20 text-light-success dark:bg-dark-success/20 dark:text-dark-success"
+                                              : "bg-light-error/20 text-light-error dark:bg-dark-error/20 dark:text-dark-error"
+                                          }`}
+                                        >
+                                          {currentValues.bidding_leg?.action ||
+                                            "-"}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-1 px-2">
+                                      {isEditing ? (
+                                        <input
+                                          type="number"
+                                          value={
+                                            currentValues.bidding_leg
+                                              ?.quantity || ""
+                                          }
+                                          onChange={(e) =>
+                                            handleFieldChange("bidding_leg", {
+                                              ...currentValues.bidding_leg,
+                                              quantity: Number(e.target.value),
+                                            })
+                                          }
+                                          className="w-full px-1 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                        />
+                                      ) : (
+                                        <span className="text-light-text-primary dark:text-dark-text-primary">
+                                          {currentValues.bidding_leg
+                                            ?.quantity || "-"}
+                                        </span>
+                                      )}
+                                    </td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -685,8 +793,8 @@ const AdvancedOptionsTable = () => {
                         )}
                       </div>
 
-                      {/* Strategy Configuration - Takes 1 column */}
-                      <div className="space-y-4">
+                      {/* Strategy Configuration - Takes 2 columns */}
+                      <div className="xl:col-span-2 space-y-4">
                         <h4 className="text-md font-semibold text-light-text-primary dark:text-dark-text-primary border-b border-light-border dark:border-dark-border pb-2">
                           Configuration
                         </h4>
@@ -762,57 +870,77 @@ const AdvancedOptionsTable = () => {
                             </div>
                             <div>
                               <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
-                                Quantity
+                                Qty Multiplier
                               </label>
                               {isEditing ? (
-                                <input
-                                  type="number"
-                                  value={currentValues.quantity || ""}
+                                <select
+                                  value={currentValues.quantity_multiplier || 1}
                                   onChange={(e) =>
                                     handleFieldChange(
-                                      "quantity",
+                                      "quantity_multiplier",
                                       Number(e.target.value)
                                     )
                                   }
                                   className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
-                                />
+                                >
+                                  <option value={1}>1x</option>
+                                  <option value={2}>2x</option>
+                                  <option value={3}>3x</option>
+                                  <option value={4}>4x</option>
+                                  <option value={5}>5x</option>
+                                  <option value={6}>6x</option>
+                                  <option value={7}>7x</option>
+                                  <option value={8}>8x</option>
+                                  <option value={9}>9x</option>
+                                  <option value={10}>10x</option>
+                                </select>
                               ) : (
                                 <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
-                                  {currentValues.quantity}
+                                  {currentValues.quantity_multiplier || 1}x
                                 </div>
                               )}
                             </div>
                             <div>
                               <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
-                                Slices
+                                Slice Multiplier
                               </label>
                               {isEditing ? (
-                                <input
-                                  type="number"
-                                  value={currentValues.slices || ""}
+                                <select
+                                  value={currentValues.slice_multiplier || 1}
                                   onChange={(e) =>
                                     handleFieldChange(
-                                      "slices",
+                                      "slice_multiplier",
                                       Number(e.target.value)
                                     )
                                   }
                                   className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
-                                />
+                                >
+                                  <option value={1}>1x</option>
+                                  <option value={2}>2x</option>
+                                  <option value={3}>3x</option>
+                                  <option value={4}>4x</option>
+                                  <option value={5}>5x</option>
+                                  <option value={6}>6x</option>
+                                  <option value={7}>7x</option>
+                                  <option value={8}>8x</option>
+                                  <option value={9}>9x</option>
+                                  <option value={10}>10x</option>
+                                </select>
                               ) : (
                                 <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
-                                  {currentValues.slices}
+                                  {currentValues.slice_multiplier || 1}x
                                 </div>
                               )}
                             </div>
                             <div>
                               <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
-                                Action
+                                Forward
                               </label>
                               {isEditing ? (
                                 <select
                                   value={currentValues.action || ""}
                                   onChange={(e) =>
-                                    handleFieldChange("action", e.target.value)
+                                    handleActionChange(e.target.value)
                                   }
                                   className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
                                 >
@@ -892,6 +1020,120 @@ const AdvancedOptionsTable = () => {
                               ) : (
                                 <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
                                   {currentValues.order_type}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
+                                IOC Timeout (sec)
+                              </label>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0.1"
+                                  max="300"
+                                  value={currentValues.IOC_timeout || ""}
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      "IOC_timeout",
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                  placeholder="60.0"
+                                />
+                              ) : (
+                                <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
+                                  {currentValues.IOC_timeout || "60.0"}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
+                                Bid/Ask Average
+                              </label>
+                              {isEditing ? (
+                                <select
+                                  value={
+                                    currentValues.no_of_bidask_average || 1
+                                  }
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      "no_of_bidask_average",
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                >
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                                  <option value={3}>3</option>
+                                  <option value={4}>4</option>
+                                  <option value={5}>5</option>
+                                </select>
+                              ) : (
+                                <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
+                                  {currentValues.no_of_bidask_average || 1}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
+                                Pricing Method
+                              </label>
+                              {isEditing ? (
+                                <select
+                                  value={
+                                    currentValues.pricing_method || "average"
+                                  }
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      "pricing_method",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                >
+                                  <option value="average">Average</option>
+                                  <option value="depth">Depth</option>
+                                </select>
+                              ) : (
+                                <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
+                                  {currentValues.pricing_method || "average"}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
+                                Depth Index
+                              </label>
+                              {isEditing ? (
+                                <select
+                                  value={currentValues.depth_index || 3}
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      "depth_index",
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  disabled={
+                                    currentValues.pricing_method === "average"
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <option value={1}>1st (Best)</option>
+                                  <option value={2}>2nd</option>
+                                  <option value={3}>3rd</option>
+                                  <option value={4}>4th</option>
+                                  <option value={5}>5th</option>
+                                </select>
+                              ) : (
+                                <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
+                                  {currentValues.depth_index || 3}
+                                  {currentValues.pricing_method === "depth"
+                                    ? " (Used)"
+                                    : " (Ignored)"}
                                 </div>
                               )}
                             </div>
@@ -987,13 +1229,13 @@ const AdvancedOptionsTable = () => {
                       </div>
 
                       {/* Users Section - Takes 1 column */}
-                      <div className="space-y-4">
+                      <div className="xl:col-span-1 space-y-4">
                         <h4 className="text-md font-semibold text-light-text-primary dark:text-dark-text-primary border-b border-light-border dark:border-dark-border pb-2">
                           Selected Users
                         </h4>
                         <div className="bg-light-elevated dark:bg-dark-elevated rounded-lg p-4">
                           {(currentValues.user_ids || []).length > 0 ? (
-                            <div className="flex flex-wrap gap-2 mb-3">
+                            <div className="space-y-2 mb-3">
                               {(currentValues.user_ids || []).map((userId) => {
                                 const user = usersForDropdown.find(
                                   (u) =>
@@ -1003,12 +1245,12 @@ const AdvancedOptionsTable = () => {
                                   ? user.username ?? user.userid ?? user.id
                                   : userId;
                                 return (
-                                  <span
+                                  <div
                                     key={userId}
                                     className="inline-block px-2 py-1 bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent text-xs rounded border border-light-accent/20 dark:border-dark-accent/20"
                                   >
                                     {label}
-                                  </span>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -1019,7 +1261,7 @@ const AdvancedOptionsTable = () => {
                           )}
 
                           {isEditing && (
-                            <div className="grid grid-cols-2 gap-1 max-h-32 overflow-y-auto">
+                            <div className="space-y-1 max-h-32 overflow-y-auto">
                               {Array.isArray(usersForDropdown) &&
                                 usersForDropdown.map((u) => {
                                   const val = String(u.userid ?? u.id);
@@ -1035,7 +1277,7 @@ const AdvancedOptionsTable = () => {
                                   return (
                                     <label
                                       key={val}
-                                      className="flex items-center space-x-1 text-xs cursor-pointer hover:bg-light-surface dark:hover:bg-dark-surface p-1 rounded"
+                                      className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-light-surface dark:hover:bg-dark-surface p-1 rounded"
                                     >
                                       <input
                                         type="checkbox"

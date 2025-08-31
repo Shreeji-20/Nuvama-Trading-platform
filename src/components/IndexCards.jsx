@@ -1,8 +1,5 @@
-import React, { useState, useEffect } from "react";
-
-// base URLs (development / production)
-const DEV_BASE_URL = "http://localhost:8000";
-const PROD_BASE_URL = "https://api.example.com"; // replace with real prod URL
+import React, { useState, useEffect, useCallback } from "react";
+import config from "../config/api";
 
 // Icon mapping for different indices
 const getIndexIcon = (symbol) => {
@@ -132,16 +129,18 @@ const IndexCard = ({ indexData }) => {
   const icon = getIndexIcon(symbol);
   const exchange = getExchangeName(symbol);
 
-  const isPositive = change >= 0;
+  // Safe calculation for change direction
+  const isPositive = change !== null && change >= 0;
   const changeColor = isPositive
     ? "text-green-600 dark:text-green-400"
     : "text-red-600 dark:text-red-400";
 
   const formatNumber = (num) => {
+    if (!num || num === 0) return "0";
     if (num >= 1e9) return `${(num / 1e9).toFixed(1)}B`;
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
     if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
-    return num.toString();
+    return num.toLocaleString("en-IN");
   };
 
   return (
@@ -161,7 +160,7 @@ const IndexCard = ({ indexData }) => {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+          <div className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
             {price
               ? price.toLocaleString("en-IN", { minimumFractionDigits: 2 })
               : "--"}
@@ -231,66 +230,134 @@ const IndexCards = ({ indices = [], className = "" }) => {
   const [error, setError] = useState(null);
 
   // Fetch index data from backend
-  const fetchIndexData = async () => {
-    if (!indices || indices.length === 0) return;
+  const fetchIndexData = useCallback(async () => {
+    if (!indices || indices.length === 0) {
+      console.log("No indices provided or empty array");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // If indices is an array of strings, fetch data for each
+      // If indices is an array of strings, fetch all data with single request
       if (typeof indices[0] === "string") {
-        const promises = indices.map(async (symbol) => {
-          try {
-            const response = await fetch(`${DEV_BASE_URL}/index/${symbol}`);
-            if (!response.ok) throw new Error(`Failed to fetch ${symbol}`);
-            const data = await response.json();
-            return {
-              symbol,
-              name: symbol,
-              price:
-                data?.response?.data?.ltp || data.ltp || data.current_price,
-              change:
-                data?.response?.data?.ltp - data?.response?.data?.c ||
-                data.net_change,
-              changePercent:
-                ((data?.response?.data?.ltp - data?.response?.data?.c) * 100) /
-                  (data?.response?.data?.ltp ||
-                    data.ltp ||
-                    data.current_price) || data.percent_change,
-              high: data?.response?.data?.h || data.day_high,
-              low: data?.response?.data?.l || data.day_low,
-              volume: data?.response?.data?.vol || data.total_volume,
-            };
-          } catch (err) {
-            console.error(`Error fetching ${symbol}:`, err);
-            // Return default data structure for failed requests
-            return {
-              symbol,
-              name: symbol,
-              price: null,
-              change: null,
-              changePercent: null,
-              high: null,
-              low: null,
-              volume: null,
-            };
-          }
-        });
+        try {
+          // Make single request to get all index data
+          const response = await fetch(config.buildUrl(config.ENDPOINTS.INDEX));
 
-        const results = await Promise.all(promises);
-        setIndexData(results);
+          if (!response.ok)
+            throw new Error(`Failed to fetch index data: ${response.status}`);
+          const allData = await response.json();
+
+          // Process and filter data for requested symbols
+          if (Array.isArray(allData) && allData.length > 0) {
+            const processedData = indices.map((symbol) => {
+              // Find matching data where response.data.symbol === symbol
+              const symbolData = allData.find((item) => {
+                const itemSymbol = item?.response?.data?.symbol;
+
+                return itemSymbol === symbol;
+              });
+
+              if (symbolData) {
+                // Extract data with proper fallbacks
+                const ltp =
+                  symbolData?.response?.data?.ltp ||
+                  symbolData?.ltp ||
+                  symbolData?.current_price ||
+                  0;
+                const previousClose =
+                  symbolData?.response?.data?.c ||
+                  symbolData?.previous_close ||
+                  ltp;
+                const change = ltp - previousClose;
+                const changePercent =
+                  previousClose !== 0 ? (change * 100) / previousClose : 0;
+
+                const processedItem = {
+                  symbol,
+                  name:
+                    symbolData?.response?.data?.symbol ||
+                    symbolData?.name ||
+                    symbol,
+                  price: ltp,
+                  change: change,
+                  changePercent: changePercent,
+                  high:
+                    symbolData?.response?.data?.h ||
+                    symbolData?.day_high ||
+                    ltp,
+                  low:
+                    symbolData?.response?.data?.l || symbolData?.day_low || ltp,
+                  volume:
+                    symbolData?.response?.data?.vol ||
+                    symbolData?.total_volume ||
+                    0,
+                };
+
+                return processedItem;
+              } else {
+                console.warn(`❌ No data found for symbol: ${symbol}`);
+                console.log(
+                  "Available symbols in response:",
+                  allData.map(
+                    (item) =>
+                      item?.response?.data?.symbol || item?.symbol || "unknown"
+                  )
+                );
+
+                // Return default data structure for missing symbols
+                return {
+                  symbol,
+                  name: symbol,
+                  price: null,
+                  change: null,
+                  changePercent: null,
+                  high: null,
+                  low: null,
+                  volume: null,
+                };
+              }
+            });
+
+            setIndexData(processedData);
+          } else {
+            console.error("Invalid data structure:", allData);
+            throw new Error(
+              "No index data received from API or data is not an array"
+            );
+          }
+        } catch (err) {
+          console.error("Error fetching index data:", err);
+          setError(`Failed to fetch index data: ${err.message}`);
+
+          // Set default data structure for all symbols on error
+          const defaultData = indices.map((symbol) => ({
+            symbol,
+            name: symbol,
+            price: null,
+            change: null,
+            changePercent: null,
+            high: null,
+            low: null,
+            volume: null,
+          }));
+          console.log("Setting default data:", defaultData);
+          setIndexData(defaultData);
+        }
       } else {
         // If indices is already an array of objects, use it directly
+        console.log("Using indices as object array:", indices);
         setIndexData(indices);
       }
     } catch (err) {
-      console.error("Error fetching index data:", err);
+      console.error("Error in fetchIndexData:", err);
       setError("Failed to fetch index data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [indices]);
 
   useEffect(() => {
     fetchIndexData();
@@ -298,14 +365,17 @@ const IndexCards = ({ indices = [], className = "" }) => {
 
   // Auto-refresh data every 30 seconds
   useEffect(() => {
+    if (!indices || indices.length === 0) return;
+
     const interval = setInterval(() => {
       fetchIndexData();
-    }, 1000);
+    }, 1000); // 1 second
 
     return () => clearInterval(interval);
   }, [indices]);
 
   if (loading && indexData.length === 0) {
+    console.log("Showing loading state");
     return (
       <div className={`grid gap-6 ${className}`}>
         {Array.from({ length: indices.length || 2 }).map((_, index) => (
@@ -338,6 +408,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
   }
 
   if (error) {
+    console.log("Showing error state:", error);
     return (
       <div
         className={`p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl ${className}`}
@@ -363,6 +434,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
   }
 
   if (!indexData || indexData.length === 0) {
+    console.log("No data to display - returning null");
     return null;
   }
 
@@ -377,9 +449,9 @@ const IndexCards = ({ indices = [], className = "" }) => {
 
   return (
     <div className={`grid ${getGridCols(indexData.length)} gap-6 ${className}`}>
-      {indexData.map((data, index) => (
-        <IndexCard key={data.symbol || index} indexData={data} />
-      ))}
+      {indexData.map((data, index) => {
+        return <IndexCard key={data.symbol || index} indexData={data} />;
+      })}
     </div>
   );
 };

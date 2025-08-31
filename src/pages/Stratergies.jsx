@@ -1,10 +1,7 @@
 // src/pages/Orders.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import IndexCards from "../components/IndexCards";
-
-// base URLs (development / production)
-const DEV_BASE_URL = "http://localhost:8000";
-const PROD_BASE_URL = "https://api.example.com"; // replace with real prod URL
+import config from "../config/api";
 
 export default function Stratergies() {
   // ----- Select options -----
@@ -47,7 +44,7 @@ export default function Stratergies() {
   });
 
   useEffect(() => {
-    fetch(`${DEV_BASE_URL}/lotsizes`)
+    fetch(config.buildUrl(config.ENDPOINTS.LOTSIZES))
       .then((response) => response.json())
       .then((data) => {
         console.log(data);
@@ -191,7 +188,7 @@ export default function Stratergies() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1`);
+      const res = await fetch(config.buildUrl(config.ENDPOINTS.STRATEGIES));
       const data = await res.json();
       console.log(data);
       // Normalize array and field names
@@ -216,7 +213,7 @@ export default function Stratergies() {
       setOrders(normalized);
       // also fetch logged-in users for dropdown (filter later)
       try {
-        const ures = await fetch(`${DEV_BASE_URL}/users`);
+        const ures = await fetch(config.buildUrl(config.ENDPOINTS.USERS));
         const udata = await ures.json();
         const arr = Array.isArray(udata)
           ? udata
@@ -246,7 +243,7 @@ export default function Stratergies() {
       if (editingIndex !== null) {
         // update
         const body = { ...form };
-        await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1/update`, {
+        await fetch(config.buildUrl(config.ENDPOINTS.STRATEGIES_UPDATE), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -257,11 +254,14 @@ export default function Stratergies() {
         setEditingIndex(null);
       } else {
         // create
-        const res = await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1/add`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
+        const res = await fetch(
+          config.buildUrl(config.ENDPOINTS.STRATEGIES_ADD),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(form),
+          }
+        );
         const created = await res.json();
         setOrders((prev) => [...prev, created]);
         fetchOrders();
@@ -291,7 +291,7 @@ export default function Stratergies() {
   const saveInlineEdit = async (index) => {
     const body = orders[index];
     try {
-      await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1/update`, {
+      await fetch(config.buildUrl(config.ENDPOINTS.STRATEGIES_UPDATE), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -304,9 +304,12 @@ export default function Stratergies() {
 
   const deleteOrder = async (index) => {
     // optional: call DELETE endpoint here
-    await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1/${orders[index].id}`, {
-      method: "DELETE",
-    });
+    await fetch(
+      config.buildUrl(`${config.ENDPOINTS.STRATEGIES}/${orders[index].id}`),
+      {
+        method: "DELETE",
+      }
+    );
     setOrders((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -314,7 +317,7 @@ export default function Stratergies() {
   const updateOrderState = async (index, newState) => {
     const o = { ...orders[index], run_state: newState };
     try {
-      await fetch(`${DEV_BASE_URL}/stratergy/stratergy_1/update`, {
+      await fetch(config.buildUrl(config.ENDPOINTS.STRATEGIES_UPDATE), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(o),
@@ -339,7 +342,7 @@ export default function Stratergies() {
     let t;
     async function load() {
       try {
-        const res = await fetch(`${DEV_BASE_URL}/optiondata`);
+        const res = await fetch(config.buildUrl(config.ENDPOINTS.OPTIONDATA));
         if (!res.ok) throw new Error("Failed to fetch optiondata");
         const data = await res.json();
         if (mounted) setOptionData(Array.isArray(data) ? data : []);

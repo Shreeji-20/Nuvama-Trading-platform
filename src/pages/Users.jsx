@@ -1,20 +1,20 @@
 import { data } from "autoprefixer";
 import React, { useState, useEffect } from "react";
-
-// base URLs (development / production)
-const DEV_BASE_URL = "http://localhost:8000";
-const PROD_BASE_URL = "https://api.example.com"; // replace with real prod URL
+import config from "../config/api";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState({
     apikey: "",
     apisecret: "",
-    reqid: "",
+    password: "",
+    totp_secret: "",
     userid: "",
   });
   const [editIndex, setEditIndex] = useState(null);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [loginStatus, setLoginStatus] = useState({});
+  const [loginProgress, setLoginProgress] = useState({});
 
   const [saveIndex, setSaveIndex] = useState(null);
 
@@ -26,7 +26,7 @@ export default function Users() {
   }, [users]);
   // Fetch users from API on load
   useEffect(() => {
-    fetch(`${DEV_BASE_URL}/users`)
+    fetch(config.buildUrl(config.ENDPOINTS.USERS))
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -46,9 +46,10 @@ export default function Users() {
   };
 
   const addUser = () => {
-    if (!form.apikey || !form.apisecret || !form.userid) return;
+    if (!form.apikey || !form.apisecret || !form.userid || !form.password)
+      return;
 
-    fetch(`${DEV_BASE_URL}/user`, {
+    fetch(config.buildUrl(config.ENDPOINTS.USER), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -56,7 +57,13 @@ export default function Users() {
       .then((res) => res.json())
       .then(() => {
         setUsers([...users, { ...form, lastLogin: null }]);
-        setForm({ apikey: "", apisecret: "", reqid: "", userid: "" });
+        setForm({
+          apikey: "",
+          apisecret: "",
+          password: "",
+          totp_secret: "",
+          userid: "",
+        });
         setMessage({ type: "success", text: "User added successfully!" });
       })
       .catch(() => setMessage({ type: "error", text: "Failed to add user!" }));
@@ -70,7 +77,7 @@ export default function Users() {
 
   const saveEdit = (index) => {
     const updatedUser = users[index];
-    fetch(`${DEV_BASE_URL}/user`, {
+    fetch(config.buildUrl(config.ENDPOINTS.USER), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedUser),
@@ -86,37 +93,152 @@ export default function Users() {
   };
 
   const handleLogin = (index) => {
-    if (!users[index].reqid)
-      return setMessage({ type: "warning", text: "Req ID is Empty !" });
+    if (!users[index].password)
+      return setMessage({ type: "warning", text: "Password is Empty !" });
+
     const user = users[index];
-    fetch(`${DEV_BASE_URL}/userlogin`, {
+    const userId = user.userid;
+
+    // Initialize login status
+    setLoginStatus({
+      ...loginStatus,
+      [userId]: "starting",
+    });
+
+    setLoginProgress({
+      ...loginProgress,
+      [userId]: {
+        step: "initializing",
+        message: "🚀 Starting login process...",
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    });
+
+    setMessage({ type: "info", text: `Starting login for ${userId}...` });
+
+    fetch(config.buildUrl(config.ENDPOINTS.USERLOGIN), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(user),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Login Failed");
-        return res;
+        // Update progress
+        setLoginProgress({
+          ...loginProgress,
+          [userId]: {
+            step: "web_login",
+            message: "🔐 Processing web login...",
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        });
+
+        if (!res.ok) {
+          return res.json().then((errorData) => {
+            throw new Error(errorData.message || "Login Failed");
+          });
+        }
+        return res.json();
       })
       .then((data) => {
-        console.log(data);
-        if (data.ok) {
-          const updatedUsers = [...users];
-          updatedUsers[index].lastLogin = new Date().toLocaleString();
-          setUsers(updatedUsers);
-          setSaveIndex(index);
-          setMessage({
-            type: "success",
-            text: "Login successful!",
-          });
-          // saveEdit(updatedUsers);
-          // updatedUsers[index].reqid = "";
+        console.log("Login response:", data);
+
+        if (data.status === "success") {
+          // Update progress through steps
+          if (data.steps) {
+            data.steps.forEach((step, stepIndex) => {
+              setTimeout(() => {
+                setLoginProgress({
+                  ...loginProgress,
+                  [userId]: {
+                    step: step.step,
+                    message: `✅ ${step.message}`,
+                    timestamp: new Date().toLocaleTimeString(),
+                  },
+                });
+              }, stepIndex * 1000);
+            });
+          }
+
+          // Final success update
+          setTimeout(() => {
+            const updatedUsers = [...users];
+            updatedUsers[index].lastLogin = new Date().toLocaleString();
+            setUsers(updatedUsers);
+            setSaveIndex(index);
+
+            setLoginStatus({
+              ...loginStatus,
+              [userId]: "success",
+            });
+
+            setLoginProgress({
+              ...loginProgress,
+              [userId]: {
+                step: "completed",
+                message: "🎉 Login completed successfully!",
+                timestamp: new Date().toLocaleTimeString(),
+              },
+            });
+
+            setMessage({
+              type: "success",
+              text: `Login successful for ${userId}!`,
+            });
+
+            // Clear progress after 5 seconds
+            setTimeout(() => {
+              setLoginProgress((prev) => {
+                const newProgress = { ...prev };
+                delete newProgress[userId];
+                return newProgress;
+              });
+              setLoginStatus((prev) => {
+                const newStatus = { ...prev };
+                delete newStatus[userId];
+                return newStatus;
+              });
+            }, 5000);
+          }, (data.steps?.length || 1) * 1000);
         } else {
-          console.log("here ");
-          setMessage({ type: "error", text: data.message || "Login failed!" });
+          throw new Error(data.message || "Login failed!");
         }
       })
-      .catch(() => setMessage({ type: "error", text: "Failed to login!" }));
+      .catch((error) => {
+        console.error("Login error:", error);
+
+        setLoginStatus({
+          ...loginStatus,
+          [userId]: "error",
+        });
+
+        setLoginProgress({
+          ...loginProgress,
+          [userId]: {
+            step: "error",
+            message: `❌ ${error.message}`,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        });
+
+        setMessage({
+          type: "error",
+          text: `Login failed for ${userId}: ${error.message}`,
+        });
+
+        // Clear error status after 10 seconds
+        setTimeout(() => {
+          setLoginProgress((prev) => {
+            const newProgress = { ...prev };
+            delete newProgress[userId];
+            return newProgress;
+          });
+          setLoginStatus((prev) => {
+            const newStatus = { ...prev };
+            delete newStatus[userId];
+            return newStatus;
+          });
+        }, 10000);
+      });
   };
 
   const deleteUser = (index) => {
@@ -126,7 +248,7 @@ export default function Users() {
       return;
     }
 
-    fetch(`${DEV_BASE_URL}/deleteuser`, {
+    fetch(config.buildUrl(config.ENDPOINTS.DELETEUSER), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(users[index]),
@@ -180,6 +302,8 @@ export default function Users() {
                 ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
                 : message.type === "warning"
                 ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800"
+                : message.type === "info"
+                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                 : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
             }`}
           >
@@ -210,6 +334,19 @@ export default function Users() {
                   />
                 </svg>
               )}
+              {message.type === "info" && (
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
               {message.type === "error" && (
                 <svg
                   className="w-5 h-5"
@@ -234,7 +371,7 @@ export default function Users() {
             <div className="w-3 h-3 bg-blue-500 dark:bg-dark-accent rounded-full"></div>
             Add New User
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
                 Nuvama User ID
@@ -245,6 +382,32 @@ export default function Users() {
                 value={form.userid}
                 onChange={handleChange}
                 placeholder="Enter user ID"
+                className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter password"
+                className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                TOTP Secret
+              </label>
+              <input
+                type="password"
+                name="totp_secret"
+                value={form.totp_secret}
+                onChange={handleChange}
+                placeholder="Enter TOTP secret"
                 className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200"
               />
             </div>
@@ -271,19 +434,6 @@ export default function Users() {
                 value={form.apisecret}
                 onChange={handleChange}
                 placeholder="Enter API secret"
-                className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                Request ID
-              </label>
-              <input
-                type="text"
-                name="reqid"
-                value={form.reqid}
-                onChange={handleChange}
-                placeholder="Enter request ID"
                 className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-3 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent focus:border-blue-500 dark:focus:border-dark-accent transition-colors duration-200"
               />
             </div>
@@ -355,13 +505,16 @@ export default function Users() {
                         User ID
                       </th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                        Password
+                      </th>
+                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                        TOTP Secret
+                      </th>
+                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                         API Key
                       </th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                         API Secret
-                      </th>
-                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
-                        Request ID
                       </th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                         Last Login
@@ -395,6 +548,38 @@ export default function Users() {
                         <td className="p-4">
                           {editIndex === index ? (
                             <input
+                              type="password"
+                              name="password"
+                              value={user.password || ""}
+                              onChange={(e) => handleEditChange(e, index)}
+                              className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent"
+                              placeholder="Enter password"
+                            />
+                          ) : (
+                            <span className="text-gray-700 dark:text-dark-text-secondary font-mono text-sm">
+                              {user.password ? "•".repeat(8) : "-"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editIndex === index ? (
+                            <input
+                              type="password"
+                              name="totp_secret"
+                              value={user.totp_secret || ""}
+                              onChange={(e) => handleEditChange(e, index)}
+                              className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent"
+                              placeholder="Enter TOTP secret"
+                            />
+                          ) : (
+                            <span className="text-gray-700 dark:text-dark-text-secondary font-mono text-sm">
+                              {user.totp_secret ? "•".repeat(12) : "-"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editIndex === index ? (
+                            <input
                               type="text"
                               name="apikey"
                               value={user.apikey}
@@ -419,21 +604,6 @@ export default function Users() {
                           ) : (
                             <span className="text-gray-700 dark:text-dark-text-secondary font-mono text-sm">
                               {"•".repeat(Math.min(user.apisecret.length, 12))}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {editIndex === index ? (
-                            <input
-                              type="text"
-                              name="reqid"
-                              value={user.reqid}
-                              onChange={(e) => handleEditChange(e, index)}
-                              className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-accent"
-                            />
-                          ) : (
-                            <span className="text-gray-700 dark:text-dark-text-secondary">
-                              {user.reqid || "-"}
                             </span>
                           )}
                         </td>
@@ -497,22 +667,86 @@ export default function Users() {
                             )}
                             <button
                               onClick={() => handleLogin(index)}
-                              className="bg-blue-600 dark:bg-dark-accent hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
+                              disabled={loginStatus[user.userid] === "starting"}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
+                                loginStatus[user.userid] === "starting"
+                                  ? "bg-gray-400 cursor-not-allowed text-white"
+                                  : loginStatus[user.userid] === "success"
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : loginStatus[user.userid] === "error"
+                                  ? "bg-red-600 hover:bg-red-700 text-white"
+                                  : "bg-blue-600 dark:bg-dark-accent hover:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                              }`}
                             >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                                />
-                              </svg>
-                              Login
+                              {loginStatus[user.userid] === "starting" ? (
+                                <>
+                                  <svg
+                                    className="w-4 h-4 animate-spin"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                  </svg>
+                                  Logging in...
+                                </>
+                              ) : loginStatus[user.userid] === "success" ? (
+                                <>
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                  Success
+                                </>
+                              ) : loginStatus[user.userid] === "error" ? (
+                                <>
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                  Retry
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                                    />
+                                  </svg>
+                                  Login
+                                </>
+                              )}
                             </button>
                             <button
                               onClick={() => deleteUser(index)}
@@ -588,10 +822,18 @@ export default function Users() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-dark-text-secondary">
-                              Request ID:
+                              Password:
                             </span>
                             <span className="text-gray-900 dark:text-dark-text-primary">
-                              {user.reqid || "-"}
+                              {user.password ? "•".repeat(8) : "-"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-dark-text-secondary">
+                              TOTP Secret:
+                            </span>
+                            <span className="text-gray-900 dark:text-dark-text-primary">
+                              {user.totp_secret ? "•".repeat(8) : "-"}
                             </span>
                           </div>
                         </div>
@@ -609,6 +851,22 @@ export default function Users() {
                           placeholder="User ID"
                         />
                         <input
+                          type="password"
+                          name="password"
+                          value={user.password || ""}
+                          onChange={(e) => handleEditChange(e, index)}
+                          className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
+                          placeholder="Password"
+                        />
+                        <input
+                          type="password"
+                          name="totp_secret"
+                          value={user.totp_secret || ""}
+                          onChange={(e) => handleEditChange(e, index)}
+                          className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
+                          placeholder="TOTP Secret"
+                        />
+                        <input
                           type="text"
                           name="apikey"
                           value={user.apikey}
@@ -623,14 +881,6 @@ export default function Users() {
                           onChange={(e) => handleEditChange(e, index)}
                           className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
                           placeholder="API Secret"
-                        />
-                        <input
-                          type="text"
-                          name="reqid"
-                          value={user.reqid}
-                          onChange={(e) => handleEditChange(e, index)}
-                          className="w-full border border-gray-300 dark:border-dark-border rounded-lg p-2 text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary"
-                          placeholder="Request ID"
                         />
                       </div>
                     ) : null}
@@ -679,22 +929,86 @@ export default function Users() {
                       )}
                       <button
                         onClick={() => handleLogin(index)}
-                        className="flex-1 px-3 py-2 rounded-lg bg-blue-600 dark:bg-dark-accent hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+                        disabled={loginStatus[user.userid] === "starting"}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1 ${
+                          loginStatus[user.userid] === "starting"
+                            ? "bg-gray-400 cursor-not-allowed text-white"
+                            : loginStatus[user.userid] === "success"
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : loginStatus[user.userid] === "error"
+                            ? "bg-red-600 hover:bg-red-700 text-white"
+                            : "bg-blue-600 dark:bg-dark-accent hover:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                        }`}
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"
-                          />
-                        </svg>
-                        Login
+                        {loginStatus[user.userid] === "starting" ? (
+                          <>
+                            <svg
+                              className="w-4 h-4 animate-spin"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            Logging in...
+                          </>
+                        ) : loginStatus[user.userid] === "success" ? (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            Success
+                          </>
+                        ) : loginStatus[user.userid] === "error" ? (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                            Retry
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"
+                              />
+                            </svg>
+                            Login
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => deleteUser(index)}
@@ -722,6 +1036,104 @@ export default function Users() {
             </>
           )}
         </div>
+
+        {/* Login Progress Display */}
+        {Object.keys(loginProgress).length > 0 && (
+          <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border mt-8">
+            <div className="p-6 md:p-8 border-b border-gray-200 dark:border-dark-border">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 dark:bg-blue-400 rounded-full animate-pulse"></div>
+                Login Progress
+              </h3>
+            </div>
+            <div className="p-6 md:p-8">
+              <div className="space-y-4">
+                {Object.entries(loginProgress).map(([userId, progress]) => (
+                  <div
+                    key={userId}
+                    className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary">
+                            User: {userId}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Step: {progress.step}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {progress.timestamp}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {loginStatus[userId] === "starting" && (
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      )}
+                      <p
+                        className={`text-sm font-medium ${
+                          progress.step === "error"
+                            ? "text-red-600 dark:text-red-400"
+                            : progress.step === "completed"
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-blue-600 dark:text-blue-400"
+                        }`}
+                      >
+                        {progress.message}
+                      </p>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-3">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            progress.step === "error"
+                              ? "bg-red-500"
+                              : progress.step === "completed"
+                              ? "bg-green-500"
+                              : progress.step === "web_login"
+                              ? "bg-blue-500"
+                              : "bg-blue-300"
+                          }`}
+                          style={{
+                            width:
+                              progress.step === "initializing"
+                                ? "20%"
+                                : progress.step === "web_login"
+                                ? "50%"
+                                : progress.step === "completed"
+                                ? "100%"
+                                : progress.step === "error"
+                                ? "100%"
+                                : "30%",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

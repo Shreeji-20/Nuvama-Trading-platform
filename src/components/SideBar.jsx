@@ -1,6 +1,31 @@
 import React from "react";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Sidebar({ isOpen = true, onClose = () => {} }) {
+  const location = useLocation();
+
+  const isActive = (path) => {
+    if (path === "/" || path === "/dashboard") {
+      return location.pathname === "/" || location.pathname === "/dashboard";
+    }
+    return location.pathname === path;
+  };
+
+  const NavLink = ({ to, children, icon }) => (
+    <Link
+      to={to}
+      className={`flex items-center gap-3 px-3 py-2 rounded transition-colors duration-200 ${
+        isActive(to)
+          ? "bg-blue-600 text-white"
+          : "text-gray-300 hover:bg-white/10 hover:text-white"
+      }`}
+      // onClick={onClose}
+    >
+      {icon && <span className="text-lg">{icon}</span>}
+      {children}
+    </Link>
+  );
+
   return (
     <>
       {/* Sidebar: always visible on desktop, togglable on mobile */}
@@ -42,55 +67,34 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
             </svg>
           </button>
         </div>
-        <nav className="space-y-4 text-sm">
-          <a
-            href="#dashboard"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
+        <nav className="space-y-2 text-sm">
+          <NavLink to="/dashboard" icon="📊">
             Dashboard
-          </a>
-          <a
-            href="/users"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
+          </NavLink>
+          <NavLink to="/users" icon="👥">
             Users
-          </a>
-          <a
-            href="/stratergies"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
+          </NavLink>
+          <NavLink to="/stratergies" icon="💼">
             Strategies
-          </a>
-          <a
-            href="/optionchain"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
-            OptionChain
-          </a>
-          <a
-            href="/optionchaincustom"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
-            OptionChain - Custom Strikes
-          </a>
-          <a
-            href="/multilegspread"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
-            Multi-Leg Spread Builder
-          </a>
-          <a
-            href="/advanced-options"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
-            Advanced Options Strategy
-          </a>
-          <a
-            href="/advanced-options-table"
-            className="block px-3 py-2 rounded text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200"
-          >
+          </NavLink>
+          <NavLink to="/optionchain" icon="⛓️">
+            Option Chain
+          </NavLink>
+          <NavLink to="/optionchaincustom" icon="🎯">
+            Custom Option Chain
+          </NavLink>
+          <NavLink to="/multilegspread" icon="📈">
+            Multi-Leg Spread
+          </NavLink>
+          <NavLink to="/advanced-options" icon="🚀">
+            Advanced Options
+          </NavLink>
+          <NavLink to="/advanced-options-table" icon="📋">
             Advanced Options Table
-          </a>
+          </NavLink>
+          <NavLink to="/orders-new" icon="🔄">
+            Orders Management
+          </NavLink>
         </nav>
       </aside>
       {/* )} */}

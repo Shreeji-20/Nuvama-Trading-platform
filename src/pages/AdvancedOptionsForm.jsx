@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-
-const DEV_BASE_URL = "http://localhost:8000";
+import IndexCards from "../components/IndexCards";
+import config from "../config/api";
 
 const AdvancedOptionsForm = () => {
   // Form state
@@ -11,18 +11,24 @@ const AdvancedOptionsForm = () => {
         strike: 20000,
         type: "CE",
         expiry: 0, // Numeric expiry: 0=current week
+        action: "BUY", // Individual leg action
+        quantity: 75, // Individual leg quantity based on symbol lot size
       },
       leg2: {
         symbol: "NIFTY",
         strike: 20100,
         type: "PE",
-        expiry: 1, // Numeric expiry: 1=next week
+        expiry: 0, // Numeric expiry: 1=next week
+        action: "SELL", // Individual leg action
+        quantity: 75, // Individual leg quantity based on symbol lot size
       },
       leg3: {
         symbol: "NIFTY",
         strike: 20200,
         type: "CE",
-        expiry: 2, // Numeric expiry: 2=following week
+        expiry: 0, // Numeric expiry: 2=following week
+        action: "BUY", // Individual leg action
+        quantity: 75, // Individual leg quantity based on symbol lot size
       },
     },
     bidding_leg: {
@@ -30,6 +36,8 @@ const AdvancedOptionsForm = () => {
       strike: 20150,
       type: "PE",
       expiry: 0, // Numeric expiry: 0=current week
+      action: "BUY", // Bidding leg action
+      quantity: 75, // Individual bidding leg quantity based on symbol lot size
     },
     base_legs: ["leg1", "leg2", "leg3"],
     bidding_leg_key: "bidding_leg",
@@ -38,10 +46,9 @@ const AdvancedOptionsForm = () => {
     start_price: 50,
     exit_start: 150,
     action: "BUY",
-    quantity: 50, // Default to 1 lot of NIFTY
-    slices: 50, // Default to 1 lot of NIFTY
+    slice_multiplier: 1, // Slice multiplier (1x, 2x, etc.) applied to each leg's lot size
     user_ids: [],
-    run_state: 0,
+    run_state: 3,
     order_type: "LIMIT",
     IOC_timeout: 30,
     exit_price_gap: 2.0,
@@ -52,10 +59,10 @@ const AdvancedOptionsForm = () => {
   // Counter for generating unique leg IDs
   const [legCounter, setLegCounter] = useState(4);
 
-  // State for storing lot sizes from API
+  // State for storing lot sizes from API (updated defaults to match Stratergies.jsx)
   const [lotSizes, setLotSizes] = useState({
-    NIFTY: 50,
-    BANKNIFTY: 15,
+    NIFTY: 75,
+    BANKNIFTY: 25,
     FINNIFTY: 40,
     SENSEX: 10,
   });
@@ -66,7 +73,7 @@ const AdvancedOptionsForm = () => {
   // Fetch users for dropdown
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${DEV_BASE_URL}/users`);
+      const response = await fetch(config.buildUrl(config.ENDPOINTS.USERS));
       if (response.ok) {
         const users = await response.json();
         setUsersForDropdown(users);
@@ -78,21 +85,38 @@ const AdvancedOptionsForm = () => {
     }
   };
 
-  // Fetch lot sizes from backend
+  // Fetch lot sizes from backend (similar to Stratergies.jsx)
   const fetchLotSizes = async () => {
     try {
-      const response = await fetch(`${DEV_BASE_URL}/lotsizes`);
+      const response = await fetch(config.buildUrl(config.ENDPOINTS.LOTSIZES));
       if (response.ok) {
-        const sizes = await response.json();
-        setLotSizes(sizes);
+        const data = await response.json();
+        console.log("Fetched lot sizes:", data);
+
+        // Process the fetched data - handle both object and array formats
+        if (data && typeof data === "object") {
+          if (Array.isArray(data)) {
+            // If data is array format: [{ symbol: "NIFTY", lotsize: 75 }, ...]
+            const lotSizeMap = {};
+            data.forEach((item) => {
+              if (item.symbol && item.lotsize) {
+                lotSizeMap[item.symbol] = item.lotsize;
+              }
+            });
+            if (Object.keys(lotSizeMap).length > 0) {
+              setLotSizes((prev) => ({ ...prev, ...lotSizeMap }));
+            }
+          } else {
+            // If data is object format: { NIFTY: 75, BANKNIFTY: 25, ... }
+            setLotSizes((prev) => ({ ...prev, ...data }));
+          }
+        }
       } else {
         console.error("Error fetching lot sizes:", response.status);
-        // Use default lot sizes if endpoint is not available
         console.log("Using default lot sizes");
       }
     } catch (error) {
       console.error("Error fetching lot sizes:", error);
-      // Use default lot sizes if endpoint is not available
       console.log("Using default lot sizes");
     }
   };
@@ -119,6 +143,106 @@ const AdvancedOptionsForm = () => {
     ];
     return options;
   };
+
+  // Get primary symbol for lot size calculations (from bidding leg or first base leg)
+  const getPrimarySymbol = () => {
+    return (
+      formData.bidding_leg?.symbol ||
+      formData.legs[formData.base_legs[0]]?.symbol ||
+      "NIFTY"
+    );
+  };
+
+  // Get current primary symbol's lot size
+  const getCurrentLotSize = () => {
+    const primarySymbol = getPrimarySymbol();
+    return lotSizes[primarySymbol] || 50; // fallback to 50 if not found
+  };
+
+  // Get quantity options for a specific symbol
+  const getQuantityOptionsForSymbol = (symbol) => {
+    const lotSize = lotSizes[symbol] || 50;
+    const options = [];
+    for (let i = 1; i <= 10; i++) {
+      const quantity = i * lotSize;
+      options.push({
+        value: quantity,
+        label: `${i} Lot (${quantity})`,
+      });
+    }
+    return options;
+  };
+
+  // Get slice multiplier options (1x, 2x, etc.)
+  const getSliceMultiplierOptions = () => {
+    const options = [];
+    for (let i = 1; i <= 10; i++) {
+      options.push({
+        value: i,
+        label: `${i}x`,
+      });
+    }
+    return options;
+  };
+
+  // Calculate effective slice quantity for a symbol
+  const getEffectiveSliceQuantity = (symbol) => {
+    const lotSize = lotSizes[symbol] || 50;
+    return formData.slice_multiplier * lotSize;
+  };
+
+  // Check if slice multiplier is valid for a specific leg
+  const isSliceValidForLeg = (legKey, isLeg = true) => {
+    const leg = isLeg ? formData.legs[legKey] : formData.bidding_leg;
+    if (!leg) return true;
+
+    const effectiveSlice = getEffectiveSliceQuantity(leg.symbol);
+    return effectiveSlice <= leg.quantity;
+  };
+
+  // Get all legs including bidding leg for validation
+  const getAllLegs = () => {
+    const legs = [];
+    // Add base legs
+    Object.keys(formData.legs).forEach((legKey) => {
+      legs.push({ key: legKey, ...formData.legs[legKey], isLeg: true });
+    });
+    // Add bidding leg
+    legs.push({ key: "bidding_leg", ...formData.bidding_leg, isLeg: false });
+    return legs;
+  };
+
+  // Update leg quantities when lot sizes are fetched
+  useEffect(() => {
+    // Update quantities for all legs based on their symbols
+    setFormData((prev) => {
+      const updatedLegs = {};
+      Object.keys(prev.legs).forEach((legKey) => {
+        const leg = prev.legs[legKey];
+        const lotSize = lotSizes[leg.symbol] || 50;
+        updatedLegs[legKey] = {
+          ...leg,
+          quantity: leg.quantity % lotSize === 0 ? leg.quantity : lotSize,
+        };
+      });
+
+      // Update bidding leg quantity
+      const biddingLegLotSize = lotSizes[prev.bidding_leg.symbol] || 50;
+      const updatedBiddingLeg = {
+        ...prev.bidding_leg,
+        quantity:
+          prev.bidding_leg.quantity % biddingLegLotSize === 0
+            ? prev.bidding_leg.quantity
+            : biddingLegLotSize,
+      };
+
+      return {
+        ...prev,
+        legs: updatedLegs,
+        bidding_leg: updatedBiddingLeg,
+      };
+    });
+  }, [lotSizes]);
 
   // Helper function to generate lot options
   const getLotOptions = (symbol) => {
@@ -164,21 +288,32 @@ const AdvancedOptionsForm = () => {
 
   // Handle leg changes
   const handleLegChange = (legKey, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      legs: {
-        ...prev.legs,
-        [legKey]: {
-          ...prev.legs[legKey],
-          [field]: value,
+    setFormData((prev) => {
+      const updatedLeg = {
+        ...prev.legs[legKey],
+        [field]: value,
+      };
+
+      // If symbol is changed, update quantity to match new symbol's lot size
+      if (field === "symbol") {
+        const newLotSize = lotSizes[value] || 50;
+        updatedLeg.quantity = newLotSize;
+      }
+
+      return {
+        ...prev,
+        legs: {
+          ...prev.legs,
+          [legKey]: updatedLeg,
         },
-      },
-    }));
+      };
+    });
   };
 
   // Add new base leg
   const addBaseLeg = () => {
     const newLegKey = `leg${legCounter}`;
+    const defaultLotSize = lotSizes["NIFTY"] || 75;
     setFormData((prev) => ({
       ...prev,
       legs: {
@@ -188,6 +323,8 @@ const AdvancedOptionsForm = () => {
           strike: 20000,
           type: "CE",
           expiry: 0, // Default to current week (numeric)
+          action: "BUY", // Default leg action
+          quantity: defaultLotSize, // Default quantity based on symbol
         },
       },
       base_legs: [...prev.base_legs, newLegKey],
@@ -226,13 +363,23 @@ const AdvancedOptionsForm = () => {
 
   // Handle bidding leg changes
   const handleBiddingLegChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      bidding_leg: {
+    setFormData((prev) => {
+      const updatedBiddingLeg = {
         ...prev.bidding_leg,
         [field]: value,
-      },
-    }));
+      };
+
+      // If symbol is changed, update quantity to match new symbol's lot size
+      if (field === "symbol") {
+        const newLotSize = lotSizes[value] || 50;
+        updatedBiddingLeg.quantity = newLotSize;
+      }
+
+      return {
+        ...prev,
+        bidding_leg: updatedBiddingLeg,
+      };
+    });
   };
 
   // Submit form
@@ -241,8 +388,49 @@ const AdvancedOptionsForm = () => {
     setLoading(true);
     setMessage("");
 
+    // Validation checks for per-leg quantities
+    const allLegs = getAllLegs();
+    for (const leg of allLegs) {
+      const legData =
+        leg.key === "bidding_leg"
+          ? formData.bidding_leg
+          : formData.legs[leg.key];
+      const effectiveSliceQty = getEffectiveSliceQuantity(legData.symbol);
+
+      if (effectiveSliceQty > legData.quantity) {
+        setMessage(
+          `Error: Slice quantity (${effectiveSliceQty}) cannot exceed leg quantity (${legData.quantity}) for ${leg.key}`
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (formData.base_legs.length === 0) {
+      setMessage("Error: Please select at least one base leg for the strategy");
+      setLoading(false);
+      return;
+    }
+
+    // Additional validations for lot size multiples
+    for (const leg of allLegs) {
+      const legData =
+        leg.key === "bidding_leg"
+          ? formData.bidding_leg
+          : formData.legs[leg.key];
+      const lotSize = lotSizes[legData.symbol] || 50;
+
+      if (legData.quantity % lotSize !== 0) {
+        setMessage(
+          `Error: Quantity (${legData.quantity}) must be a multiple of lot size (${lotSize}) for ${legData.symbol} in ${leg.key}`
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-      // Prepare data in the required format (includes notes field)
+      // Prepare data in the required format with per-leg quantities
       const submitData = {
         ...formData.legs, // Spread all legs (leg1, leg2, etc.)
         bidding_leg: formData.bidding_leg,
@@ -253,8 +441,7 @@ const AdvancedOptionsForm = () => {
         start_price: formData.start_price,
         exit_start: formData.exit_start,
         action: formData.action,
-        quantity: formData.quantity,
-        slices: formData.slices,
+        slice_multiplier: formData.slice_multiplier, // Use slice_multiplier instead of individual slices
         user_ids: formData.user_ids,
         run_state: formData.run_state,
         order_type: formData.order_type,
@@ -264,13 +451,16 @@ const AdvancedOptionsForm = () => {
         notes: formData.notes, // Include notes field
       };
 
-      const response = await fetch(`${DEV_BASE_URL}/advanced-options`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submitData),
-      });
+      const response = await fetch(
+        config.buildUrl(config.ENDPOINTS.ADVANCED_OPTIONS),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submitData),
+        }
+      );
 
       if (response.ok) {
         setMessage("Strategy submitted successfully!");
@@ -295,18 +485,24 @@ const AdvancedOptionsForm = () => {
           strike: 20000,
           type: "CE",
           expiry: 0, // Numeric expiry: 0=current week
+          action: "BUY", // Individual leg action
+          quantity: 75, // Default quantity based on NIFTY lot size
         },
         leg2: {
           symbol: "NIFTY",
           strike: 20100,
           type: "PE",
           expiry: 1, // Numeric expiry: 1=next week
+          action: "SELL", // Individual leg action
+          quantity: 75, // Default quantity based on NIFTY lot size
         },
         leg3: {
           symbol: "NIFTY",
           strike: 20200,
           type: "CE",
           expiry: 2, // Numeric expiry: 2=following week
+          action: "BUY", // Individual leg action
+          quantity: 75, // Default quantity based on NIFTY lot size
         },
       },
       bidding_leg: {
@@ -314,6 +510,8 @@ const AdvancedOptionsForm = () => {
         strike: 20150,
         type: "PE",
         expiry: 0, // Numeric expiry: 0=current week
+        action: "BUY", // Bidding leg action
+        quantity: 75, // Default quantity based on NIFTY lot size
       },
       base_legs: ["leg1", "leg2", "leg3"],
       bidding_leg_key: "bidding_leg",
@@ -322,8 +520,7 @@ const AdvancedOptionsForm = () => {
       start_price: 50,
       exit_start: 150,
       action: "BUY",
-      quantity: 50,
-      slices: 50,
+      slice_multiplier: 1, // Use slice_multiplier instead of individual slices
       user_ids: [],
       run_state: 0,
       order_type: "LIMIT",
@@ -337,10 +534,10 @@ const AdvancedOptionsForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-light-gradient dark:bg-dark-gradient p-4 md:p-6">
+    <div className="min-h-screen bg-light-gradient dark:bg-dark-gradient p-2 md:p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 mb-6 border border-light-border dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 mb-4 border border-light-border dark:border-dark-border">
           <div className="flex items-center gap-4">
             <div className="bg-purple-600 dark:bg-purple-500 rounded-xl p-3">
               <svg
@@ -362,22 +559,25 @@ const AdvancedOptionsForm = () => {
                 Advanced Options Strategy
               </h1>
               <p className="text-light-text-secondary dark:text-dark-text-secondary mt-1">
-                Configure multi-leg options strategy with bidding leg
+                Configure multi-leg options strategy with individual leg actions
+                and bidding leg
               </p>
             </div>
           </div>
         </div>
-
+        <div className="max-w-7xl mx-auto mb-4">
+          <IndexCards indices={["NIFTY", "SENSEX"]} className="" />
+        </div>
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Legs Configuration */}
-          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 border border-light-border dark:border-dark-border">
+          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 border border-light-border dark:border-dark-border">
             <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-4">
               Legs Configuration
             </h2>
 
             {/* Expiry Explanation */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6 border border-blue-200 dark:border-blue-800">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-4 border border-blue-200 dark:border-blue-800">
               <div className="flex items-start gap-3">
                 <div className="bg-blue-500 rounded-full p-1 mt-0.5">
                   <svg
@@ -409,16 +609,49 @@ const AdvancedOptionsForm = () => {
               </div>
             </div>
 
+            {/* Individual Actions Explanation */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 mb-6 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-3">
+                <div className="bg-amber-500 rounded-full p-1 mt-0.5">
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                    Individual Leg Actions
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Each leg now has its own <strong>BUY</strong> or{" "}
+                    <strong>SELL</strong> action. The global "Action" setting is
+                    used as fallback, but individual leg actions take
+                    precedence. This allows for complex strategies like iron
+                    condors, butterflies, etc.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Base Legs */}
-            <div className="space-y-6 mb-8">
+            <div className="space-y-4 mb-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-light-text-primary dark:text-dark-text-primary">
+                <h3 className="text-base font-medium text-light-text-primary dark:text-dark-text-primary">
                   Base Legs ({Object.keys(formData.legs).length})
                 </h3>
                 <button
                   type="button"
                   onClick={addBaseLeg}
-                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors flex items-center gap-2"
+                  className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors flex items-center gap-2 text-sm"
                 >
                   <svg
                     className="w-4 h-4"
@@ -437,15 +670,28 @@ const AdvancedOptionsForm = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(formData.legs).map(([legKey, legData]) => (
                   <div
                     key={legKey}
-                    className="bg-light-elevated dark:bg-dark-elevated rounded-lg p-4 border border-light-border dark:border-dark-border"
+                    className={`rounded-lg p-3 shadow-sm transition-colors ${
+                      legData.action === "BUY"
+                        ? "bg-green-50 dark:bg-green-900/10"
+                        : "bg-red-50 dark:bg-red-900/10"
+                    }`}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-medium text-light-text-primary dark:text-dark-text-primary capitalize">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-base font-medium text-light-text-primary dark:text-dark-text-primary capitalize flex items-center gap-2">
                         {legKey.replace("leg", "Leg ")}
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                            legData.action === "BUY"
+                              ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200"
+                              : "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
+                          }`}
+                        >
+                          {legData.action || "BUY"}
+                        </span>
                       </h4>
                       {Object.keys(formData.legs).length > 1 && (
                         <button
@@ -455,7 +701,7 @@ const AdvancedOptionsForm = () => {
                           title="Remove this leg"
                         >
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -472,9 +718,9 @@ const AdvancedOptionsForm = () => {
                     </div>
 
                     {/* Horizontal layout for leg fields */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                           Symbol
                         </label>
                         <select
@@ -482,7 +728,7 @@ const AdvancedOptionsForm = () => {
                           onChange={(e) =>
                             handleLegChange(legKey, "symbol", e.target.value)
                           }
-                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                         >
                           {symbolOptions.map((symbol) => (
                             <option key={symbol} value={symbol}>
@@ -493,7 +739,7 @@ const AdvancedOptionsForm = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                           Strike
                         </label>
                         <input
@@ -506,12 +752,12 @@ const AdvancedOptionsForm = () => {
                               Number(e.target.value)
                             )
                           }
-                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                           Type
                         </label>
                         <select
@@ -519,7 +765,7 @@ const AdvancedOptionsForm = () => {
                           onChange={(e) =>
                             handleLegChange(legKey, "type", e.target.value)
                           }
-                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                         >
                           {typeOptions.map((type) => (
                             <option key={type} value={type}>
@@ -530,7 +776,54 @@ const AdvancedOptionsForm = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                          Forward
+                        </label>
+                        <select
+                          value={legData.action || "BUY"}
+                          onChange={(e) =>
+                            handleLegChange(legKey, "action", e.target.value)
+                          }
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                        >
+                          {actionOptions.map((action) => (
+                            <option key={action} value={action}>
+                              {action}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                          Quantity
+                        </label>
+                        <select
+                          value={legData.quantity || 75}
+                          onChange={(e) =>
+                            handleLegChange(
+                              legKey,
+                              "quantity",
+                              Number(e.target.value)
+                            )
+                          }
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                        >
+                          {getQuantityOptionsForSymbol(legData.symbol).map(
+                            (option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                        <p className="text-xs text-light-text-muted dark:text-dark-text-muted mt-1">
+                          Lot size: {lotSizes[legData.symbol] || 50}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                           Expiry
                         </label>
                         <input
@@ -545,7 +838,7 @@ const AdvancedOptionsForm = () => {
                               Number(e.target.value)
                             )
                           }
-                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                          className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                           placeholder="0-9"
                         />
                         <p className="text-xs text-light-text-muted dark:text-dark-text-muted mt-1">
@@ -559,14 +852,29 @@ const AdvancedOptionsForm = () => {
             </div>
 
             {/* Bidding Leg */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <h3 className="text-lg font-medium text-light-text-primary dark:text-dark-text-primary mb-4">
+            <div
+              className={`rounded-lg p-3 shadow-sm transition-colors ${
+                formData.bidding_leg.action === "BUY"
+                  ? "bg-green-50 dark:bg-green-900/10"
+                  : "bg-red-50 dark:bg-red-900/10"
+              }`}
+            >
+              <h3 className="text-base font-medium text-light-text-primary dark:text-dark-text-primary mb-2 flex items-center gap-2">
                 Bidding Leg
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold ${
+                    formData.bidding_leg.action === "BUY"
+                      ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200"
+                      : "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
+                  }`}
+                >
+                  {formData.bidding_leg.action || "BUY"}
+                </span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                     Symbol
                   </label>
                   <select
@@ -574,7 +882,7 @@ const AdvancedOptionsForm = () => {
                     onChange={(e) =>
                       handleBiddingLegChange("symbol", e.target.value)
                     }
-                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                   >
                     {symbolOptions.map((symbol) => (
                       <option key={symbol} value={symbol}>
@@ -585,7 +893,7 @@ const AdvancedOptionsForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                     Strike
                   </label>
                   <input
@@ -594,12 +902,12 @@ const AdvancedOptionsForm = () => {
                     onChange={(e) =>
                       handleBiddingLegChange("strike", Number(e.target.value))
                     }
-                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                     Type
                   </label>
                   <select
@@ -607,7 +915,7 @@ const AdvancedOptionsForm = () => {
                     onChange={(e) =>
                       handleBiddingLegChange("type", e.target.value)
                     }
-                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                   >
                     {typeOptions.map((type) => (
                       <option key={type} value={type}>
@@ -618,7 +926,50 @@ const AdvancedOptionsForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                    Forward
+                  </label>
+                  <select
+                    value={formData.bidding_leg.action || "BUY"}
+                    onChange={(e) =>
+                      handleBiddingLegChange("action", e.target.value)
+                    }
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  >
+                    {actionOptions.map((action) => (
+                      <option key={action} value={action}>
+                        {action}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                    Quantity
+                  </label>
+                  <select
+                    value={formData.bidding_leg.quantity || 75}
+                    onChange={(e) =>
+                      handleBiddingLegChange("quantity", Number(e.target.value))
+                    }
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  >
+                    {getQuantityOptionsForSymbol(
+                      formData.bidding_leg.symbol
+                    ).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-light-text-muted dark:text-dark-text-muted mt-1">
+                    Lot size: {lotSizes[formData.bidding_leg.symbol] || 50}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                     Expiry
                   </label>
                   <input
@@ -629,7 +980,7 @@ const AdvancedOptionsForm = () => {
                     onChange={(e) =>
                       handleBiddingLegChange("expiry", Number(e.target.value))
                     }
-                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                     placeholder="0-9"
                   />
                   <p className="text-xs text-light-text-muted dark:text-dark-text-muted mt-1">
@@ -641,12 +992,12 @@ const AdvancedOptionsForm = () => {
           </div>
 
           {/* Strategy Configuration */}
-          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 border border-light-border dark:border-dark-border">
-            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-6">
+          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 border border-light-border dark:border-dark-border">
+            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-4">
               Strategy Configuration
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Base Legs Selection */}
               <div className="lg:col-span-3">
                 <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-3">
@@ -679,7 +1030,7 @@ const AdvancedOptionsForm = () => {
 
               {/* Spreads */}
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Desired Spread
                 </label>
                 <input
@@ -688,12 +1039,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("desired_spread", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Exit Desired Spread
                 </label>
                 <input
@@ -702,12 +1053,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("exit_desired_spread", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Start Price
                 </label>
                 <input
@@ -716,12 +1067,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("start_price", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Exit Start
                 </label>
                 <input
@@ -730,12 +1081,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("exit_start", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Exit Price Gap
                 </label>
                 <input
@@ -745,18 +1096,18 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("exit_price_gap", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-                  Action
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                  Forward
                 </label>
                 <select
                   value={formData.action}
                   onChange={(e) => handleChange("action", e.target.value)}
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 >
                   {actionOptions.map((action) => (
                     <option key={action} value={action}>
@@ -769,50 +1120,75 @@ const AdvancedOptionsForm = () => {
           </div>
 
           {/* Order Configuration */}
-          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 border border-light-border dark:border-dark-border">
-            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-6">
+          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 border border-light-border dark:border-dark-border">
+            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-4">
               Order Configuration
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Lot Size Information */}
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 mb-4 border border-green-200 dark:border-green-800">
+              <div className="flex items-start gap-3">
+                <div className="bg-green-500 rounded-full p-1 mt-0.5">
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                    Lot Size Information
+                  </h4>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Primary Symbol: <strong>{getPrimarySymbol()}</strong> | Lot
+                    Size: <strong>{getCurrentLotSize()}</strong> | Available Lot
+                    Sizes: NIFTY({lotSizes.NIFTY}), BANKNIFTY(
+                    {lotSizes.BANKNIFTY}), FINNIFTY({lotSizes.FINNIFTY}),
+                    SENSEX({lotSizes.SENSEX})
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-                  Quantity (Lots)
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
+                  Slice Multiplier
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
+                <select
+                  value={formData.slice_multiplier}
                   onChange={(e) =>
-                    handleChange("quantity", Number(e.target.value))
+                    handleChange("slice_multiplier", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
-                />
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                >
+                  {getSliceMultiplierOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-light-text-muted dark:text-dark-text-muted mt-1">
+                  Applied to each leg's lot size
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-                  Slices (Lots)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.slices}
-                  onChange={(e) =>
-                    handleChange("slices", Number(e.target.value))
-                  }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Order Type
                 </label>
                 <select
                   value={formData.order_type}
                   onChange={(e) => handleChange("order_type", e.target.value)}
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 >
                   {orderTypeOptions.map((type) => (
                     <option key={type} value={type}>
@@ -823,7 +1199,7 @@ const AdvancedOptionsForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   IOC Timeout (seconds)
                 </label>
                 <input
@@ -832,12 +1208,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("IOC_timeout", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Bid/Ask Average
                 </label>
                 <input
@@ -848,12 +1224,12 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("no_of_bidask_average", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                   Run State
                 </label>
                 <select
@@ -861,7 +1237,7 @@ const AdvancedOptionsForm = () => {
                   onChange={(e) =>
                     handleChange("run_state", Number(e.target.value))
                   }
-                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 >
                   {runStateOptions.map((state) => (
                     <option key={state.value} value={state.value}>
@@ -874,7 +1250,7 @@ const AdvancedOptionsForm = () => {
 
             {/* Notes Field */}
             <div className="mt-6">
-              <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+              <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">
                 Notes
               </label>
               <textarea
@@ -882,14 +1258,14 @@ const AdvancedOptionsForm = () => {
                 onChange={(e) => handleChange("notes", e.target.value)}
                 placeholder="Add any notes or comments about this strategy..."
                 rows={3}
-                className="w-full border border-light-border dark:border-dark-border rounded-lg p-3 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-vertical"
+                className="w-full border border-light-border dark:border-dark-border rounded-lg p-2 bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-vertical"
               />
             </div>
           </div>
 
           {/* User Selection */}
-          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 border border-light-border dark:border-dark-border">
-            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-6">
+          <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 border border-light-border dark:border-dark-border">
+            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-4">
               User Selection
             </h2>
 
@@ -944,7 +1320,7 @@ const AdvancedOptionsForm = () => {
               {/* Selected users display */}
               {(formData.user_ids || []).length > 0 && (
                 <div className="mt-4">
-                  <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-2">
+                  <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-1">
                     Selected: {formData.user_ids.length} user(s)
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -985,11 +1361,11 @@ const AdvancedOptionsForm = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-light-success dark:bg-dark-success text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="flex-1 py-2.5 bg-light-success dark:bg-dark-success text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {loading ? "Submitting..." : "Submit Strategy"}
             </button>
@@ -997,7 +1373,7 @@ const AdvancedOptionsForm = () => {
             <button
               type="button"
               onClick={resetForm}
-              className="flex-1 py-3 bg-gray-500 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors font-semibold"
+              className="flex-1 py-2.5 bg-gray-500 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors font-semibold"
             >
               Reset Form
             </button>

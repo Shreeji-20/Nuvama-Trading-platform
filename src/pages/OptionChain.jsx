@@ -6,21 +6,25 @@ import React, {
   useRef,
 } from "react";
 import IndexCards from "../components/IndexCards";
+import config from "../config/api";
 
 /** ---------- Config ---------- */
-// const BASE_URL = "https://r4np4x2t-8000.inc1.devtunnels.ms"; // change if needed
-const DEV_BASE_URL = "http://localhost:8000"; // change if needed
-const BASE_URL = DEV_BASE_URL; // use DEV by default
 const SYMBOLS = ["NIFTY", "SENSEX"];
 const EXPIRIES = ["0", "1", "2", "3"];
 
 // Fetch LTP for a symbol (same logic as IndexCards)
 async function fetchLTP(symbol) {
   try {
-    const response = await fetch(`${DEV_BASE_URL}/index/${symbol}`);
+    const response = await fetch(config.buildUrl(config.ENDPOINTS.INDEX));
     if (!response.ok) throw new Error(`Failed to fetch ${symbol} LTP`);
-    const data = await response.json();
-    return data?.response?.data?.ltp || data.ltp || data.current_price || 0;
+    var data = await response.json();
+    data = data.filter((item) => item?.response?.data?.symbol === symbol);
+    return (
+      data[0]?.response?.data?.ltp ||
+      data[0]?.ltp ||
+      data[0]?.current_price ||
+      0
+    );
   } catch (err) {
     console.error(`Error fetching LTP for ${symbol}:`, err);
     return 0;
@@ -36,7 +40,8 @@ function calculateATMStrike(ltp, symbol) {
 }
 
 async function fetchOptionChain(symbol, expiry) {
-  const res = await fetch(`${BASE_URL}/optiondata`);
+  // fetch(config.buildUrl(config.ENDPOINTS.OPTION_DATA));
+  const res = await fetch(config.buildUrl(config.ENDPOINTS.OPTIONDATA));
   if (!res.ok) throw new Error(`Failed to fetch ${symbol} option chain`);
   const data = await res.json();
 

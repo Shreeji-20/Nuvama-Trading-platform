@@ -9,6 +9,10 @@ import SpreadPage from "./pages/CustomOptionChain";
 import MultiLegSpread from "./pages/MultiLegSpread";
 import AdvancedOptionsForm from "./pages/AdvancedOptionsForm";
 import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
+import Dashboard from "./pages/Dashboard";
+import OrdersTableNew from "./pages/OrdersTable_New";
+import AutoLogin from "./pages/AutoLogin";
+
 function App() {
   const [count, setCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -130,10 +134,12 @@ function App() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 overflow-hidden">
+          <main className="flex-1 p-0 overflow-hidden ">
             <div className="flex flex-col w-full h-full max-w-none px-0 md:px-0 overflow-hidden">
               {/* Routes */}
               <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/stratergies" element={<Stratergies />} />
                 <Route path="/optionchain" element={<OptionChains />} />
@@ -147,6 +153,8 @@ function App() {
                   path="/advanced-options-table"
                   element={<AdvancedOptionsTable />}
                 />
+                <Route path="/orders-new" element={<OrdersTableNew />} />
+                <Route path="/auto-login" element={<AutoLogin />} />
               </Routes>
             </div>
           </main>

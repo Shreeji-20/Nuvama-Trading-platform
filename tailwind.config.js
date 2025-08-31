@@ -64,6 +64,10 @@ module.exports = {
           "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)",
         "dark-card-gradient":
           "linear-gradient(145deg, #1e293b 0%, #0e1628 100%)",
+        // Custom dark solid backgrounds
+        "dark-solid": "linear-gradient(135deg, #1f2937 0%, #1f2937 100%)", // gray-800 equivalent
+        "dark-custom": "linear-gradient(135deg, #374151 0%, #374151 100%)", // gray-700 equivalent
+        "dark-900": "linear-gradient(135deg, #111827 0%, #111827 100%)", // gray-900 equivalent
       },
       boxShadow: {
         // Light theme shadows - soft and subtle
