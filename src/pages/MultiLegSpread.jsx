@@ -100,44 +100,7 @@ const MultiLegSpread = () => {
         const d = match.response.data;
 
         if (orderType === "buy") {
-          // For buy orders, use ask values
-          const askValues = d.askValues || [];
-          if (askValues.length === 0) {
-            if (debugMode)
-              console.warn(
-                `No ask values for ${symbol} ${strikeprice} ${optiontype}`
-              );
-            return null;
-          }
-
-          if (pricingMethod === "depth") {
-            // Use specific depth index (1-based, convert to 0-based)
-            const index = Math.max(
-              0,
-              Math.min(depthIndex - 1, askValues.length - 1)
-            );
-            const price = Number(askValues[index]?.price);
-            return !isNaN(price) && price > 0 ? price : null;
-          } else {
-            // Use averaging method
-            const valuesToAverage = askValues.slice(
-              0,
-              Math.min(noBidAskAverage, askValues.length)
-            );
-
-            const validPrices = valuesToAverage
-              .map((val) => Number(val.price))
-              .filter((price) => !isNaN(price) && price > 0);
-
-            if (validPrices.length === 0) return null;
-
-            const sum = validPrices.reduce((acc, price) => acc + price, 0);
-            const average = sum / validPrices.length;
-
-            return !isNaN(average) && average > 0 ? average : null;
-          }
-        } else {
-          // For sell orders, use bid values
+          // For buy orders, use bid values
           const bidValues = d.bidValues || [];
           if (bidValues.length === 0) {
             if (debugMode)
@@ -160,6 +123,43 @@ const MultiLegSpread = () => {
             const valuesToAverage = bidValues.slice(
               0,
               Math.min(noBidAskAverage, bidValues.length)
+            );
+
+            const validPrices = valuesToAverage
+              .map((val) => Number(val.price))
+              .filter((price) => !isNaN(price) && price > 0);
+
+            if (validPrices.length === 0) return null;
+
+            const sum = validPrices.reduce((acc, price) => acc + price, 0);
+            const average = sum / validPrices.length;
+
+            return !isNaN(average) && average > 0 ? average : null;
+          }
+        } else {
+          // For sell orders, use ask values
+          const askValues = d.askValues || [];
+          if (askValues.length === 0) {
+            if (debugMode)
+              console.warn(
+                `No ask values for ${symbol} ${strikeprice} ${optiontype}`
+              );
+            return null;
+          }
+
+          if (pricingMethod === "depth") {
+            // Use specific depth index (1-based, convert to 0-based)
+            const index = Math.max(
+              0,
+              Math.min(depthIndex - 1, askValues.length - 1)
+            );
+            const price = Number(askValues[index]?.price);
+            return !isNaN(price) && price > 0 ? price : null;
+          } else {
+            // Use averaging method
+            const valuesToAverage = askValues.slice(
+              0,
+              Math.min(noBidAskAverage, askValues.length)
             );
 
             const validPrices = valuesToAverage
