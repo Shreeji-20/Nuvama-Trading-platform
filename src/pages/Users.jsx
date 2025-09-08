@@ -15,6 +15,8 @@ export default function Users() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loginStatus, setLoginStatus] = useState({});
   const [loginProgress, setLoginProgress] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState({ type: "", text: "" });
 
   const [saveIndex, setSaveIndex] = useState(null);
 
@@ -261,6 +263,66 @@ export default function Users() {
       .catch(() =>
         setMessage({ type: "error", text: "Failed to delete user!" })
       );
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-excel"
+      ) {
+        setSelectedFile(file);
+        setUploadStatus({ type: "", text: "" });
+      } else {
+        setUploadStatus({
+          type: "error",
+          text: "Please select a valid Excel file (.xlsx or .xls)",
+        });
+        setSelectedFile(null);
+      }
+    }
+  };
+
+  const uploadExcelFile = () => {
+    if (!selectedFile) {
+      setUploadStatus({
+        type: "error",
+        text: "Please select an Excel file first",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    setUploadStatus({ type: "info", text: "Uploading Excel file..." });
+
+    fetch(config.buildUrl("/upload-excel"), {
+      method: "POST",
+      body: formData,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          throw new Error(data.message || "Upload failed");
+        }
+        setUploadStatus({
+          type: "success",
+          text: `Excel file uploaded successfully! ${data.count} entries stored in Redis.`,
+        });
+        setSelectedFile(null);
+        // Reset the file input
+        const fileInput = document.getElementById("excel-file-input");
+        if (fileInput) fileInput.value = "";
+      })
+      .catch((error) => {
+        setUploadStatus({
+          type: "error",
+          text: `Upload failed: ${error.message}`,
+        });
+      });
   };
 
   return (
@@ -1035,6 +1097,144 @@ export default function Users() {
               </div>
             </>
           )}
+        </div>
+        {/* Excel Upload Section */}
+        <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6 md:p-8 mt-8">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-6 flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
+            Upload Excel File
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                Select Excel File (Column A will be stored in Redis)
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  id="excel-file-input"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/20 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/30 file:cursor-pointer border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface"
+                />
+                <button
+                  onClick={uploadExcelFile}
+                  disabled={!selectedFile}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
+                    selectedFile
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  Upload
+                </button>
+              </div>
+            </div>
+
+            {selectedFile && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span className="text-sm text-blue-700 dark:text-blue-400">
+                    Selected: {selectedFile.name} (
+                    {(selectedFile.size / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {uploadStatus.text && (
+              <div
+                className={`p-4 rounded-lg border ${
+                  uploadStatus.type === "success"
+                    ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                    : uploadStatus.type === "info"
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                    : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {uploadStatus.type === "success" && (
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                  {uploadStatus.type === "info" && (
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                  {uploadStatus.type === "error" && (
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                  {uploadStatus.text}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <h4 className="font-medium text-gray-900 dark:text-dark-text-primary mb-2">
+                Instructions:
+              </h4>
+              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <li>• Upload an Excel file (.xlsx or .xls format)</li>
+                <li>• Only data from Column A will be read and stored</li>
+                <li>• Data will be stored in Redis as a list</li>
+                <li>• Empty cells in Column A will be skipped</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         {/* Login Progress Display */}

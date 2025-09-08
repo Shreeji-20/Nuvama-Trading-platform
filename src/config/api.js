@@ -3,9 +3,9 @@
 
 const config = {
   // API Base URL from environment variables
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+  // API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
   // API_BASE_URL: "https://r4np4x2t-8000.inc1.devtunnels.ms",
-  // API_BASE_URL: "http://172.20.10.3:8000",
+  API_BASE_URL: "http://100.98.41.25:8000",
 
   // App configuration
   APP_NAME: import.meta.env.VITE_APP_NAME || "Nuvama Trading Platform",
@@ -41,6 +41,7 @@ const config = {
 
   // Helper function to build full URL
   buildUrl: (endpoint) => {
+    console.log(`API Base URL: ${config.API_BASE_URL}${endpoint}`);
     return `${config.API_BASE_URL}${endpoint}`;
   },
 
