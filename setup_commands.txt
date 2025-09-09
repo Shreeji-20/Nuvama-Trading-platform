@@ -1,0 +1,329 @@
+    1  pwd
+    2  ls
+    3  sudo apt update
+    4  apt update
+    5  exit
+    6  apt update
+    7  apt upgrade
+    8  apt install -y software-properties-common
+    9  python
+   10  python3
+   11  ls
+   12  cd tmp
+   13  ls
+   14  cd ..
+   15  mkdir workspace
+   16  ls
+   17  cd workspace/
+   18  ls
+   19  python3 -m venv venv
+   20  apt install python3.12-venv
+   21  python3 -m venv venv
+   22  ls
+   23  cd venv
+   24  ls
+   25  cd bin
+   26  ls
+   27  cd ..
+   28  Source venv\bin\activate
+   29  source venv\bin\activate
+   30  venv\bin\activate
+   31  source venv/bin/activate
+   32  python
+   33  git pull https://github.com/Shreeji-20/Nuvama-Trading-platform-backend.git
+   34  apt install git
+   35  git pull https://github.com/Shreeji-20/Nuvama-Trading-platform-backend.git
+   36  git clone https://github.com/Shreeji-20/Nuvama-Trading-platform-backend.git
+   37  ls
+   38  git clone https://github.com/Shreeji-20/Nuvama-Trading-platform.git
+   39  ls
+   40  node -v
+   41  apt install -y nodejs npm
+   42  apt install -y curl
+   43  speedtest
+   44  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+   45  curl -fsSL https://deb.nodesource.com/setup_22.x | -E bash -
+   46  curl -fsSL https://deb.nodesource.com/setup_22.x
+   47  nano /etc/systemd/resolved.conf
+   48  cat
+   49  cat/etc/systemd/resolved.conf 
+   50  cat /etc/systemd/resolved.conf 
+   51  vim /etc/systemd/resolved.conf
+   52  apt install -y nano
+   53  apt install -y sudo curl wget git unzip zip vim nano net-tools iputils-ping dnsutils htop build-essential
+   54  apt install -y ubuntu-standard
+   55  nano /etc/systemd/resolved.conf
+   56  apt install speedtest-cli
+   57  speedtest-cli
+   58  sudo
+   59  curl -fsSL https://deb.nodesource.com/setup_2.x | sudo -E bash -
+   60  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+   61  sudo apt install -y nodejs
+   62  node -v
+   63  ls
+   64  cd Nuvama-Trading-platform
+   65  ls
+   66  npm run dev
+   67  npm install
+   68  npm run dev
+   69  ip config
+   70  ifconfig
+   71  exit
+   72  source ../venv/bin/activate
+   73  redis-server
+   74  redis-server stop
+   75  redis-server
+   76  redis-cli
+   77  uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   78  top
+   79  cd ..
+   80  cd Nuvama-Trading-platform
+   81  npm run dev -- --host
+   82  git init
+   83  git info
+   84  git status
+   85  git remote
+   86  git remote url
+   87  git remote get-url
+   88  git remote get-url --all
+   89  git remote get-urlall
+   90  git remote get-url all
+   91  git remote get-url --all
+   92  git remote get-url --all origin
+   93  cd .
+   94  cd ..
+   95  ls
+   96  install -y openssh-server
+   97  apt install -y openssh-server
+   98  mkdir -p /var/run/sshd
+   99  echo 'root:Docker!' | chpasswd
+  100  sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+  101  sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
+  102  service ssh start
+  103  exit
+  104  top
+  105  ls
+  106  cd workspace/
+  107  ls
+  108  cd venv/
+  109  ls
+  110  cd bin/
+  111  ls
+  112  cd ..
+  113  /workspace/venv/bin/python -m pip list
+  114  install -y build-essential libffi-dev libssl-dev
+  115  apt install -y build-essential libffi-dev libssl-dev
+  116  rm -rf ~/.vscode-server/
+  117  rm -r ~/.vscode-server/
+  118  rm -rf ~/.vscode-server/extensions/ms-python.python-*
+  119  rm -rf ~/.vscode-server/extensions/ms-python.vscode-pylance-*
+  120  exit()
+  121  exit
+  122  git status
+  123  cd Nuvama-Trading-platform-backend/
+  124  git status
+  125  git add -A
+  126  git commit -m "Docker setup complete"
+  127  git push
+  128  l
+  129  ls
+  130  cd ..
+  131  ls
+  132  cd ..
+  133  ls
+  134  cd workspace/
+  135  ls
+  136  cd Nuvama-Trading-platform-backend/
+  137  ls
+  138  cd Nuvama-Trading-platform-backend/
+  139  git status
+  140  git push
+  141  source venv/bin/activate
+  142  cd Nuvama-Trading-platform-backend/
+  143  cd ..
+  144  cd Nuvama-Trading-platform-backend/
+  145  uvicorn main:app --reload
+  146  uvicorn main:app --reload --host 0.0.0.0 --port 8000
+  147  source /workspace/venv/bin/activate
+  148  redis-server redis.conf 
+  149  source /workspace/venv/bin/activate
+  150  cd Nuvama-Trading-platform
+  151  npm run dev -- --host
+  152  source /workspace/venv/bin/activate
+  153  ps aux | grep central
+  154  kill 1523
+  155  ps aux | grep order
+  156  kill 1522
+  157  ps aux | grep central
+  158  ps aux | grep order
+  159  ps aux | grep central
+  160  ps aux | grep order
+  161  ps aux | grep central
+  162  ps aux | grep uvicorn
+  163  ps aus | grep redis
+  164  ps aux | grep redis
+  165  cat redis.conf
+  166  nano redis-config
+  167  nano redis.conf 
+  168  ps aux | grep central
+  169  kill 2182
+  170  ps aux | grep order
+  171  kill 2181
+  172  ps aux | grep order
+  173  clear
+  174  source venv/bin/activate
+  175  cd Nuvama-Trading-platform-backend/
+  176  cd ..
+  177  redis-server redis.conf 
+  178  cd Nuvama-Trading-platform-backend/
+  179  nohup uvicorn main:app --reload --port 8000 --host 0.0.0.0 &
+  180  cd ..
+  181  cd Nuvama-Trading-platform
+  182  nohup npm run dev -- --host > react.log 2>&1 &
+  183  ps aux | grep central
+  184  ps aux | grep order
+  185  ps aux | grep central
+  186  source venv/bin/activate
+  187  cd Nuvama-Trading-platform-backend/
+  188  nohup uvicorn main:app --reload --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 < /dev/null &
+  189  disown
+  190  ps aux | frep uvicorn
+  191  ps aux | grep uvicorn
+  192  jobs
+  193  kill 5406
+  194  nohup uvicorn main:app --reload --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 < /dev/null &
+  195  jobs
+  196  disown %1
+  197  ps aux | grep uvicorn
+  198  cd ..
+  199  cd Nuvama-Trading-platform
+  200  nohup npm run dev -- --host > react.log 2>&1 < /dev/null &
+  201  jobs
+  202  disown %1
+  203  ps aux | grep npm
+  204  ps aux | grep uvicorn
+  205  ps aux | grep npm
+  206  kill 7289
+  207  cd /workspace/
+  208  cd Nuvama-Trading-platform
+  209  nohup npm run dev -- --host 0.0.0.0 > react.log 2>&1 < /dev/null &
+  210  jobs
+  211  disown %1
+  212  ps aux | grep uvicorn
+  213  ls
+  214  ps aux | grep npm
+  215  kill 7832
+  216  nohup npm run dev -- --host 0.0.0.0 > react.log 2>&1 < /dev/null &
+  217  disown %1
+  218  ifconfig
+  219  cd ..
+  220  cd Nuvama-Trading-platform-backend/
+  221  ls
+  222  cat uvicorn.log 
+  223  ifconfig
+  224  ps aux | grep npm
+  225  kill 8640
+  226  nohup npm run dev -- --host 0.0.0.0 > react.log 2>&1 < /dev/null &
+  227  disown %1
+  228  ls
+  229  tail -f uvicorn.log 
+  230  ps aux | grep npm
+  231  cd ..
+  232  ps aux | grep npm
+  233  nohup npm run dev -- --host 0.0.0.0 > react.log 2>&1 < /dev/null &
+  234  jobs
+  235  nohup npm run dev -- --host 0.0.0.0 > react1.log 2>&1 < /dev/null &
+  236  jobs
+  237  ps aux | grep npm
+  238  cd Nuvama-Trading-platform
+  239  npm run dev -- --host 0.0.0.0
+  240  ss -tunlp
+  241  apt install iproute2
+  242  ss -tunlp
+  243  top
+  244  ps aux | grep npm
+  245  ps aux
+  246  netstat -tulpn
+  247  lsof -i :5173
+  248  kill 7303
+  249  lsof -i :5173
+  250  npm run dev -- --host 0.0.0.0
+  251  nohup npm run dev -- --host 0.0.0.0 > react1.log 2>&1 < /dev/null &
+  252  jobs
+  253  disown %1
+  254  ps aux
+  255  ifconfig
+  256  redis-cli KEYS "*"
+  257  redis-cli
+  258  ls
+  259  cd /workspace/
+  260  ls
+  261  ls -lah
+  262  cat redis.conf 
+  263  ps aux | grep npm
+  264  kill 9720
+  265  nohup npm run dev -- --host 0.0.0.0 > react1.log 2>&1 < /dev/null &
+  266  jobs
+  267  disown %1
+  268  cd Nuvama-Trading-platform
+  269  nohup npm run dev -- --host 0.0.0.0 > react1.log 2>&1 < /dev/null &
+  270  jobs
+  271  disown %1
+  272  ps aux | grep uvicorn
+  273  kill 7058
+  274  cd ..
+  275  cd Nuvama-Trading-platform-backend/
+  276  source ../venv/bin/activate
+  277  uvicorn main:app --reload --host 0.0.0.0 --port 8000
+  278  clear
+  279  ps aux | grep central
+  280  kill 12928
+  281  ps aux | grep order
+  282  kill 5879
+  283  ps aux
+  284  redis-server stop
+  285  stop redis-server
+  286  kill 807
+  287  kill 804
+  288  ps aux
+  289  kill 19453
+  290  exit
+  291  ps aux | grep npm run dev
+  292  ps aux | grep npm 
+  293  kill 18219
+  294  cls
+  295  cd Nuvama-Trading-platform
+  296  ls
+  297  npm run dev -- --host 0.0.0.0 --port 5173
+  298  ss -tunlp
+  299  kill 9732
+  300  
+  301  exit
+  302  cd Nuvama-Trading-platform
+  303  git status
+  304  git add -A
+  305  git commit -m "All setup Done"
+  306  git push
+  307  git push origin main
+  308  git remote -v
+  309  cd ..
+  310  cd Nuvama-Trading-platform-backend/
+  311  git add -A
+  312  git commit -m "All server setup done"
+  313  git push origin main
+  314  cd ..
+  315  cd Nuvama-Trading-platform
+  316  ls
+  317  git remote -v
+  318  cd ..
+  319  cd Nuvama-Trading-platform-backend/
+  320  git remote -v
+  321  clear
+  322  cd ..
+  323  cd Nuvama-Trading-platform
+  324  ls
+  325  git remote -v
+  326  git remote set-url origin git@github.com:Shreeji-20/Nuvama-Trading-platform.git
+  327  git remote -v
+  328  git push
+  329  history > setup_commands.txt

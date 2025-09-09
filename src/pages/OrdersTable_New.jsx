@@ -1,6 +1,64 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import config from "../config/api";
 
+// Export to Excel functionality
+const exportToExcel = (data, filename = "orders_export") => {
+  // Convert data to CSV format
+  const headers = [
+    "Time",
+    "User ID",
+    "Symbol",
+    "Trading Symbol",
+    "Action",
+    "Quantity",
+    "Price",
+    "Status",
+    "Exchange",
+    "Product",
+    "Order Type",
+    "Remarks",
+  ];
+
+  const csvContent = [
+    headers.join(","),
+    ...data.map((order) =>
+      [
+        order.ordTim || "",
+        order.userID || "",
+        order.dpName || "",
+        order.tSym || "",
+        order.tTyp || "",
+        order.tQty || "",
+        order.avgPrc || order.prc || "",
+        order.sts || "",
+        order.exc || "",
+        order.pCode || "",
+        order.oTyp || "",
+        (order.rmk || "").replace(/,/g, ";"), // Replace commas to avoid CSV issues
+      ]
+        .map((field) => `"${field}"`)
+        .join(",")
+    ),
+  ].join("\n");
+
+  // Create blob and download
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${filename}_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+
 // FilterInput component - defined outside to prevent re-creation
 const FilterInput = React.memo(
   ({
@@ -157,7 +215,7 @@ const OrdersTable = () => {
   // Filter states
   const [filters, setFilters] = useState({
     userID: "",
-    tSym: "",
+    dpName: "",
     tTyp: "",
     sts: "",
     exc: "",
@@ -201,8 +259,8 @@ const OrdersTable = () => {
   // Dynamic options from orders data
   const dynamicOptions = useMemo(
     () => ({
-      tSym: [
-        ...new Set(orders.map((order) => order.tSym).filter(Boolean)),
+      dpName: [
+        ...new Set(orders.map((order) => order.dpName).filter(Boolean)),
       ].sort(),
       rmk: [
         ...new Set(orders.map((order) => order.rmk).filter(Boolean)),
@@ -316,7 +374,7 @@ const OrdersTable = () => {
   const clearFilters = useCallback(() => {
     setFilters({
       userID: "",
-      tSym: "",
+      dpName: "",
       tTyp: "",
       sts: "",
       exc: "",
@@ -348,8 +406,8 @@ const OrdersTable = () => {
       return (
         (!filters.userID ||
           order.userID?.toLowerCase().includes(filters.userID.toLowerCase())) &&
-        (!filters.tSym ||
-          order.tSym?.toLowerCase().includes(filters.tSym.toLowerCase())) &&
+        (!filters.dpName ||
+          order.dpName?.toLowerCase().includes(filters.dpName.toLowerCase())) &&
         (!filters.tTyp || order.tTyp === filters.tTyp) &&
         (!filters.sts || order.sts === filters.sts) &&
         (!filters.exc || order.exc === filters.exc) &&
@@ -492,6 +550,12 @@ const OrdersTable = () => {
               </h1>
               <p className="text-sm md:text-base text-light-text-secondary dark:text-dark-text-secondary mt-1">
                 Total: {filteredAndSortedOrders.length} orders
+                {filteredAndSortedOrders.length !== orders.length && (
+                  <span className="text-light-accent dark:text-dark-accent">
+                    {" "}
+                    (filtered from {orders.length})
+                  </span>
+                )}
                 {lastUpdated && (
                   <span className="block sm:inline sm:ml-2">
                     • Last updated: {lastUpdated.toLocaleTimeString()}
@@ -500,6 +564,31 @@ const OrdersTable = () => {
               </p>
             </div>
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={() =>
+                  exportToExcel(filteredAndSortedOrders, "orders_export")
+                }
+                disabled={filteredAndSortedOrders.length === 0}
+                className={`
+                  group relative px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-white 
+                  transition-all duration-300 transform hover:scale-105 
+                  shadow-lg hover:shadow-xl overflow-hidden text-sm md:text-base
+                  ${
+                    filteredAndSortedOrders.length === 0
+                      ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
+                      : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                  }
+                `}
+              >
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <div className="relative flex items-center justify-center space-x-2">
+                  <span className="group-hover:rotate-12 transition-transform duration-300">
+                    📊
+                  </span>
+                  <span className="hidden sm:inline">Export to Excel</span>
+                  <span className="sm:hidden">Export</span>
+                </div>
+              </button>
               <button
                 onClick={() => fetchOrders(true)}
                 disabled={loading}
@@ -572,14 +661,14 @@ const OrdersTable = () => {
             />
             <FilterInput
               placeholder="Symbol"
-              value={filters.tSym}
-              onChange={onChangeHandlers.tSym}
-              options={allOptions.tSym}
+              value={filters.dpName}
+              onChange={onChangeHandlers.dpName}
+              options={allOptions.dpName}
               searchable={true}
-              filterKey="tSym"
-              dropdownState={dropdownStates.tSym}
+              filterKey="dpName"
+              dropdownState={dropdownStates.dpName}
               setDropdownState={setDropdownState}
-              searchTerm={searchTerms.tSym}
+              searchTerm={searchTerms.dpName}
               setSearchTerm={setSearchTerm}
             />
             <FilterInput
@@ -716,7 +805,8 @@ const OrdersTable = () => {
                 <tr>
                   <SortableHeader sortKey="ordTim">Time</SortableHeader>
                   <SortableHeader sortKey="userID">User</SortableHeader>
-                  <SortableHeader sortKey="tSym">Symbol</SortableHeader>
+                  <SortableHeader sortKey="dpName">Symbol</SortableHeader>
+                  <SortableHeader sortKey="tSym">Trading Symbol</SortableHeader>
                   <SortableHeader sortKey="tTyp">Action</SortableHeader>
                   <SortableHeader sortKey="tQty">Quantity</SortableHeader>
                   <SortableHeader sortKey="avgPrc">Price</SortableHeader>
@@ -738,6 +828,9 @@ const OrdersTable = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-light-accent dark:text-dark-accent">
                       {order.userID}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-mono text-light-text-primary dark:text-dark-text-primary">
+                      {order.dpName}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-mono text-light-text-primary dark:text-dark-text-primary">
                       {order.tSym}
@@ -802,7 +895,7 @@ const OrdersTable = () => {
                       {order.tTyp}
                     </span>
                     <span className="text-sm font-mono text-light-text-primary dark:text-dark-text-primary">
-                      {order.tSym}
+                      {order.dpName}
                     </span>
                   </div>
                   <span
@@ -811,6 +904,16 @@ const OrdersTable = () => {
                     )}`}
                   >
                     {order.sts}
+                  </span>
+                </div>
+
+                {/* Trading Symbol row */}
+                <div className="text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Trading Symbol:
+                  </span>
+                  <span className="ml-2 font-mono text-light-text-primary dark:text-dark-text-primary">
+                    {order.tSym || "-"}
                   </span>
                 </div>
 
