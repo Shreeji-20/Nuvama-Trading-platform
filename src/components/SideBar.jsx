@@ -95,6 +95,9 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
           <NavLink to="/orders-new" icon="🔄">
             Orders Management
           </NavLink>
+          <NavLink to="/execution-details" icon="📊">
+            Execution Details
+          </NavLink>
         </nav>
       </aside>
       {/* )} */}

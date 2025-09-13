@@ -12,6 +12,7 @@ import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
 import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
+import ExecutionDetails from "./pages/ExecutionDetails";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -155,6 +156,7 @@ function App() {
                 />
                 <Route path="/orders-new" element={<OrdersTableNew />} />
                 <Route path="/auto-login" element={<AutoLogin />} />
+                <Route path="/execution-details" element={<ExecutionDetails />} />
               </Routes>
             </div>
           </main>
