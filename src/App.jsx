@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
 import ExecutionDetails from "./pages/ExecutionDetails";
+import ObservationMonitor from "./pages/ObservationMonitor";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -156,7 +157,14 @@ function App() {
                 />
                 <Route path="/orders-new" element={<OrdersTableNew />} />
                 <Route path="/auto-login" element={<AutoLogin />} />
-                <Route path="/execution-details" element={<ExecutionDetails />} />
+                <Route
+                  path="/execution-details"
+                  element={<ExecutionDetails />}
+                />
+                <Route
+                  path="/observation-monitor"
+                  element={<ObservationMonitor />}
+                />
               </Routes>
             </div>
           </main>

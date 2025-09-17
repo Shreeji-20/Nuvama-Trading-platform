@@ -98,6 +98,9 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
           <NavLink to="/execution-details" icon="📊">
             Execution Details
           </NavLink>
+          <NavLink to="/observation-monitor" icon="📈">
+            Observation Monitor
+          </NavLink>
         </nav>
       </aside>
       {/* )} */}
