@@ -101,6 +101,12 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
           <NavLink to="/observation-monitor" icon="📈">
             Observation Monitor
           </NavLink>
+          <NavLink to="/observation-dashboard" icon="🎯">
+            Observation Dashboard
+          </NavLink>
+          <NavLink to="/observation-tables" icon="📊">
+            Observation Tables
+          </NavLink>
         </nav>
       </aside>
       {/* )} */}

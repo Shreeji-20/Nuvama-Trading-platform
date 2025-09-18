@@ -13,7 +13,9 @@ import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
 import ExecutionDetails from "./pages/ExecutionDetails";
-import ObservationMonitor from "./pages/ObservationMonitor";
+// import ObservationMonitor from "./pages/ObservationMonitor";
+import ObservationDashboard from "./pages/ObservationDashboard";
+import ObservationTables from "./pages/ObservationTables";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -161,9 +163,17 @@ function App() {
                   path="/execution-details"
                   element={<ExecutionDetails />}
                 />
-                <Route
+                {/* <Route
                   path="/observation-monitor"
                   element={<ObservationMonitor />}
+                /> */}
+                <Route
+                  path="/observation-dashboard"
+                  element={<ObservationDashboard />}
+                />
+                <Route
+                  path="/observation-tables"
+                  element={<ObservationTables />}
                 />
               </Routes>
             </div>
