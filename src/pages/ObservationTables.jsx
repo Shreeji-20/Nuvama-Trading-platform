@@ -42,7 +42,7 @@ const ObservationTables = () => {
 
     try {
       const url = config.buildObservationUrl(
-        config.ENDPOINTS.OBSERVATIONS.GLOBAL,
+        config.ENDPOINTS.OBSERVATIONS.GLOBAL_OBSERVATION,
         { instance_id: selectedInstance }
       );
       const response = await fetch(url);
@@ -829,7 +829,7 @@ const ObservationTables = () => {
               </div>
             )}
 
-            {/* Global Observation Table */}
+            {/* Global Observation Summary */}
             {globalObservation && (
               <div className="bg-white dark:bg-dark-card-gradient rounded-lg shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border overflow-hidden">
                 <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border-b border-gray-200 dark:border-dark-border">
@@ -847,7 +847,7 @@ const ObservationTables = () => {
                         d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                       />
                     </svg>
-                    Global Observation
+                    Global Observation Summary
                   </h3>
                 </div>
                 <div className="p-0">
@@ -856,19 +856,146 @@ const ObservationTables = () => {
                       <thead className="bg-gray-50 dark:bg-dark-surface">
                         <tr>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
-                            Strategy Status
+                            Instance ID
                           </th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
-                            Market Condition
+                            Buy Pair Status
                           </th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
-                            Risk Level
+                            Sell Pair Status
                           </th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
-                            Volatility
+                            Buy Action
                           </th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
-                            Last Updated
+                            Sell Action
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Timestamp
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                        <tr className="hover:bg-gray-50 dark:hover:bg-dark-surface">
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-mono text-xs">
+                            {globalObservation.instance_id?.slice(-12) || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.buy_pair_pair?.first_leg &&
+                                globalObservation.buy_pair_pair?.second_leg
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair?.first_leg &&
+                              globalObservation.buy_pair_pair?.second_leg
+                                ? "Active"
+                                : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.sell_pair_pair?.first_leg &&
+                                globalObservation.sell_pair_pair?.second_leg
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair?.first_leg &&
+                              globalObservation.sell_pair_pair?.second_leg
+                                ? "Active"
+                                : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.buy_pair_pair
+                                  ?.execution_strategy?.action === "EXECUTE"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair
+                                ?.execution_strategy?.action || "N/A"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.sell_pair_pair
+                                  ?.execution_strategy?.action === "EXECUTE"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair
+                                ?.execution_strategy?.action || "N/A"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary">
+                            {formatTimestamp(globalObservation.timestamp)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Buy Pair Analysis */}
+            {globalObservation && globalObservation.buy_pair_pair && (
+              <div className="bg-white dark:bg-dark-card-gradient rounded-lg shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border overflow-hidden">
+                <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-b border-gray-200 dark:border-dark-border">
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-dark-text-primary flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                      />
+                    </svg>
+                    Buy Pair Strategy
+                  </h3>
+                </div>
+                <div className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 dark:bg-dark-surface">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Action
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Strategy
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg1 Trend
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg2 Trend
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg1 Price
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg2 Price
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Exit Strategy
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Reason
                           </th>
                         </tr>
                       </thead>
@@ -876,24 +1003,279 @@ const ObservationTables = () => {
                         <tr className="hover:bg-gray-50 dark:hover:bg-dark-surface">
                           <td className="px-3 py-2 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                globalObservation.strategy_status
-                              )}`}
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.buy_pair_pair
+                                  .execution_strategy?.action === "EXECUTE"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
                             >
-                              {globalObservation.strategy_status || "N/A"}
+                              {globalObservation.buy_pair_pair
+                                .execution_strategy?.action || "N/A"}
                             </span>
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary">
-                            {globalObservation.market_condition || "N/A"}
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            {globalObservation.buy_pair_pair.execution_strategy
+                              ?.strategy || "N/A"}
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary">
-                            {globalObservation.risk_level || "N/A"}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.buy_pair_pair.trends?.leg1
+                                  ?.trend === "STABLE"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                  : globalObservation.buy_pair_pair.trends?.leg1
+                                      ?.trend === "INCREASING"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair.trends?.leg1
+                                ?.trend || "N/A"}
+                            </span>
+                            <div
+                              className={`text-xs mt-1 font-semibold ${
+                                globalObservation.buy_pair_pair.trends?.leg1
+                                  ?.change > 0
+                                  ? "text-green-600 dark:text-green-400"
+                                  : globalObservation.buy_pair_pair.trends?.leg1
+                                      ?.change < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair.trends?.leg1
+                                ?.change > 0
+                                ? "+"
+                                : ""}
+                              {globalObservation.buy_pair_pair.trends?.leg1?.change?.toFixed(
+                                3
+                              ) || "0.000"}
+                            </div>
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary">
-                            {globalObservation.volatility || "N/A"}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.buy_pair_pair.trends?.leg2
+                                  ?.trend === "STABLE"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                  : globalObservation.buy_pair_pair.trends?.leg2
+                                      ?.trend === "INCREASING"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair.trends?.leg2
+                                ?.trend || "N/A"}
+                            </span>
+                            <div
+                              className={`text-xs mt-1 font-semibold ${
+                                globalObservation.buy_pair_pair.trends?.leg2
+                                  ?.change > 0
+                                  ? "text-green-600 dark:text-green-400"
+                                  : globalObservation.buy_pair_pair.trends?.leg2
+                                      ?.change < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.buy_pair_pair.trends?.leg2
+                                ?.change > 0
+                                ? "+"
+                                : ""}
+                              {globalObservation.buy_pair_pair.trends?.leg2?.change?.toFixed(
+                                3
+                              ) || "0.000"}
+                            </div>
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary">
-                            {formatTimestamp(globalObservation.timestamp)}
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            ₹
+                            {globalObservation.buy_pair_pair.final_prices?.leg1?.toFixed(
+                              2
+                            ) || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            ₹
+                            {globalObservation.buy_pair_pair.final_prices?.leg2?.toFixed(
+                              2
+                            ) || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-purple-600 dark:text-purple-400 font-medium">
+                            {globalObservation.buy_pair_pair
+                              .exit_execution_strategy?.strategy || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 text-gray-700 dark:text-dark-text-secondary max-w-xs text-xs">
+                            {globalObservation.buy_pair_pair.execution_strategy
+                              ?.reason || "N/A"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sell Pair Analysis */}
+            {globalObservation && globalObservation.sell_pair_pair && (
+              <div className="bg-white dark:bg-dark-card-gradient rounded-lg shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border overflow-hidden">
+                <div className="px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-b border-gray-200 dark:border-dark-border">
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-dark-text-primary flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                      />
+                    </svg>
+                    Sell Pair Strategy
+                  </h3>
+                </div>
+                <div className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 dark:bg-dark-surface">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Action
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Strategy
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg3 Trend
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg4 Trend
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg3 Price
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Leg4 Price
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Exit Strategy
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-dark-text-secondary border-b border-gray-200 dark:border-dark-border">
+                            Reason
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                        <tr className="hover:bg-gray-50 dark:hover:bg-dark-surface">
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.sell_pair_pair
+                                  .execution_strategy?.action === "EXECUTE"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair
+                                .execution_strategy?.action || "N/A"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            {globalObservation.sell_pair_pair.execution_strategy
+                              ?.strategy || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.sell_pair_pair.trends?.leg3
+                                  ?.trend === "STABLE"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                  : globalObservation.sell_pair_pair.trends
+                                      ?.leg3?.trend === "INCREASING"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair.trends?.leg3
+                                ?.trend || "N/A"}
+                            </span>
+                            <div
+                              className={`text-xs mt-1 font-semibold ${
+                                globalObservation.sell_pair_pair.trends?.leg3
+                                  ?.change > 0
+                                  ? "text-green-600 dark:text-green-400"
+                                  : globalObservation.sell_pair_pair.trends
+                                      ?.leg3?.change < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair.trends?.leg3
+                                ?.change > 0
+                                ? "+"
+                                : ""}
+                              {globalObservation.sell_pair_pair.trends?.leg3?.change?.toFixed(
+                                3
+                              ) || "0.000"}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                globalObservation.sell_pair_pair.trends?.leg4
+                                  ?.trend === "STABLE"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                  : globalObservation.sell_pair_pair.trends
+                                      ?.leg4?.trend === "INCREASING"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair.trends?.leg4
+                                ?.trend || "N/A"}
+                            </span>
+                            <div
+                              className={`text-xs mt-1 font-semibold ${
+                                globalObservation.sell_pair_pair.trends?.leg4
+                                  ?.change > 0
+                                  ? "text-green-600 dark:text-green-400"
+                                  : globalObservation.sell_pair_pair.trends
+                                      ?.leg4?.change < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              {globalObservation.sell_pair_pair.trends?.leg4
+                                ?.change > 0
+                                ? "+"
+                                : ""}
+                              {globalObservation.sell_pair_pair.trends?.leg4?.change?.toFixed(
+                                3
+                              ) || "0.000"}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            ₹
+                            {globalObservation.sell_pair_pair.final_prices?.leg3?.toFixed(
+                              2
+                            ) || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-dark-text-primary font-semibold">
+                            ₹
+                            {globalObservation.sell_pair_pair.final_prices?.leg4?.toFixed(
+                              2
+                            ) || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-purple-600 dark:text-purple-400 font-medium">
+                            {globalObservation.sell_pair_pair
+                              .exit_execution_strategy?.strategy || "N/A"}
+                          </td>
+                          <td className="px-3 py-2 text-gray-700 dark:text-dark-text-secondary max-w-xs text-xs">
+                            {globalObservation.sell_pair_pair.execution_strategy
+                              ?.reason || "N/A"}
                           </td>
                         </tr>
                       </tbody>

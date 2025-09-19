@@ -5,7 +5,7 @@ const config = {
   // API Base URL from environment variables
   // API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
   // API_BASE_URL: "https://r4np4x2t-8000.inc1.devtunnels.ms",
-  API_BASE_URL: "http://localhost:8000",
+  API_BASE_URL: "http://100.64.231.34:8000",
 
   // App configuration
   APP_NAME: import.meta.env.VITE_APP_NAME || "Nuvama Trading Platform",
