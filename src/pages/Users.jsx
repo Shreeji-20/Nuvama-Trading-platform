@@ -326,8 +326,8 @@ export default function Users() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:bg-dark-gradient p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto ">
         {/* Page Header */}
         <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6 md:p-8 mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -347,10 +347,10 @@ export default function Users() {
               </svg>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text-primary">
+              <h1 className="text-md font-bold text-gray-900 dark:text-dark-text-primary">
                 User Management
               </h1>
-              <p className="text-gray-600 dark:text-dark-text-secondary mt-1">
+              <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-1">
                 Manage Nuvama API users and their credentials
               </p>
             </div>
@@ -429,7 +429,7 @@ export default function Users() {
 
         {/* Add User Form */}
         <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6 md:p-8 mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-6 flex items-center gap-2">
+          <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-dark-text-primary mb-6 flex items-center gap-2">
             <div className="w-3 h-3 bg-blue-500 dark:bg-dark-accent rounded-full"></div>
             Add New User
           </h3>
@@ -526,7 +526,7 @@ export default function Users() {
         {/* User List */}
         <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border">
           <div className="p-6 md:p-8 border-b border-gray-200 dark:border-dark-border">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary flex items-center gap-2">
+            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-dark-text-primary flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
               User List ({users.length})
             </h3>
@@ -549,10 +549,10 @@ export default function Users() {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-lg">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
                 No users added yet
               </p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
                 Add your first Nuvama API user to get started
               </p>
             </div>
@@ -563,7 +563,7 @@ export default function Users() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-dark-border">
-                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                      <th className="text-left p-4 text-sm md:text-base font-semibold text-gray-700 dark:text-dark-text-secondary">
                         User ID
                       </th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
@@ -863,17 +863,17 @@ export default function Users() {
                             </svg>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary">
                               {user.userid}
                             </h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {user.lastLogin
                                 ? `Last login: ${user.lastLogin}`
                                 : "Never logged in"}
                             </p>
                           </div>
                         </div>
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-xs">
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-dark-text-secondary">
                               API Key:
@@ -1100,7 +1100,7 @@ export default function Users() {
         </div>
         {/* Excel Upload Section */}
         <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6 md:p-8 mt-8">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-6 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary mb-6 flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
             Upload Excel File
           </h3>
@@ -1160,7 +1160,7 @@ export default function Users() {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <span className="text-sm text-blue-700 dark:text-blue-400">
+                  <span className="text-xs text-blue-700 dark:text-blue-400">
                     Selected: {selectedFile.name} (
                     {(selectedFile.size / 1024).toFixed(1)} KB)
                   </span>
@@ -1224,10 +1224,10 @@ export default function Users() {
             )}
 
             <div className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <h4 className="font-medium text-gray-900 dark:text-dark-text-primary mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-dark-text-primary mb-2">
                 Instructions:
               </h4>
-              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Upload an Excel file (.xlsx or .xls format)</li>
                 <li>• Only data from Column A will be read and stored</li>
                 <li>• Data will be stored in Redis as a list</li>
@@ -1241,7 +1241,7 @@ export default function Users() {
         {Object.keys(loginProgress).length > 0 && (
           <div className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border mt-8">
             <div className="p-6 md:p-8 border-b border-gray-200 dark:border-dark-border">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary flex items-center gap-2">
                 <div className="w-3 h-3 bg-blue-500 dark:bg-blue-400 rounded-full animate-pulse"></div>
                 Login Progress
               </h3>
@@ -1271,10 +1271,10 @@ export default function Users() {
                           </svg>
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary">
                             User: {userId}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
                             Step: {progress.step}
                           </p>
                         </div>
@@ -1288,7 +1288,7 @@ export default function Users() {
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       )}
                       <p
-                        className={`text-sm font-medium ${
+                        className={`text-xs font-medium ${
                           progress.step === "error"
                             ? "text-red-600 dark:text-red-400"
                             : progress.step === "completed"

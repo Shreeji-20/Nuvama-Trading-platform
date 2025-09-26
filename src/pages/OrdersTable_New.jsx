@@ -539,8 +539,8 @@ const OrdersTable = () => {
   }
 
   return (
-    <div className="min-h-screen bg-light-gradient dark:bg-dark-gradient p-4 md:p-6 transition-colors duration-300">
-      <div className="max-w-full mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-4 md:p-6 mb-6 border border-light-border dark:border-dark-border transition-colors duration-300">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">

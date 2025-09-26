@@ -442,16 +442,16 @@ export default function Stratergies() {
 
   // ----- UI -----
   return (
-    <div className="min-h-screen bg-light-gradient dark:bg-dark-gradient p-2 md:p-6 transition-colors duration-300 overflow-hidden">
-      <div className="max-w-7xl mx-auto overflow-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
-        <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 mb-6 border border-light-border dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-3 mb-3 border border-light-border dark:border-dark-border">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+              <h1 className="text-sm md:text-base font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
                 Trading Strategies
               </h1>
-              <p className="text-light-text-secondary dark:text-dark-text-secondary">
+              <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
                 Manage your option trading strategies
               </p>
             </div>
@@ -486,9 +486,9 @@ export default function Stratergies() {
         <IndexCards indices={["NIFTY", "SENSEX"]} className="mb-6" />
 
         {/* Form */}
-        <div className="bg-light-card-gradient dark:bg-dark-card-gradient shadow-light-lg dark:shadow-dark-xl rounded-xl p-6 mb-6 border border-light-border dark:border-dark-border">
+        <div className="bg-light-card-gradient dark:bg-dark-card-gradient shadow-light-lg dark:shadow-dark-xl rounded-xl p-3 mb-3 border border-light-border dark:border-dark-border">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+            <h2 className="text-sm md:text-base font-semibold text-light-text-primary dark:text-dark-text-primary">
               {editingIndex !== null ? "Edit Strategy" : "Create New Strategy"}
             </h2>
             {editingIndex !== null && (
@@ -859,10 +859,10 @@ export default function Stratergies() {
           <div className="px-6 py-4 bg-light-secondary dark:bg-dark-elevated border-b border-light-border dark:border-dark-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">
                   Active Strategies
                 </h3>
-                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1">
+                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-1">
                   Manage and monitor your trading strategies
                 </p>
               </div>
@@ -903,10 +903,10 @@ export default function Stratergies() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-dark-text-primary mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-dark-text-primary mb-2">
                 No strategies found
               </h3>
-              <p className="text-gray-500 dark:text-dark-text-muted">
+              <p className="text-xs text-gray-500 dark:text-dark-text-muted">
                 Create your first strategy to get started
               </p>
             </div>

@@ -261,8 +261,8 @@ const AdvancedOptionsTable = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-light-background dark:bg-dark-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">

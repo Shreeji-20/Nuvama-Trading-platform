@@ -157,18 +157,18 @@ const Dashboard = () => {
   ];
 
   const StatCard = ({ title, value, icon, trend, color = "text-blue-500" }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             {title}
           </p>
-          <p className={`text-3xl font-bold ${color} mt-2`}>
+          <p className={`text-sm md:text-base font-bold ${color} mt-2`}>
             {loading ? "..." : value}
           </p>
           {trend && (
             <p
-              className={`text-sm mt-2 ${
+              className={`text-xs mt-2 ${
                 trend > 0 ? "text-green-500" : "text-red-500"
               }`}
             >
@@ -183,16 +183,16 @@ const Dashboard = () => {
 
   const QuickActionCard = ({ title, description, icon, link, color }) => (
     <Link to={link} className="group">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:scale-105 transition-all duration-300">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:scale-105 transition-all duration-300">
         <div
           className={`${color} w-12 h-12 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
         >
           <span className="text-2xl">{icon}</span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-2">
           {title}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
           {description}
         </p>
       </div>
@@ -220,7 +220,7 @@ const Dashboard = () => {
             className={`w-3 h-3 rounded-full ${getStatusColor(status)}`}
           ></div>
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <p className="text-xs font-medium text-gray-900 dark:text-white">
               {action}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -233,41 +233,41 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
                 Trading Dashboard
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                 Welcome to Nuvama Trading Platform
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Last updated: {new Date().toLocaleTimeString()}
               </p>
               <div className="flex items-center mt-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                <span className="text-sm text-green-500 font-medium">Live</span>
+                <span className="text-xs text-green-500 font-medium">Live</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Market Index Cards */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-2">
             Market Overview
           </h2>
           <IndexCards />
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           <StatCard
             title="Total Users"
             value={stats.totalUsers}
@@ -315,11 +315,11 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions and Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Quick Actions */}
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-6">
                 Quick Actions
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -333,7 +333,7 @@ const Dashboard = () => {
           {/* Recent Activity */}
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-6">
                 Recent Activity
               </h2>
               <div className="space-y-2">
@@ -344,7 +344,7 @@ const Dashboard = () => {
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Link
                   to="/stratergies"
-                  className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                  className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                 >
                   View all activity →
                 </Link>
@@ -355,13 +355,15 @@ const Dashboard = () => {
 
         {/* Trading Tools */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-6">
             Trading Tools & Analytics
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
-              <h3 className="font-semibold mb-2">Options Greeks</h3>
-              <p className="text-sm opacity-90">
+              <h3 className="text-sm md:text-base font-semibold mb-2">
+                Options Greeks
+              </h3>
+              <p className="text-xs opacity-90">
                 Calculate Delta, Gamma, Theta
               </p>
               <button className="mt-3 px-3 py-1 bg-white bg-opacity-20 rounded text-xs hover:bg-opacity-30 transition-colors">
@@ -369,22 +371,28 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
-              <h3 className="font-semibold mb-2">Risk Calculator</h3>
-              <p className="text-sm opacity-90">Portfolio risk analysis</p>
+              <h3 className="text-sm md:text-base font-semibold mb-2">
+                Risk Calculator
+              </h3>
+              <p className="text-xs opacity-90">Portfolio risk analysis</p>
               <button className="mt-3 px-3 py-1 bg-white bg-opacity-20 rounded text-xs hover:bg-opacity-30 transition-colors">
                 Coming Soon
               </button>
             </div>
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
-              <h3 className="font-semibold mb-2">P&L Tracker</h3>
-              <p className="text-sm opacity-90">Real-time profit tracking</p>
+              <h3 className="text-sm md:text-base font-semibold mb-2">
+                P&L Tracker
+              </h3>
+              <p className="text-xs opacity-90">Real-time profit tracking</p>
               <button className="mt-3 px-3 py-1 bg-white bg-opacity-20 rounded text-xs hover:bg-opacity-30 transition-colors">
                 Coming Soon
               </button>
             </div>
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white">
-              <h3 className="font-semibold mb-2">Market Scanner</h3>
-              <p className="text-sm opacity-90">Find trading opportunities</p>
+              <h3 className="text-sm md:text-base font-semibold mb-2">
+                Market Scanner
+              </h3>
+              <p className="text-xs opacity-90">Find trading opportunities</p>
               <button className="mt-3 px-3 py-1 bg-white bg-opacity-20 rounded text-xs hover:bg-opacity-30 transition-colors">
                 Coming Soon
               </button>
@@ -394,13 +402,13 @@ const Dashboard = () => {
 
         {/* System Status */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white mb-6">
             System Status
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900 dark:bg-opacity-20 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                <p className="text-xs font-medium text-green-800 dark:text-green-200">
                   API Status
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-400">
@@ -411,7 +419,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
                   Market Data
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400">
@@ -422,7 +430,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900 dark:bg-opacity-20 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                <p className="text-xs font-medium text-purple-800 dark:text-purple-200">
                   Order Engine
                 </p>
                 <p className="text-xs text-purple-600 dark:text-purple-400">

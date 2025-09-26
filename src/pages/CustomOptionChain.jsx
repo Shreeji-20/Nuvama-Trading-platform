@@ -209,222 +209,224 @@ const SpreadPage = () => {
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6 app-container bg-white dark:bg-gray-900 min-h-full transition-colors duration-300">
-      {/* Index Cards */}
-      <IndexCards indices={["NIFTY", "SENSEX"]} className="" />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Index Cards */}
+        <IndexCards indices={["NIFTY", "SENSEX"]} className="" />
 
-      {/* Form */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 border border-gray-300 dark:border-gray-600 p-4 rounded-lg shadow bg-white dark:bg-gray-800 transition-colors duration-300">
-        {/* Index */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Index
-          </label>
-          <select
-            name="index"
-            value={form.index}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            <option value="NIFTY">NIFTY</option>
-            <option value="SENSEX">SENSEX</option>
-          </select>
-        </div>
+        {/* Form */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 border border-gray-300 dark:border-gray-600 p-4 rounded-lg shadow bg-white dark:bg-gray-800 transition-colors duration-300">
+          {/* Index */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Index
+            </label>
+            <select
+              name="index"
+              value={form.index}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              <option value="NIFTY">NIFTY</option>
+              <option value="SENSEX">SENSEX</option>
+            </select>
+          </div>
 
-        {/* Leg 1 Strike */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 1 Strike
-          </label>
-          <input
-            name="leg1Strike"
-            type="number"
-            value={form.leg1Strike}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          />
-        </div>
+          {/* Leg 1 Strike */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 1 Strike
+            </label>
+            <input
+              name="leg1Strike"
+              type="number"
+              value={form.leg1Strike}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            />
+          </div>
 
-        {/* Leg 1 Expiry */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 1 Expiry
-          </label>
-          <select
-            name="leg1Expiry"
-            value={form.leg1Expiry}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            {expiryOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Leg 1 Option Type */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 1 Option Type
-          </label>
-          <select
-            name="leg1OptionType"
-            value={form.leg1OptionType}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            <option value="CE">Call (CE)</option>
-            <option value="PE">Put (PE)</option>
-          </select>
-        </div>
-
-        {/* Leg 1 Order Type */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 1 Order Type
-          </label>
-          <select
-            name="leg1OrderType"
-            value={form.leg1OrderType}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-          </select>
-        </div>
-
-        {/* Leg 2 Strike */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 2 Strike
-          </label>
-          <input
-            name="leg2Strike"
-            type="number"
-            value={form.leg2Strike}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          />
-        </div>
-
-        {/* Leg 2 Expiry */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 2 Expiry
-          </label>
-          <select
-            name="leg2Expiry"
-            value={form.leg2Expiry}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            {expiryOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Leg 2 Option Type */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 2 Option Type
-          </label>
-          <select
-            name="leg2OptionType"
-            value={form.leg2OptionType}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            <option value="CE">Call (CE)</option>
-            <option value="PE">Put (PE)</option>
-          </select>
-        </div>
-
-        {/* Leg 2 Order Type */}
-        <div>
-          <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Leg 2 Order Type
-          </label>
-          <select
-            name="leg2OrderType"
-            value={form.leg2OrderType}
-            onChange={handleChange}
-            className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
-          >
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-          </select>
-        </div>
-
-        {/* Submit */}
-        <div className="flex items-end">
-          <button
-            onClick={fetchData}
-            className="bg-blue-500 dark:bg-blue-600 text-white rounded p-2 w-full hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            Add Spread
-          </button>
-        </div>
-      </div>
-
-      {/* Spread Table */}
-      {displayRows.length > 0 && (
-        <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-600 transition-colors duration-300">
-          <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-700 transition-colors duration-300">
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
-                  Leg 1
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
-                  Leg 2
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
-                  Spread
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayRows.map((row, i) => (
-                <tr
-                  key={i}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white">
-                    {`${row.leg1Strike} ${row.leg1OptionType} (${row.leg1OrderType})`}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white">
-                    {`${row.leg2Strike} ${row.leg2OptionType} (${row.leg2OrderType})`}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white font-mono">
-                    {row.spread !== null &&
-                    row.spread !== undefined &&
-                    row.spread !== ""
-                      ? Number(row.spread).toFixed(2)
-                      : ""}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                    <button
-                      onClick={() => handleDelete(i)}
-                      className="bg-red-500 dark:bg-red-600 text-white px-3 py-1 rounded hover:bg-red-600 dark:hover:bg-red-700 transition-colors duration-200 shadow-md hover:shadow-lg"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+          {/* Leg 1 Expiry */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 1 Expiry
+            </label>
+            <select
+              name="leg1Expiry"
+              value={form.leg1Expiry}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              {expiryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+
+          {/* Leg 1 Option Type */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 1 Option Type
+            </label>
+            <select
+              name="leg1OptionType"
+              value={form.leg1OptionType}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              <option value="CE">Call (CE)</option>
+              <option value="PE">Put (PE)</option>
+            </select>
+          </div>
+
+          {/* Leg 1 Order Type */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 1 Order Type
+            </label>
+            <select
+              name="leg1OrderType"
+              value={form.leg1OrderType}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+
+          {/* Leg 2 Strike */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 2 Strike
+            </label>
+            <input
+              name="leg2Strike"
+              type="number"
+              value={form.leg2Strike}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            />
+          </div>
+
+          {/* Leg 2 Expiry */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 2 Expiry
+            </label>
+            <select
+              name="leg2Expiry"
+              value={form.leg2Expiry}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              {expiryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Leg 2 Option Type */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 2 Option Type
+            </label>
+            <select
+              name="leg2OptionType"
+              value={form.leg2OptionType}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              <option value="CE">Call (CE)</option>
+              <option value="PE">Put (PE)</option>
+            </select>
+          </div>
+
+          {/* Leg 2 Order Type */}
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Leg 2 Order Type
+            </label>
+            <select
+              name="leg2OrderType"
+              value={form.leg2OrderType}
+              onChange={handleChange}
+              className="border border-gray-300 dark:border-gray-600 p-2 rounded w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+            >
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+
+          {/* Submit */}
+          <div className="flex items-end">
+            <button
+              onClick={fetchData}
+              className="bg-blue-500 dark:bg-blue-600 text-white rounded p-2 w-full hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg"
+            >
+              Add Spread
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Spread Table */}
+        {displayRows.length > 0 && (
+          <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-600 transition-colors duration-300">
+            <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-gray-700 transition-colors duration-300">
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
+                    Leg 1
+                  </th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
+                    Leg 2
+                  </th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
+                    Spread
+                  </th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-gray-900 dark:text-white">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayRows.map((row, i) => (
+                  <tr
+                    key={i}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  >
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white">
+                      {`${row.leg1Strike} ${row.leg1OptionType} (${row.leg1OrderType})`}
+                    </td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white">
+                      {`${row.leg2Strike} ${row.leg2OptionType} (${row.leg2OrderType})`}
+                    </td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-gray-900 dark:text-white font-mono">
+                      {row.spread !== null &&
+                      row.spread !== undefined &&
+                      row.spread !== ""
+                        ? Number(row.spread).toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                      <button
+                        onClick={() => handleDelete(i)}
+                        className="bg-red-500 dark:bg-red-600 text-white px-3 py-1 rounded hover:bg-red-600 dark:hover:bg-red-700 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

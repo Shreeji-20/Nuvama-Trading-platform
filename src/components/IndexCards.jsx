@@ -144,30 +144,30 @@ const IndexCard = ({ indexData }) => {
   };
 
   return (
-    <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl border border-light-border dark:border-dark-border p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`${theme.bg} rounded-lg p-3`}>
+    <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl border border-light-border dark:border-dark-border p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className={`${theme.bg} rounded-lg p-2`}>
             <div className={theme.icon}>{icon}</div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+            <h3 className="text-xs md:text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">
               {name || symbol}
             </h3>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
               {exchange}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
+          <div className="text-sm md:text-base font-bold text-light-text-primary dark:text-dark-text-primary">
             {price
               ? price.toLocaleString("en-IN", { minimumFractionDigits: 2 })
               : "--"}
           </div>
-          <div className="flex items-center gap-1 text-sm">
+          <div className="flex items-center gap-1 text-xs">
             <svg
-              className={`w-4 h-4 ${
+              className={`w-3 h-3 ${
                 isPositive ? "text-green-500" : "text-red-500"
               } ${isPositive ? "" : "rotate-180"}`}
               fill="none"
@@ -189,7 +189,7 @@ const IndexCard = ({ indexData }) => {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 text-sm">
+      <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
           <p className="text-light-text-secondary dark:text-dark-text-secondary">
             High
@@ -381,25 +381,25 @@ const IndexCards = ({ indices = [], className = "" }) => {
         {Array.from({ length: indices.length || 2 }).map((_, index) => (
           <div
             key={index}
-            className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-6 animate-pulse"
+            className="bg-white dark:bg-dark-card-gradient rounded-xl shadow-lg dark:shadow-dark-xl border border-gray-200 dark:border-dark-border p-3 animate-pulse"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-3 w-12 h-12"></div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-2 w-8 h-8"></div>
                 <div>
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-1"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
           </div>
         ))}

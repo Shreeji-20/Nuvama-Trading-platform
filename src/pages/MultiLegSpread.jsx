@@ -1132,8 +1132,8 @@ const MultiLegSpread = () => {
   }, [updateAllSpreads]);
 
   return (
-    <div className="min-h-screen bg-light-gradient dark:bg-dark-900 p-4 md:p-6 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-6 ">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-light-lg dark:shadow-dark-xl p-6 border border-light-border dark:border-dark-border">
           <div className="flex items-center gap-4">
