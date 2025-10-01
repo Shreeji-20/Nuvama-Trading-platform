@@ -108,6 +108,12 @@ export default function Navbar({
                 <NavLink to="/advanced-options-builder" icon="🔧">
                   Options Strategy Builder
                 </NavLink>
+                <NavLink to="/deployed-strategies" icon="📊">
+                  Deployed Strategies
+                </NavLink>
+                <NavLink to="/strategy-tags" icon="🏷️">
+                  Strategy Tags
+                </NavLink>
                 <NavLink to="/orders-new" icon="🔄">
                   Orders Management
                 </NavLink>
@@ -288,6 +294,22 @@ export default function Navbar({
                 isMobile={true}
               >
                 Options Strategy Builder
+              </NavLink>
+              <NavLink
+                to="/deployed-strategies"
+                icon="📊"
+                onClick={closeMobileMenu}
+                isMobile={true}
+              >
+                Deployed Strategies
+              </NavLink>
+              <NavLink
+                to="/strategy-tags"
+                icon="🏷️"
+                onClick={closeMobileMenu}
+                isMobile={true}
+              >
+                Strategy Tags
               </NavLink>
               <NavLink
                 to="/orders-new"

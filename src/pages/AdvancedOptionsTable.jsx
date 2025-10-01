@@ -845,6 +845,44 @@ const AdvancedOptionsTable = () => {
                             </div>
                             <div>
                               <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
+                                Simulation Mode
+                              </label>
+                              {isEditing ? (
+                                <select
+                                  value={
+                                    currentValues.simulation_mode || "Live Mode"
+                                  }
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      "simulation_mode",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-light-border dark:border-dark-border rounded bg-light-surface dark:bg-dark-surface text-light-text-primary dark:text-dark-text-primary"
+                                >
+                                  <option value="Live Mode">Live Mode</option>
+                                  <option value="Simulation Mode">
+                                    Simulation Mode
+                                  </option>
+                                </select>
+                              ) : (
+                                <div className="text-xs text-light-text-primary dark:text-dark-text-primary">
+                                  <span
+                                    className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                      currentValues.simulation_mode ===
+                                      "Live Mode"
+                                        ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                        : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                    }`}
+                                  >
+                                    {currentValues.simulation_mode ||
+                                      "Live Mode"}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-light-text-muted dark:text-dark-text-muted mb-1">
                                 Exit Spread
                               </label>
                               {isEditing ? (

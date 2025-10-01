@@ -10,6 +10,8 @@ import MultiLegSpread from "./pages/MultiLegSpread";
 // import AdvancedOptionsForm from "./pages/AdvancedOptionsForm";
 import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
 import AdvancedOptionsBuilder from "./pages/AdvancedOptionsBuilder";
+import DeployedStrategies from "./pages/DeployedStrategies";
+import StrategyTags from "./pages/StrategyTags";
 import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
@@ -85,6 +87,11 @@ function App() {
                 path="/advanced-options-builder"
                 element={<AdvancedOptionsBuilder />}
               />
+              <Route
+                path="/deployed-strategies"
+                element={<DeployedStrategies />}
+              />
+              <Route path="/strategy-tags" element={<StrategyTags />} />
               <Route path="/orders-new" element={<OrdersTableNew />} />
               <Route path="/auto-login" element={<AutoLogin />} />
               <Route path="/execution-details" element={<ExecutionDetails />} />

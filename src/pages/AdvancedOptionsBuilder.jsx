@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
 
 const AdvancedOptionsBuilder = () => {
+  // Strategy tags state
+  const [availableTags, setAvailableTags] = useState([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+
   // Base configuration state
   const [baseConfig, setBaseConfig] = useState({
     strategyId: `STRATEGY_${Date.now().toString().slice(-6)}`, // Unique strategy ID
-    symbol: "NIFTY",
-    expiry: "",
     lots: 1,
     underlying: "Spot",
-    priceType: "LTP",
-    orderType: "Limit",
     buyTradesFirst: false,
-    depthIndex: 1,
+    executionMode: "Live Mode",
   });
 
   // Legs state
@@ -21,22 +21,13 @@ const AdvancedOptionsBuilder = () => {
 
   // Options for dropdowns
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
-  const expiryOptions = [
-    "16-Sep-2025",
-    "23-Sep-2025",
-    "30-Sep-2025",
-    "07-Oct-2025",
-    "14-Oct-2025",
-    "21-Oct-2025",
-  ];
+  const expiryOptions = ["Current Week", "Next Week", "Next Week+1", "Monthly"];
   const dynamicExpiryOptions = [
     "None",
     "Current Week",
     "Next Week",
-    "Next Week + 1",
-    "Next Week + 2",
+    "Next Week+1",
     "Monthly",
-    "Next Monthly",
   ];
   const underlyingOptions = ["Spot", "Futures"];
   const priceTypeOptions = ["LTP", "BidAsk", "Depth"];
@@ -80,14 +71,11 @@ const AdvancedOptionsBuilder = () => {
     squareoffTime: "",
   });
 
+  // API Base URL
+  const API_BASE_URL = "http://localhost:8000";
+
   // Options for execution parameters
   const productOptions = ["NRML", "MIS", "CNC"];
-  const strategyTagOptions = [
-    "Conservative",
-    "Aggressive",
-    "Balanced",
-    "Momentum",
-  ];
   const legsExecutionOptions = ["Parallel", "One by One", "Sequential"];
   const portfolioExecutionModeOptions = [
     "startTime",
@@ -167,6 +155,11 @@ const AdvancedOptionsBuilder = () => {
     strike500: false,
   });
 
+  // API integration states
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploymentStatus, setDeploymentStatus] = useState(null); // 'success' | 'error' | null
+  const [deploymentMessage, setDeploymentMessage] = useState("");
+
   // Options for dynamic hedge settings
   const hedgeTypeOptions = ["premium Based", "fixed Distance"];
 
@@ -183,8 +176,44 @@ const AdvancedOptionsBuilder = () => {
     }));
   };
 
+  // Fetch available strategy tags
+  const fetchStrategyTags = async () => {
+    try {
+      setLoadingTags(true);
+      const response = await fetch(`${API_BASE_URL}/strategy-tags/list`);
+      if (response.ok) {
+        const tags = await response.json();
+        setAvailableTags(tags);
+      } else {
+        console.error("Failed to fetch strategy tags");
+      }
+    } catch (error) {
+      console.error("Error fetching strategy tags:", error);
+    } finally {
+      setLoadingTags(false);
+    }
+  };
+
+  // Fetch tags on component mount
+  useEffect(() => {
+    fetchStrategyTags();
+  }, []);
+
   // Handle execution parameters changes
   const handleExecutionParamChange = (field, value) => {
+    if (field === "strategyTag") {
+      // If a tag is selected, store the full tag data
+      if (value) {
+        const selectedTag = availableTags.find((tag) => tag.id === value);
+        if (selectedTag) {
+          setExecutionParams((prev) => ({
+            ...prev,
+            [field]: JSON.stringify({ strategyTag: selectedTag }),
+          }));
+          return;
+        }
+      }
+    }
     setExecutionParams((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -218,23 +247,119 @@ const AdvancedOptionsBuilder = () => {
     setDynamicHedgeSettings((prev) => ({ ...prev, [field]: value }));
   };
 
+  // API deployment function
+  const deployStrategy = async () => {
+    try {
+      setIsDeploying(true);
+      setDeploymentStatus(null);
+      setDeploymentMessage("");
+
+      // Validate required fields
+      if (legs.length === 0) {
+        throw new Error("At least one leg is required to deploy the strategy");
+      }
+
+      // Validate that all legs have required fields
+      for (const leg of legs) {
+        if (!leg.symbol) {
+          throw new Error(`Symbol is required for Leg ${leg.legId}`);
+        }
+        if (!leg.expiry) {
+          throw new Error(`Expiry is required for Leg ${leg.legId}`);
+        }
+        if (!leg.priceType) {
+          throw new Error(`Price Type is required for Leg ${leg.legId}`);
+        }
+        if (!leg.orderType) {
+          throw new Error(`Order Type is required for Leg ${leg.legId}`);
+        }
+      }
+      // Note: strategyTag is now optional, so no validation needed
+
+      // Prepare strategy data for API
+      const strategyData = {
+        baseConfig,
+        legs,
+        executionParams,
+        targetSettings,
+        stoplossSettings,
+        exitSettings,
+        dynamicHedgeSettings, // Include dynamic hedge settings
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log("Deploying Strategy Data:", strategyData);
+
+      // Make API call to strategy configuration endpoint
+      const response = await fetch(`${API_BASE_URL}/strategy/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(strategyData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ detail: "Unknown error occurred" }));
+        throw new Error(
+          errorData.detail || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Strategy Deployment Result:", result);
+
+      setDeploymentStatus("success");
+      setDeploymentMessage(
+        `Strategy deployed successfully! Strategy ID: ${result.strategyId}`
+      );
+
+      // Auto-clear success message after 5 seconds
+      setTimeout(() => {
+        setDeploymentStatus(null);
+        setDeploymentMessage("");
+      }, 5000);
+    } catch (error) {
+      console.error("Strategy Deployment Error:", error);
+      setDeploymentStatus("error");
+      setDeploymentMessage(
+        error.message ||
+          "Failed to deploy strategy. Please check your configuration and try again."
+      );
+
+      // Auto-clear error message after 8 seconds
+      setTimeout(() => {
+        setDeploymentStatus(null);
+        setDeploymentMessage("");
+      }, 8000);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   // Add new leg
   const addLeg = () => {
     const newLeg = {
       id: Date.now(), // Internal unique identifier
       legId: `LEG_${legCounter.toString().padStart(3, "0")}`, // User-friendly leg ID
+      symbol: "NIFTY",
+      expiry: "Current Week",
       orderType: "BUY",
       optionType: "CE",
       lots: 1,
-      expiry: expiryOptions[0],
       strike: "ATM",
       target: "Absolute",
       targetValue: 0,
       stoploss: "Absolute",
       stoplossValue: 0,
+      priceType: "LTP",
+      depthIndex: 0,
+      legOrderType: "Limit",
       startTime: "",
       dynamicExpiry: "None",
-      waitAndTrade: false,
+      waitAndTrade: "",
     };
     setLegs((prev) => [...prev, newLeg]);
     setLegCounter((prev) => prev + 1);
@@ -273,13 +398,13 @@ const AdvancedOptionsBuilder = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-2 md:p-4 ">
+      <div className="max-w-[120rem] mx-auto space-y-4">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-sm md:text-md font-bold text-gray-900 dark:text-white">
                 Advanced Options Strategy Builder
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -295,191 +420,88 @@ const AdvancedOptionsBuilder = () => {
           </div>
         </div>
 
-        {/* Base Index Configuration Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-              Base Index Configuration
-            </h2>
+        {/* Base Configuration Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <h2 className="text-sm md:text-md font-semibold text-gray-900 dark:text-white">
+                Base Configuration
+              </h2>
+            </div>
+            <button
+              onClick={addLeg}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              + Add Leg
+            </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Symbol
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Expiry
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Lots
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Underlying
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Price Type
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Depth Index
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Order Type
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Buy First
-                  </th>
-                  <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-100 dark:border-gray-700">
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.symbol}
-                      onChange={(e) =>
-                        handleBaseConfigChange("symbol", e.target.value)
-                      }
-                      className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {symbolOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.expiry}
-                      onChange={(e) =>
-                        handleBaseConfigChange("expiry", e.target.value)
-                      }
-                      className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Expiry</option>
-                      {expiryOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <input
-                      type="number"
-                      value={baseConfig.lots}
-                      onChange={(e) =>
-                        handleBaseConfigChange(
-                          "lots",
-                          parseInt(e.target.value) || 1
-                        )
-                      }
-                      className="w-16 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
-                      min="1"
-                    />
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.underlying}
-                      onChange={(e) =>
-                        handleBaseConfigChange("underlying", e.target.value)
-                      }
-                      className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {underlyingOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.priceType}
-                      onChange={(e) =>
-                        handleBaseConfigChange("priceType", e.target.value)
-                      }
-                      className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {priceTypeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.depthIndex}
-                      onChange={(e) =>
-                        handleBaseConfigChange(
-                          "depthIndex",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      disabled={baseConfig.priceType !== "Depth"}
-                      className={`w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        baseConfig.priceType !== "Depth"
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      {depthOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={baseConfig.orderType}
-                      onChange={(e) =>
-                        handleBaseConfigChange("orderType", e.target.value)
-                      }
-                      className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {orderTypeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <div className="flex justify-center">
-                      <input
-                        type="checkbox"
-                        checked={baseConfig.buyTradesFirst}
-                        onChange={(e) =>
-                          handleBaseConfigChange(
-                            "buyTradesFirst",
-                            e.target.checked
-                          )
-                        }
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <div className="flex justify-center">
-                      <button
-                        onClick={addLeg}
-                        className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
-                      >
-                        Add Leg
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Lots
+              </label>
+              <input
+                type="number"
+                value={baseConfig.lots}
+                onChange={(e) =>
+                  handleBaseConfigChange("lots", parseInt(e.target.value) || 1)
+                }
+                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                min="1"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Underlying
+              </label>
+              <select
+                value={baseConfig.underlying}
+                onChange={(e) =>
+                  handleBaseConfigChange("underlying", e.target.value)
+                }
+                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {underlyingOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Execution Mode
+              </label>
+              <select
+                value={baseConfig.executionMode}
+                onChange={(e) =>
+                  handleBaseConfigChange("executionMode", e.target.value)
+                }
+                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="Live Mode">Live Mode</option>
+                <option value="Simulation Mode">Simulation Mode</option>
+              </select>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="buyTradesFirst"
+                checked={baseConfig.buyTradesFirst}
+                onChange={(e) =>
+                  handleBaseConfigChange("buyTradesFirst", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label
+                htmlFor="buyTradesFirst"
+                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+              >
+                Buy Trades First
+              </label>
+            </div>
           </div>
         </div>
 
@@ -488,7 +510,7 @@ const AdvancedOptionsBuilder = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <h2 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-sm md:text-md font-semibold text-gray-900 dark:text-white">
                 Legs Builder ({legs.length} legs)
               </h2>
             </div>
@@ -503,7 +525,7 @@ const AdvancedOptionsBuilder = () => {
             <div className="text-center py-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-gray-400"
+                  className="w-6 h-6 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -530,6 +552,12 @@ const AdvancedOptionsBuilder = () => {
                       Leg ID
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      Symbol
+                    </th>
+                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      Expiry
+                    </th>
+                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                       Order
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -537,9 +565,6 @@ const AdvancedOptionsBuilder = () => {
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                       Lots
-                    </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      Expiry
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                       Strike
@@ -555,6 +580,15 @@ const AdvancedOptionsBuilder = () => {
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                       Stop Loss Value
+                    </th>
+                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      Price Type
+                    </th>
+                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      Depth Index
+                    </th>
+                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      Order Type
                     </th>
                     <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                       Start Time
@@ -586,6 +620,35 @@ const AdvancedOptionsBuilder = () => {
                             {leg.legId}
                           </span>
                         </div>
+                      </td>
+                      <td className="p-2">
+                        <select
+                          value={leg.symbol}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "symbol", e.target.value)
+                          }
+                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="NIFTY">NIFTY</option>
+                          <option value="BANKNIFTY">BANKNIFTY</option>
+                          <option value="FINNIFTY">FINNIFTY</option>
+                          <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <select
+                          value={leg.expiry}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "expiry", e.target.value)
+                          }
+                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {expiryOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-2">
                         <div className="flex justify-center">
@@ -624,21 +687,6 @@ const AdvancedOptionsBuilder = () => {
                           min="1"
                           style={{ fontSize: "0.6rem" }}
                         />
-                      </td>
-                      <td className="p-2">
-                        <select
-                          value={leg.expiry}
-                          onChange={(e) =>
-                            updateLeg(leg.id, "expiry", e.target.value)
-                          }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {expiryOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
                       </td>
                       <td className="p-2">
                         <select
@@ -718,6 +766,55 @@ const AdvancedOptionsBuilder = () => {
                         />
                       </td>
                       <td className="p-2">
+                        <select
+                          value={leg.priceType}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "priceType", e.target.value)
+                          }
+                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {priceTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <select
+                          value={leg.depthIndex}
+                          onChange={(e) =>
+                            updateLeg(
+                              leg.id,
+                              "depthIndex",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value={0}>0</option>
+                          <option value={1}>1</option>
+                          <option value={2}>2</option>
+                          <option value={3}>3</option>
+                          <option value={4}>4</option>
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <select
+                          value={leg.legOrderType || "Limit"}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "legOrderType", e.target.value)
+                          }
+                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {orderTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
                         <input
                           type="time"
                           value={leg.startTime}
@@ -743,20 +840,16 @@ const AdvancedOptionsBuilder = () => {
                         </select>
                       </td>
                       <td className="p-2">
-                        <div className="flex justify-center">
-                          <input
-                            type="checkbox"
-                            checked={leg.waitAndTrade}
-                            onChange={(e) =>
-                              updateLeg(
-                                leg.id,
-                                "waitAndTrade",
-                                e.target.checked
-                              )
-                            }
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                          />
-                        </div>
+                        <input
+                          type="text"
+                          value={leg.waitAndTrade}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "waitAndTrade", e.target.value)
+                          }
+                          className="w-20 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          placeholder="0.5, -1%, etc"
+                          style={{ fontSize: "0.6rem" }}
+                        />
                       </td>
                       <td className="p-2 text-center">
                         <button
@@ -775,7 +868,7 @@ const AdvancedOptionsBuilder = () => {
         </div>
 
         {/* Horizontal Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
           <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
             <nav className="flex space-x-8 overflow-x-auto">
               {tabs.map((tab) => (
@@ -805,7 +898,7 @@ const AdvancedOptionsBuilder = () => {
                 {/* Cards in Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Card 1: Form Parameters */}
-                  <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                  <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -855,7 +948,20 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                             <td className="p-2">
                               <select
-                                value={executionParams.strategyTag}
+                                value={
+                                  executionParams.strategyTag
+                                    ? (() => {
+                                        try {
+                                          const parsed = JSON.parse(
+                                            executionParams.strategyTag
+                                          );
+                                          return parsed.strategyTag?.id || "";
+                                        } catch {
+                                          return executionParams.strategyTag;
+                                        }
+                                      })()
+                                    : ""
+                                }
                                 onChange={(e) =>
                                   handleExecutionParamChange(
                                     "strategyTag",
@@ -863,11 +969,21 @@ const AdvancedOptionsBuilder = () => {
                                   )
                                 }
                                 className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                disabled={loadingTags}
                               >
-                                <option value="">Select Tag</option>
-                                {strategyTagOptions.map((option) => (
-                                  <option key={option} value={option}>
-                                    {option}
+                                <option value="">
+                                  {loadingTags
+                                    ? "Loading tags..."
+                                    : "Select Tag"}
+                                </option>
+                                {availableTags.map((tag) => (
+                                  <option key={tag.id} value={tag.id}>
+                                    {tag.tagName} (
+                                    {
+                                      Object.keys(tag.userMultipliers || {})
+                                        .length
+                                    }{" "}
+                                    users)
                                   </option>
                                 ))}
                               </select>
@@ -1843,26 +1959,39 @@ const AdvancedOptionsBuilder = () => {
             {/* Action Buttons */}
             <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
               <button
-                onClick={() => {
-                  // Collect all parameters for API call
-                  const strategyData = {
-                    baseConfig,
-                    legs,
-                    executionParams,
-                    targetSettings,
-                    stoplossSettings,
-                    exitSettings,
-                    timestamp: new Date().toISOString(),
-                  };
-                  console.log("Strategy Data to be sent:", strategyData);
-                  // TODO: Replace with actual API call
-                  alert(
-                    "Strategy saved! Check console for full data structure."
-                  );
-                }}
-                className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105"
+                onClick={deployStrategy}
+                disabled={isDeploying}
+                className={`px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                  isDeploying ? "animate-pulse" : ""
+                }`}
               >
-                🚀 Deploy Strategy
+                {isDeploying ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Deploying...
+                  </>
+                ) : (
+                  "🚀 Deploy Strategy"
+                )}
               </button>
               <button
                 onClick={() => {
@@ -1914,6 +2043,17 @@ const AdvancedOptionsBuilder = () => {
                       waitBtwnRetry: 0,
                       maxWaitTime: 0,
                     });
+                    setDynamicHedgeSettings({
+                      hedgeType: "premium Based",
+                      minHedgeDistance: 0,
+                      maxHedgeDistance: 0,
+                      minPremium: 0.0,
+                      maxPremium: 0.0,
+                      strikeSteps: 100,
+                      strike500: false,
+                    });
+                    setDeploymentStatus(null);
+                    setDeploymentMessage("");
                     setActiveTab("strategy");
                   }
                 }}
@@ -1923,6 +2063,58 @@ const AdvancedOptionsBuilder = () => {
               </button>
             </div>
           </div>
+
+          {/* Deployment Status Messages */}
+          {deploymentStatus && (
+            <div
+              className={`mt-4 p-4 rounded-lg border ${
+                deploymentStatus === "success"
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                {deploymentStatus === "success" ? (
+                  <svg
+                    className="w-5 h-5 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5 text-red-600 dark:text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                )}
+                <p
+                  className={`text-sm font-medium ${
+                    deploymentStatus === "success"
+                      ? "text-green-800 dark:text-green-200"
+                      : "text-red-800 dark:text-red-200"
+                  }`}
+                >
+                  {deploymentMessage}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
