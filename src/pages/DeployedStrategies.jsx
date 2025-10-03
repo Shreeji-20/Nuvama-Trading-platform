@@ -79,6 +79,15 @@ const DeployedStrategies = () => {
           .json()
           .catch(() => ({ detail: "Unknown error" }));
         console.error("Update error response:", errorData);
+
+        // Handle validation errors specifically
+        if (response.status === 422 && errorData.detail?.errors) {
+          const errorMessages = errorData.detail.errors
+            .map((err) => `${err.loc.join(".")}: ${err.msg}`)
+            .join("\n");
+          throw new Error(`Validation errors:\n${errorMessages}`);
+        }
+
         throw new Error(
           errorData.detail || `HTTP error! status: ${response.status}`
         );
@@ -150,8 +159,22 @@ const DeployedStrategies = () => {
           waitAndTrade: leg.waitAndTrade || "",
           dynamicExpiry: leg.dynamicExpiry || "None",
         })) || [],
+      // Ensure dynamicHedgeSettings has strikeDistance if hedgeType is fixed Distance
+      dynamicHedgeSettings: editValues.dynamicHedgeSettings
+        ? {
+            ...editValues.dynamicHedgeSettings,
+            strikeDistance:
+              editValues.dynamicHedgeSettings.hedgeType === "fixed Distance"
+                ? editValues.dynamicHedgeSettings.strikeDistance || 1
+                : editValues.dynamicHedgeSettings.strikeDistance || 1,
+          }
+        : undefined,
     };
 
+    console.log(
+      "Sanitized config before update:",
+      JSON.stringify(sanitizedConfig, null, 2)
+    );
     updateStrategy(strategyId, sanitizedConfig);
   };
 
@@ -1448,6 +1471,156 @@ const DeployedStrategies = () => {
                                   "exitSettings.maxWaitTime"
                                 )}
                                 s
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dynamic Hedge Settings */}
+                    {strategy.config?.dynamicHedgeSettings && (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                          Dynamic Hedge Settings
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Hedge Type
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.hedgeType"
+                                  ) || "premium Based"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.hedgeType",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="premium Based">
+                                  premium Based
+                                </option>
+                                <option value="fixed Distance">
+                                  fixed Distance
+                                </option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.hedgeType"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strike Steps
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="number"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.strikeSteps"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.strikeSteps",
+                                    parseInt(e.target.value) || 100
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.strikeSteps"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {getEditValue(
+                            strategy,
+                            "dynamicHedgeSettings.hedgeType"
+                          ) === "fixed Distance" && (
+                            <div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Strike Distance
+                              </div>
+                              {editingStrategy === strategy.strategyId ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "dynamicHedgeSettings.strikeDistance"
+                                    ) || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "dynamicHedgeSettings.strikeDistance",
+                                      parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                  min="1"
+                                />
+                              ) : (
+                                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.strikeDistance"
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strike 500
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.strike500"
+                                  )
+                                    ? "true"
+                                    : "false"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.strike500",
+                                    e.target.value === "true"
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.strike500"
+                                )
+                                  ? "Yes"
+                                  : "No"}
                               </div>
                             )}
                           </div>

@@ -153,6 +153,7 @@ const AdvancedOptionsBuilder = () => {
     // Card 2: Strike Configuration
     strikeSteps: 100,
     strike500: false,
+    strikeDistance: 1,
   });
 
   // API integration states
@@ -1824,6 +1825,29 @@ const AdvancedOptionsBuilder = () => {
                               />
                             </td>
                           </tr>
+                          {dynamicHedgeSettings.hedgeType ===
+                            "fixed Distance" && (
+                            <tr className="border-b border-gray-100 dark:border-gray-600">
+                              <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                                Strike Distance
+                              </td>
+                              <td className="p-3">
+                                <input
+                                  type="number"
+                                  value={dynamicHedgeSettings.strikeDistance}
+                                  onChange={(e) =>
+                                    handleDynamicHedgeSettingsChange(
+                                      "strikeDistance",
+                                      parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  className="w-32 text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                  min="1"
+                                  placeholder="Strike distance"
+                                />
+                              </td>
+                            </tr>
+                          )}
                           <tr>
                             <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
                               Strike 500
@@ -1855,8 +1879,15 @@ const AdvancedOptionsBuilder = () => {
                           Current Strike Configuration
                         </div>
                         <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
-                          Steps: {dynamicHedgeSettings.strikeSteps} | Strike
-                          500:{" "}
+                          Steps: {dynamicHedgeSettings.strikeSteps}
+                          {dynamicHedgeSettings.hedgeType ===
+                            "fixed Distance" && (
+                            <>
+                              {" "}
+                              | Distance: {dynamicHedgeSettings.strikeDistance}
+                            </>
+                          )}
+                          {" | Strike 500: "}
                           {dynamicHedgeSettings.strike500
                             ? "Enabled"
                             : "Disabled"}
@@ -1880,8 +1911,11 @@ const AdvancedOptionsBuilder = () => {
                       {dynamicHedgeSettings.maxPremium}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Strike Steps: {dynamicHedgeSettings.strikeSteps} | Strike
-                      500:{" "}
+                      Strike Steps: {dynamicHedgeSettings.strikeSteps}
+                      {dynamicHedgeSettings.hedgeType === "fixed Distance" && (
+                        <> | Distance: {dynamicHedgeSettings.strikeDistance}</>
+                      )}
+                      {" | Strike 500: "}
                       {dynamicHedgeSettings.strike500 ? "Enabled" : "Disabled"}
                     </div>
                   </div>
@@ -2051,6 +2085,7 @@ const AdvancedOptionsBuilder = () => {
                       maxPremium: 0.0,
                       strikeSteps: 100,
                       strike500: false,
+                      strikeDistance: 1,
                     });
                     setDeploymentStatus(null);
                     setDeploymentMessage("");
