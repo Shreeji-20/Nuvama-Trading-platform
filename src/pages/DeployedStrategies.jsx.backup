@@ -9,27 +9,21 @@ const DeployedStrategies = () => {
   const [editValues, setEditValues] = useState({});
   const [availableTags, setAvailableTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
-  const [activeTab, setActiveTab] = useState({}); // Tab state for each strategy (keyed by strategyId)
+  const [activeTab, setActiveTab] = useState("parameters"); // Tab state for each strategy
 
   const API_BASE_URL = "http://localhost:8000";
 
   // Tab configuration
   const tabs = [
-    { id: "parameters", label: "Configuration" },
+    { id: "parameters", label: "Execution Parameters" },
+    { id: "target", label: "Target Settings" },
+    { id: "stoploss", label: "Stoploss Settings" },
+    { id: "exit", label: "Exit Settings" },
+    { id: "hedge", label: "Dynamic Hedge" },
     { id: "positions", label: "Open Positions" },
     { id: "orders", label: "Open Orders" },
     { id: "completed", label: "Completed Orders" },
   ];
-
-  // Get active tab for a strategy (default to "parameters")
-  const getActiveTab = (strategyId) => {
-    return activeTab[strategyId] || "parameters";
-  };
-
-  // Set active tab for a strategy
-  const setStrategyTab = (strategyId, tabId) => {
-    setActiveTab((prev) => ({ ...prev, [strategyId]: tabId }));
-  };
 
   // Fetch all deployed strategies
   const fetchStrategies = async () => {
@@ -463,6 +457,37 @@ const DeployedStrategies = () => {
                             {getEditValue(strategy, "baseConfig.strategyId") ||
                               "N/A"}
                           </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Strategy Name
+                          </div>
+                          {editingStrategy === strategy.strategyId ? (
+                            <input
+                              type="text"
+                              value={
+                                getEditValue(
+                                  strategy,
+                                  "baseConfig.strategyName"
+                                ) || ""
+                              }
+                              onChange={(e) =>
+                                handleEditChange(
+                                  "baseConfig.strategyName",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Enter strategy name"
+                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+                          ) : (
+                            <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                              {getEditValue(
+                                strategy,
+                                "baseConfig.strategyName"
+                              ) || "-"}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1053,11 +1078,9 @@ const DeployedStrategies = () => {
                           {tabs.map((tab) => (
                             <button
                               key={tab.id}
-                              onClick={() =>
-                                setStrategyTab(strategy.strategyId, tab.id)
-                              }
+                              onClick={() => setActiveTab(tab.id)}
                               className={`py-2 px-1 border-b-2 font-medium text-[0.6rem] whitespace-nowrap transition-colors ${
-                                getActiveTab(strategy.strategyId) === tab.id
+                                activeTab === tab.id
                                   ? "border-blue-500 text-blue-600 dark:text-blue-400"
                                   : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
                               }`}
@@ -1070,727 +1093,782 @@ const DeployedStrategies = () => {
 
                       {/* Tab Content */}
                       <div className="mt-4">
-                        {/* Configuration Tab */}
-                        {getActiveTab(strategy.strategyId) === "parameters" && (
+                        {/* Execution Parameters Tab */}
+                        {activeTab === "parameters" && (
                           <div className="space-y-4">
-                            {/* Execution Parameters */}
-                            {strategy.config?.executionParams && (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                  Execution Parameters
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Product
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "executionParams.product"
-                                          ) || "NRML"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "executionParams.product",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="NRML">NRML</option>
-                                        <option value="MIS">MIS</option>
-                                        <option value="CNC">CNC</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "executionParams.product"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Strategy Name
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <input
-                                        type="text"
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "executionParams.strategyName"
-                                          ) || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "executionParams.strategyName",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="Enter strategy name"
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "executionParams.strategyName"
-                                        ) || "-"}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Strategy Tag
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={(() => {
-                                          const tagValue = getEditValue(
-                                            strategy,
-                                            "executionParams.strategyTag"
-                                          );
-                                          try {
-                                            if (tagValue) {
-                                              const parsed =
-                                                JSON.parse(tagValue);
-                                              return (
-                                                parsed.strategyTag?.id || ""
-                                              );
-                                            }
-                                          } catch {}
-                                          return tagValue || "";
-                                        })()}
-                                        onChange={(e) => {
-                                          const selectedTagId = e.target.value;
-                                          if (selectedTagId) {
-                                            const selectedTag =
-                                              availableTags.find(
-                                                (tag) =>
-                                                  tag.id === selectedTagId
-                                              );
-                                            if (selectedTag) {
-                                              handleEditChange(
-                                                "executionParams.strategyTag",
-                                                JSON.stringify({
-                                                  strategyTag: selectedTag,
-                                                })
-                                              );
-                                            }
-                                          } else {
-                                            handleEditChange(
-                                              "executionParams.strategyTag",
-                                              ""
-                                            );
-                                          }
-                                        }}
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        disabled={loadingTags}
-                                      >
-                                        <option value="">
-                                          {loadingTags
-                                            ? "Loading..."
-                                            : "Select Tag"}
-                                        </option>
-                                        {availableTags.map((tag) => (
-                                          <option key={tag.id} value={tag.id}>
-                                            {tag.tagName} (
-                                            {
-                                              Object.keys(
-                                                tag.userMultipliers || {}
-                                              ).length
-                                            }{" "}
-                                            users)
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {(() => {
-                                          const tagValue = getEditValue(
-                                            strategy,
-                                            "executionParams.strategyTag"
-                                          );
-                                          try {
-                                            if (tagValue) {
-                                              const parsed =
-                                                JSON.parse(tagValue);
-                                              return (
-                                                parsed.strategyTag?.tagName ||
-                                                "None"
-                                              );
-                                            }
-                                          } catch {}
-                                          return tagValue || "None";
-                                        })()}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Legs Execution
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "executionParams.legsExecution"
-                                          ) || "Parallel"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "executionParams.legsExecution",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="Parallel">
-                                          Parallel
-                                        </option>
-                                        <option value="One by One">
-                                          One by One
-                                        </option>
-                                        <option value="Sequential">
-                                          Sequential
-                                        </option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "executionParams.legsExecution"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Entry Order Type
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "executionParams.entryOrderType"
-                                          ) || "Limit"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "executionParams.entryOrderType",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="Limit">Limit</option>
-                                        <option value="Market">Market</option>
-                                        <option value="SL">SL</option>
-                                        <option value="SL-M">SL-M</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "executionParams.entryOrderType"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Start Time
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <input
-                                        type="text"
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "executionParams.startTime"
-                                          ) || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "executionParams.startTime",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        placeholder="HH:MM"
-                                      />
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "executionParams.startTime"
-                                        ) || "N/A"}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Execution Parameters
+                            </h3>
+
+                    {/* Execution Parameters */}
+                    {strategy.config?.executionParams && (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          Execution Parameters
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Product
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.product"
+                                  ) || "NRML"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.product",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="NRML">NRML</option>
+                                <option value="MIS">MIS</option>
+                                <option value="CNC">CNC</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.product"
+                                )}
                               </div>
                             )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strategy Name
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="text"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.strategyName"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.strategyName",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Enter strategy name"
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.strategyName"
+                                ) || "-"}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strategy Tag
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={(() => {
+                                  const tagValue = getEditValue(
+                                    strategy,
+                                    "executionParams.strategyTag"
+                                  );
+                                  try {
+                                    if (tagValue) {
+                                      const parsed = JSON.parse(tagValue);
+                                      return parsed.strategyTag?.id || "";
+                                    }
+                                  } catch {}
+                                  return tagValue || "";
+                                })()}
+                                onChange={(e) => {
+                                  const selectedTagId = e.target.value;
+                                  if (selectedTagId) {
+                                    const selectedTag = availableTags.find(
+                                      (tag) => tag.id === selectedTagId
+                                    );
+                                    if (selectedTag) {
+                                      handleEditChange(
+                                        "executionParams.strategyTag",
+                                        JSON.stringify({
+                                          strategyTag: selectedTag,
+                                        })
+                                      );
+                                    }
+                                  } else {
+                                    handleEditChange(
+                                      "executionParams.strategyTag",
+                                      ""
+                                    );
+                                  }
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                disabled={loadingTags}
+                              >
+                                <option value="">
+                                  {loadingTags ? "Loading..." : "Select Tag"}
+                                </option>
+                                {availableTags.map((tag) => (
+                                  <option key={tag.id} value={tag.id}>
+                                    {tag.tagName} (
+                                    {
+                                      Object.keys(tag.userMultipliers || {})
+                                        .length
+                                    }{" "}
+                                    users)
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {(() => {
+                                  const tagValue = getEditValue(
+                                    strategy,
+                                    "executionParams.strategyTag"
+                                  );
+                                  try {
+                                    if (tagValue) {
+                                      const parsed = JSON.parse(tagValue);
+                                      return (
+                                        parsed.strategyTag?.tagName || "None"
+                                      );
+                                    }
+                                  } catch {}
+                                  return tagValue || "None";
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Legs Execution
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.legsExecution"
+                                  ) || "Parallel"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.legsExecution",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="Parallel">Parallel</option>
+                                <option value="One by One">One by One</option>
+                                <option value="Sequential">Sequential</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.legsExecution"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Entry Order Type
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.entryOrderType"
+                                  ) || "Limit"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.entryOrderType",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="Limit">Limit</option>
+                                <option value="Market">Market</option>
+                                <option value="SL">SL</option>
+                                <option value="SL-M">SL-M</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.entryOrderType"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Start Time
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="text"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.startTime"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.startTime",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                placeholder="HH:MM"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.startTime"
+                                ) || "N/A"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                          </div>
+                        )}
 
-                            {/* Target & Stoploss */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {strategy.config?.targetSettings && (
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                  <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    Target Settings
-                                  </h4>
-                                  <div className="space-y-2">
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-                                        Type:
-                                      </span>
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={
-                                            getEditValue(
-                                              strategy,
-                                              "targetSettings.targetType"
-                                            ) || "CombinedProfit"
-                                          }
-                                          onChange={(e) =>
-                                            handleEditChange(
-                                              "targetSettings.targetType",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        >
-                                          <option value="CombinedProfit">
-                                            CombinedProfit
-                                          </option>
-                                          <option value="IndividualLegProfit">
-                                            IndividualLegProfit
-                                          </option>
-                                          <option value="PercentageProfit">
-                                            PercentageProfit
-                                          </option>
-                                          <option value="PremiumTarget">
-                                            PremiumTarget
-                                          </option>
-                                          <option value="UnderlyingMovement">
-                                            UnderlyingMovement
-                                          </option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                          {getEditValue(
-                                            strategy,
-                                            "targetSettings.targetType"
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-                                        Value:
-                                      </span>
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={
-                                            getEditValue(
-                                              strategy,
-                                              "targetSettings.targetValue"
-                                            ) || ""
-                                          }
-                                          onChange={(e) =>
-                                            handleEditChange(
-                                              "targetSettings.targetValue",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        />
-                                      ) : (
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                          {getEditValue(
-                                            strategy,
-                                            "targetSettings.targetValue"
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
+                          </div>
+                        )}
+
+                        {/* Target Settings Tab */}
+                        {activeTab === "target" && strategy.config?.targetSettings && (
+                          <div className="space-y-4">
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Target Settings
+                            </h3>
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Target configuration details will be displayed here
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stoploss Settings Tab */}
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Target Settings
+                          </h4>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                                Type:
+                              </span>
+                              {editingStrategy === strategy.strategyId ? (
+                                <select
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "targetSettings.targetType"
+                                    ) || "CombinedProfit"
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "targetSettings.targetType",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                >
+                                  <option value="CombinedProfit">
+                                    CombinedProfit
+                                  </option>
+                                  <option value="IndividualLegProfit">
+                                    IndividualLegProfit
+                                  </option>
+                                  <option value="PercentageProfit">
+                                    PercentageProfit
+                                  </option>
+                                  <option value="PremiumTarget">
+                                    PremiumTarget
+                                  </option>
+                                  <option value="UnderlyingMovement">
+                                    UnderlyingMovement
+                                  </option>
+                                </select>
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "targetSettings.targetType"
+                                  )}
+                                </span>
                               )}
+                            </div>
+                            <div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                                Value:
+                              </span>
+                              {editingStrategy === strategy.strategyId ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "targetSettings.targetValue"
+                                    ) || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "targetSettings.targetValue",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                />
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "targetSettings.targetValue"
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
-                              {strategy.config?.stoplossSettings && (
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                  <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                    Stoploss Settings
-                                  </h4>
-                                  <div className="space-y-2">
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-                                        Type:
-                                      </span>
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={
-                                            getEditValue(
-                                              strategy,
-                                              "stoplossSettings.stoplossType"
-                                            ) || "CombinedLoss"
-                                          }
-                                          onChange={(e) =>
-                                            handleEditChange(
-                                              "stoplossSettings.stoplossType",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        >
-                                          <option value="CombinedLoss">
-                                            CombinedLoss
-                                          </option>
-                                          <option value="CombinedProfit">
-                                            CombinedProfit
-                                          </option>
-                                          <option value="IndividualLegLoss">
-                                            IndividualLegLoss
-                                          </option>
-                                          <option value="PercentageLoss">
-                                            PercentageLoss
-                                          </option>
-                                          <option value="PremiumLoss">
-                                            PremiumLoss
-                                          </option>
-                                          <option value="UnderlyingMovement">
-                                            UnderlyingMovement
-                                          </option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                          {getEditValue(
-                                            strategy,
-                                            "stoplossSettings.stoplossType"
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-                                        Value:
-                                      </span>
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={
-                                            getEditValue(
-                                              strategy,
-                                              "stoplossSettings.stoplossValue"
-                                            ) || ""
-                                          }
-                                          onChange={(e) =>
-                                            handleEditChange(
-                                              "stoplossSettings.stoplossValue",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        />
-                                      ) : (
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                          {getEditValue(
-                                            strategy,
-                                            "stoplossSettings.stoplossValue"
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
+                      {strategy.config?.stoplossSettings && (
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            Stoploss Settings
+                          </h4>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                                Type:
+                              </span>
+                              {editingStrategy === strategy.strategyId ? (
+                                <select
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "stoplossSettings.stoplossType"
+                                    ) || "CombinedLoss"
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "stoplossSettings.stoplossType",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                >
+                                  <option value="CombinedLoss">
+                                    CombinedLoss
+                                  </option>
+                                  <option value="CombinedProfit">
+                                    CombinedProfit
+                                  </option>
+                                  <option value="IndividualLegLoss">
+                                    IndividualLegLoss
+                                  </option>
+                                  <option value="PercentageLoss">
+                                    PercentageLoss
+                                  </option>
+                                  <option value="PremiumLoss">
+                                    PremiumLoss
+                                  </option>
+                                  <option value="UnderlyingMovement">
+                                    UnderlyingMovement
+                                  </option>
+                                </select>
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "stoplossSettings.stoplossType"
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                                Value:
+                              </span>
+                              {editingStrategy === strategy.strategyId ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "stoplossSettings.stoplossValue"
+                                    ) || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "stoplossSettings.stoplossValue",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                />
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "stoplossSettings.stoplossValue"
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Exit Settings */}
+                    {strategy.config?.exitSettings && (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                          Exit Settings
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Order Type
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "exitSettings.exitOrderType"
+                                  ) || "Limit"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "exitSettings.exitOrderType",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="Limit">Limit</option>
+                                <option value="Market">Market</option>
+                                <option value="SL">SL</option>
+                                <option value="SL-M">SL-M</option>
+                                <option value="SL-L">SL-L</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "exitSettings.exitOrderType"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Exit Sell First
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "exitSettings.exitSellFirst"
+                                  )
+                                    ? "true"
+                                    : "false"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "exitSettings.exitSellFirst",
+                                    e.target.value === "true"
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "exitSettings.exitSellFirst"
+                                )
+                                  ? "Yes"
+                                  : "No"}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Max Wait Time
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="number"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "exitSettings.maxWaitTime"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "exitSettings.maxWaitTime",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "exitSettings.maxWaitTime"
+                                )}
+                                s
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dynamic Hedge Settings */}
+                    {strategy.config?.dynamicHedgeSettings && (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                          Dynamic Hedge Settings
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Hedge Type
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.hedgeType"
+                                  ) || "premium Based"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.hedgeType",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="premium Based">
+                                  premium Based
+                                </option>
+                                <option value="fixed Distance">
+                                  fixed Distance
+                                </option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.hedgeType"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strike Steps
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="number"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.strikeSteps"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.strikeSteps",
+                                    parseInt(e.target.value) || 100
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.strikeSteps"
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {getEditValue(
+                            strategy,
+                            "dynamicHedgeSettings.hedgeType"
+                          ) === "fixed Distance" && (
+                            <div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Strike Distance
+                              </div>
+                              {editingStrategy === strategy.strategyId ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "dynamicHedgeSettings.strikeDistance"
+                                    ) || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "dynamicHedgeSettings.strikeDistance",
+                                      parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                  min="1"
+                                />
+                              ) : (
+                                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.strikeDistance"
+                                  )}
                                 </div>
                               )}
                             </div>
-
-                            {/* Exit Settings */}
-                            {strategy.config?.exitSettings && (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                  Exit Settings
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Order Type
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "exitSettings.exitOrderType"
-                                          ) || "Limit"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "exitSettings.exitOrderType",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="Limit">Limit</option>
-                                        <option value="Market">Market</option>
-                                        <option value="SL">SL</option>
-                                        <option value="SL-M">SL-M</option>
-                                        <option value="SL-L">SL-L</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "exitSettings.exitOrderType"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Exit Sell First
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "exitSettings.exitSellFirst"
-                                          )
-                                            ? "true"
-                                            : "false"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "exitSettings.exitSellFirst",
-                                            e.target.value === "true"
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="false">No</option>
-                                        <option value="true">Yes</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "exitSettings.exitSellFirst"
-                                        )
-                                          ? "Yes"
-                                          : "No"}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Max Wait Time
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <input
-                                        type="number"
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "exitSettings.maxWaitTime"
-                                          ) || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "exitSettings.maxWaitTime",
-                                            parseFloat(e.target.value) || 0
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "exitSettings.maxWaitTime"
-                                        )}
-                                        s
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Dynamic Hedge Settings */}
-                            {strategy.config?.dynamicHedgeSettings && (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                  Dynamic Hedge Settings
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Hedge Type
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "dynamicHedgeSettings.hedgeType"
-                                          ) || "premium Based"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "dynamicHedgeSettings.hedgeType",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="premium Based">
-                                          premium Based
-                                        </option>
-                                        <option value="fixed Distance">
-                                          fixed Distance
-                                        </option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "dynamicHedgeSettings.hedgeType"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Strike Steps
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <input
-                                        type="number"
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "dynamicHedgeSettings.strikeSteps"
-                                          ) || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "dynamicHedgeSettings.strikeSteps",
-                                            parseInt(e.target.value) || 100
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "dynamicHedgeSettings.strikeSteps"
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {getEditValue(
+                          )}
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strike 500
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <select
+                                value={
+                                  getEditValue(
                                     strategy,
-                                    "dynamicHedgeSettings.hedgeType"
-                                  ) === "fixed Distance" && (
-                                    <div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        Strike Distance
-                                      </div>
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={
-                                            getEditValue(
-                                              strategy,
-                                              "dynamicHedgeSettings.strikeDistance"
-                                            ) || ""
-                                          }
-                                          onChange={(e) =>
-                                            handleEditChange(
-                                              "dynamicHedgeSettings.strikeDistance",
-                                              parseInt(e.target.value) || 1
-                                            )
-                                          }
-                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                          min="1"
-                                        />
-                                      ) : (
-                                        <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                          {getEditValue(
-                                            strategy,
-                                            "dynamicHedgeSettings.strikeDistance"
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Strike 500
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "dynamicHedgeSettings.strike500"
-                                          )
-                                            ? "true"
-                                            : "false"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "dynamicHedgeSettings.strike500",
-                                            e.target.value === "true"
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="false">No</option>
-                                        <option value="true">Yes</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "dynamicHedgeSettings.strike500"
-                                        )
-                                          ? "Yes"
-                                          : "No"}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                                    "dynamicHedgeSettings.strike500"
+                                  )
+                                    ? "true"
+                                    : "false"
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "dynamicHedgeSettings.strike500",
+                                    e.target.value === "true"
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              >
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                              </select>
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "dynamicHedgeSettings.strike500"
+                                )
+                                  ? "Yes"
+                                  : "No"}
                               </div>
                             )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                          </div>
+                        )}
+
+                        {/* Target Settings Tab */}
+                        {activeTab === "target" && strategy.config?.targetSettings && (
+                          <div className="space-y-4">
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Target Settings
+                            </h3>
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Target configuration details will be displayed here
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stoploss Settings Tab */}
+                        {activeTab === "stoploss" && strategy.config?.stoplossSettings && (
+                          <div className="space-y-4">
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Stoploss Settings
+                            </h3>
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Stoploss configuration details will be displayed here
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Exit Settings Tab */}
+                        {activeTab === "exit" && strategy.config?.exitSettings && (
+                          <div className="space-y-4">
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Exit Settings
+                            </h3>
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Exit configuration details will be displayed here
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Dynamic Hedge Tab */}
+                        {activeTab === "hedge" && strategy.config?.dynamicHedgeSettings && (
+                          <div className="space-y-4">
+                            <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                              Dynamic Hedge
+                            </h3>
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Dynamic hedge configuration details will be displayed here
+                              </div>
+                            </div>
                           </div>
                         )}
 
                         {/* Open Positions Tab */}
-                        {getActiveTab(strategy.strategyId) === "positions" && (
+                        {activeTab === "positions" && (
                           <div className="space-y-4">
                             <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                               Open Positions
@@ -1815,15 +1893,14 @@ const DeployedStrategies = () => {
                                 No open positions available
                               </p>
                               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                Positions will appear here when strategy is
-                                active
+                                Positions will appear here when strategy is active
                               </p>
                             </div>
                           </div>
                         )}
 
                         {/* Open Orders Tab */}
-                        {getActiveTab(strategy.strategyId) === "orders" && (
+                        {activeTab === "orders" && (
                           <div className="space-y-4">
                             <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                               Open Orders
@@ -1855,7 +1932,7 @@ const DeployedStrategies = () => {
                         )}
 
                         {/* Completed Orders Tab */}
-                        {getActiveTab(strategy.strategyId) === "completed" && (
+                        {activeTab === "completed" && (
                           <div className="space-y-4">
                             <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                               Completed Orders
