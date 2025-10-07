@@ -11,7 +11,22 @@ const StrategyTags = () => {
   const [formData, setFormData] = useState({
     tagName: "",
     description: "",
-    userMultipliers: {}, // Dictionary of userId: multiplier
+    userMultipliers: {}, // Dictionary userId: multiplier
+    users: [], // Array of {userId, multiplier}
+    globalSettings: {
+      marketOrdersAllowed: false,
+      onOrderFailure: {
+        retryAfter: 0,
+        retryCount: 0,
+        marketAtLast: false,
+      },
+      modifyOptions: {
+        priceType: "LTP",
+        depthIndex: 0,
+        betterPriceLogicType: "Absolute",
+        betterPriceLogicValue: 0,
+      },
+    },
   });
 
   // Editing state
@@ -154,6 +169,7 @@ const StrategyTags = () => {
           tagName: formData.tagName.trim(),
           description: formData.description.trim(),
           userMultipliers: formData.userMultipliers,
+          globalSettings: formData.globalSettings,
         }),
       });
 
@@ -185,6 +201,20 @@ const StrategyTags = () => {
       tagName: tag.tagName,
       description: tag.description || "",
       userMultipliers: tag.userMultipliers || {},
+      globalSettings: tag.globalSettings || {
+        marketOrdersAllowed: false,
+        onOrderFailure: {
+          retryAfter: 0,
+          retryCount: 0,
+          marketAtLast: false,
+        },
+        modifyOptions: {
+          priceType: "LTP",
+          depthIndex: 0,
+          betterPriceLogicType: "Absolute",
+          betterPriceLogicValue: 0,
+        },
+      },
     });
   };
 
@@ -199,6 +229,20 @@ const StrategyTags = () => {
       tagName: "",
       description: "",
       userMultipliers: {},
+      globalSettings: {
+        marketOrdersAllowed: false,
+        onOrderFailure: {
+          retryAfter: 0,
+          retryCount: 0,
+          marketAtLast: false,
+        },
+        modifyOptions: {
+          priceType: "LTP",
+          depthIndex: 0,
+          betterPriceLogicType: "Absolute",
+          betterPriceLogicValue: 0,
+        },
+      },
     });
     setEditingTagId(null);
     setSelectedUserId("");
@@ -249,7 +293,7 @@ const StrategyTags = () => {
               <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
                 Strategy Tags Management
               </h1>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
                 Create and manage strategy tags with user-specific multipliers
               </p>
             </div>
@@ -257,12 +301,12 @@ const StrategyTags = () => {
               <button
                 onClick={fetchTags}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 🔄 Refresh
               </button>
               <div className="text-center">
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-[0.6rem] text-gray-500 dark:text-gray-400">
                   Total Tags
                 </div>
                 <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
@@ -282,7 +326,7 @@ const StrategyTags = () => {
                 : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
             }`}
           >
-            <p className="text-sm">{message.text}</p>
+            <p className="text-[0.6rem]">{message.text}</p>
           </div>
         )}
 
@@ -299,7 +343,7 @@ const StrategyTags = () => {
             {/* Tag Name and Description */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Tag Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -309,12 +353,12 @@ const StrategyTags = () => {
                     setFormData({ ...formData, tagName: e.target.value })
                   }
                   placeholder="e.g., Conservative, Aggressive"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Description
                 </label>
                 <input
@@ -324,25 +368,25 @@ const StrategyTags = () => {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   placeholder="Optional description"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
 
             {/* User Selection */}
             <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
                 User Multipliers <span className="text-red-500">*</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Select User
                   </label>
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">-- Select User --</option>
                     {users.map((user) => {
@@ -357,7 +401,7 @@ const StrategyTags = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Multiplier
                   </label>
                   <div className="flex gap-2">
@@ -368,12 +412,12 @@ const StrategyTags = () => {
                       step="0.1"
                       min="0"
                       placeholder="1.0"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 px-3 py-2 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button
                       type="button"
                       onClick={addUserMultiplier}
-                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors"
+                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
                     >
                       + Add
                     </button>
@@ -385,11 +429,11 @@ const StrategyTags = () => {
             {/* Added Users Table */}
             {Object.keys(formData.userMultipliers).length > 0 && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <h4 className="text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Added Users ({Object.keys(formData.userMultipliers).length})
                 </h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-[0.6rem]">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-600">
                         <th className="text-left p-2 font-semibold text-gray-700 dark:text-gray-300">
@@ -422,14 +466,14 @@ const StrategyTags = () => {
                                 }
                                 step="0.1"
                                 min="0"
-                                className="w-24 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-24 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               />
                             </td>
                             <td className="p-2 text-right">
                               <button
                                 type="button"
                                 onClick={() => removeUserMultiplier(userId)}
-                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
+                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] rounded transition-colors"
                               >
                                 Remove
                               </button>
@@ -443,12 +487,243 @@ const StrategyTags = () => {
               </div>
             )}
 
+            {/* Global Settings Section */}
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+              <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
+                Global Order Settings
+              </h3>
+
+              {/* Market Orders Allowed */}
+              <div className="mb-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.globalSettings.marketOrdersAllowed}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        globalSettings: {
+                          ...formData.globalSettings,
+                          marketOrdersAllowed: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-[0.6rem] text-gray-700 dark:text-gray-300 font-medium">
+                    Allow Market Orders
+                  </span>
+                </label>
+              </div>
+
+              {/* Order Failure Settings */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+                <h4 className="text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Order Failure Handling
+                </h4>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Retry After (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.globalSettings.onOrderFailure.retryAfter}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          globalSettings: {
+                            ...formData.globalSettings,
+                            onOrderFailure: {
+                              ...formData.globalSettings.onOrderFailure,
+                              retryAfter: parseFloat(e.target.value) || 0,
+                            },
+                          },
+                        })
+                      }
+                      step="0.1"
+                      min="0"
+                      className="w-20 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Retry Count
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.globalSettings.onOrderFailure.retryCount}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          globalSettings: {
+                            ...formData.globalSettings,
+                            onOrderFailure: {
+                              ...formData.globalSettings.onOrderFailure,
+                              retryCount: parseInt(e.target.value) || 0,
+                            },
+                          },
+                        })
+                      }
+                      min="0"
+                      className="w-16 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 mt-5">
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.globalSettings.onOrderFailure.marketAtLast
+                        }
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              onOrderFailure: {
+                                ...formData.globalSettings.onOrderFailure,
+                                marketAtLast: e.target.checked,
+                              },
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-[0.6rem] text-gray-700 dark:text-gray-300 font-medium">
+                        Market at Last
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modify Options */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                <h4 className="text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Modify Options
+                </h4>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Price Type
+                    </label>
+                    <select
+                      value={formData.globalSettings.modifyOptions.priceType}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          globalSettings: {
+                            ...formData.globalSettings,
+                            modifyOptions: {
+                              ...formData.globalSettings.modifyOptions,
+                              priceType: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                      className="w-24 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    >
+                      <option value="LTP">LTP</option>
+                      <option value="BidAsk">BidAsk</option>
+                      <option value="Depth">Depth</option>
+                    </select>
+                  </div>
+                  {formData.globalSettings.modifyOptions.priceType ===
+                    "Depth" && (
+                    <div>
+                      <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Depth Index
+                      </label>
+                      <select
+                        value={formData.globalSettings.modifyOptions.depthIndex}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              modifyOptions: {
+                                ...formData.globalSettings.modifyOptions,
+                                depthIndex: parseInt(e.target.value),
+                              },
+                            },
+                          })
+                        }
+                        className="w-16 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      >
+                        <option value={0}>0</option>
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                        <option value={4}>4</option>
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Better Price Logic
+                    </label>
+                    <select
+                      value={
+                        formData.globalSettings.modifyOptions
+                          .betterPriceLogicType
+                      }
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          globalSettings: {
+                            ...formData.globalSettings,
+                            modifyOptions: {
+                              ...formData.globalSettings.modifyOptions,
+                              betterPriceLogicType: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                      className="w-28 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    >
+                      <option value="Absolute">Absolute</option>
+                      <option value="Percentage">Percentage</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Better Price Value
+                    </label>
+                    <input
+                      type="number"
+                      value={
+                        formData.globalSettings.modifyOptions
+                          .betterPriceLogicValue
+                      }
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          globalSettings: {
+                            ...formData.globalSettings,
+                            modifyOptions: {
+                              ...formData.globalSettings.modifyOptions,
+                              betterPriceLogicValue:
+                                parseFloat(e.target.value) || 0,
+                            },
+                          },
+                        })
+                      }
+                      step="0.01"
+                      min="0"
+                      className="w-20 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Form Actions */}
             <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading
                   ? "Saving..."
@@ -460,7 +735,7 @@ const StrategyTags = () => {
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -481,7 +756,7 @@ const StrategyTags = () => {
           {loading && tags.length === 0 ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-4 text-[0.6rem] text-gray-600 dark:text-gray-400">
                 Loading tags...
               </p>
             </div>
@@ -505,13 +780,13 @@ const StrategyTags = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 No strategy tags yet
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-[0.6rem] text-gray-600 dark:text-gray-400">
                 Create your first strategy tag using the form above
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-[0.6rem]">
                 <thead>
                   <tr className="border-b-2 border-gray-200 dark:border-gray-600">
                     <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">
@@ -538,7 +813,7 @@ const StrategyTags = () => {
                       className="border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <td className="p-3">
-                        <span className="inline-flex px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-semibold rounded">
+                        <span className="inline-flex px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[0.6rem] font-semibold rounded">
                           {tag.tagName}
                         </span>
                       </td>
@@ -553,7 +828,7 @@ const StrategyTags = () => {
                               ([userId, multiplier]) => (
                                 <span
                                   key={userId}
-                                  className="inline-flex items-center px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded"
+                                  className="inline-flex items-center px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-[0.6rem] rounded"
                                 >
                                   {userInfoMap[userId] || userId}: {multiplier}x
                                 </span>
@@ -573,13 +848,13 @@ const StrategyTags = () => {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => startEdit(tag)}
-                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
+                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => deleteTag(tag.id)}
-                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors"
+                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] font-medium rounded transition-colors"
                           >
                             Delete
                           </button>

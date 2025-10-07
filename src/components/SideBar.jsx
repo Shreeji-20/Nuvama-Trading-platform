@@ -93,18 +93,18 @@ export default function Navbar({
                 <NavLink to="/optionchain" icon="⛓️">
                   Option Chain
                 </NavLink>
-                <NavLink to="/optionchaincustom" icon="🎯">
+                {/* <NavLink to="/optionchaincustom" icon="🎯">
                   Custom Option Chain
-                </NavLink>
+                </NavLink> */}
                 <NavLink to="/multilegspread" icon="📈">
                   Multi-Leg Spread
                 </NavLink>
-                <NavLink to="/advanced-options" icon="🚀">
+                {/* <NavLink to="/advanced-options" icon="🚀">
                   Advanced Options
-                </NavLink>
-                <NavLink to="/advanced-options-table" icon="📋">
+                </NavLink> */}
+                {/* <NavLink to="/advanced-options-table" icon="📋">
                   Advanced Options Table
-                </NavLink>
+                </NavLink> */}
                 <NavLink to="/advanced-options-builder" icon="🔧">
                   Options Strategy Builder
                 </NavLink>

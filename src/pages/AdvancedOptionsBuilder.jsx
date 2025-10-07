@@ -32,17 +32,26 @@ const AdvancedOptionsBuilder = () => {
   const underlyingOptions = ["Spot", "Futures"];
   const priceTypeOptions = ["LTP", "BidAsk", "Depth"];
   const orderTypeOptions = ["Limit", "Market"];
-  const strikeOptions = [
-    "ATM-200",
-    "ATM-150",
-    "ATM-100",
-    "ATM-50",
-    "ATM",
-    "ATM+50",
-    "ATM+100",
-    "ATM+150",
-    "ATM+200",
-  ];
+  // Generate dynamic strike options based on symbol
+  const getStrikeOptions = (symbol) => {
+    // Determine step size: 50 for NIFTY and FINNIFTY, 100 for others
+    const stepSize = symbol === "NIFTY" || symbol === "FINNIFTY" ? 50 : 100;
+    const strikes = [];
+
+    // Generate 50 strikes down and 50 strikes up from ATM
+    for (let i = -50; i <= 50; i++) {
+      const offset = i * stepSize;
+      if (offset === 0) {
+        strikes.push("ATM");
+      } else if (offset > 0) {
+        strikes.push(`ATM+${offset}`);
+      } else {
+        strikes.push(`ATM${offset}`); // Negative sign already included
+      }
+    }
+
+    return strikes;
+  };
   const targetOptions = ["Absolute", "Percentage", "Points"];
   const stoplossOptions = ["Absolute", "Percentage"];
   const depthOptions = [1, 2, 3, 4, 5];
@@ -59,6 +68,7 @@ const AdvancedOptionsBuilder = () => {
   // Execution parameters state
   const [executionParams, setExecutionParams] = useState({
     // Card 1: Form Parameters
+    strategyName: "",
     product: "NRML",
     strategyTag: "",
     legsExecution: "Parallel",
@@ -256,6 +266,15 @@ const AdvancedOptionsBuilder = () => {
       setDeploymentMessage("");
 
       // Validate required fields
+      if (
+        !executionParams.strategyName ||
+        executionParams.strategyName.trim() === ""
+      ) {
+        throw new Error(
+          "Strategy Name is required. Please enter a strategy name in Execution Parameters."
+        );
+      }
+
       if (legs.length === 0) {
         throw new Error("At least one leg is required to deploy the strategy");
       }
@@ -360,7 +379,9 @@ const AdvancedOptionsBuilder = () => {
       legOrderType: "Limit",
       startTime: "",
       dynamicExpiry: "None",
-      waitAndTrade: "",
+      waitAndTrade: 0,
+      waitAndTradeLogic: "Absolute",
+      dynamicHedge: false,
     };
     setLegs((prev) => [...prev, newLeg]);
     setLegCounter((prev) => prev + 1);
@@ -391,7 +412,7 @@ const AdvancedOptionsBuilder = () => {
       <button
         type="button"
         onClick={handleToggle}
-        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-blue-500 hover:bg-blue-600 text-white transition-colors min-w-[60px]"
+        className="px-3 py-1.5 text-[0.6rem] font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-blue-500 hover:bg-blue-600 text-white transition-colors min-w-[60px]"
       >
         {value}
       </button>
@@ -405,16 +426,16 @@ const AdvancedOptionsBuilder = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-sm md:text-md font-bold text-gray-900 dark:text-white">
+              <h1 className="text-md font-bold text-gray-900 dark:text-white">
                 Advanced Options Strategy Builder
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
                 Build and analyze complex options strategies
               </p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-500 font-medium">
+              <span className="text-[0.6rem] text-green-500 font-medium">
                 Live Data
               </span>
             </div>
@@ -426,13 +447,13 @@ const AdvancedOptionsBuilder = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <h2 className="text-sm md:text-md font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-md font-semibold text-gray-900 dark:text-white">
                 Base Configuration
               </h2>
             </div>
             <button
               onClick={addLeg}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
             >
               + Add Leg
             </button>
@@ -440,7 +461,7 @@ const AdvancedOptionsBuilder = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Lots
               </label>
               <input
@@ -449,12 +470,12 @@ const AdvancedOptionsBuilder = () => {
                 onChange={(e) =>
                   handleBaseConfigChange("lots", parseInt(e.target.value) || 1)
                 }
-                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="1"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Underlying
               </label>
               <select
@@ -462,7 +483,7 @@ const AdvancedOptionsBuilder = () => {
                 onChange={(e) =>
                   handleBaseConfigChange("underlying", e.target.value)
                 }
-                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {underlyingOptions.map((option) => (
                   <option key={option} value={option}>
@@ -472,7 +493,7 @@ const AdvancedOptionsBuilder = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Execution Mode
               </label>
               <select
@@ -480,7 +501,7 @@ const AdvancedOptionsBuilder = () => {
                 onChange={(e) =>
                   handleBaseConfigChange("executionMode", e.target.value)
                 }
-                className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="Live Mode">Live Mode</option>
                 <option value="Simulation Mode">Simulation Mode</option>
@@ -498,7 +519,7 @@ const AdvancedOptionsBuilder = () => {
               />
               <label
                 htmlFor="buyTradesFirst"
-                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                className="ml-2 text-[0.6rem] text-gray-700 dark:text-gray-300"
               >
                 Buy Trades First
               </label>
@@ -511,12 +532,12 @@ const AdvancedOptionsBuilder = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <h2 className="text-sm md:text-md font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-md font-semibold text-gray-900 dark:text-white">
                 Legs Builder ({legs.length} legs)
               </h2>
             </div>
             {legs.length > 0 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-[0.6rem] text-gray-500 dark:text-gray-400">
                 Total legs: {legs.length}
               </div>
             )}
@@ -539,7 +560,7 @@ const AdvancedOptionsBuilder = () => {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
+              <p className="text-gray-500 dark:text-gray-400 text-[0.6rem]">
                 No legs added yet. Click "Add Leg" to start building your
                 strategy.
               </p>
@@ -549,58 +570,64 @@ const AdvancedOptionsBuilder = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Leg ID
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Symbol
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Expiry
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Order
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Option
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Lots
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Strike
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Target
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Target Value
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Stop Loss
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Stop Loss Value
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Price Type
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Depth Index
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Order Type
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Start Time
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Dynamic Expiry
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
+                      Wait & Trade Logic
+                    </th>
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Wait & Trade
                     </th>
-                    <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
+                      Dynamic Hedge
+                    </th>
+                    <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                       Actions
                     </th>
                   </tr>
@@ -617,7 +644,7 @@ const AdvancedOptionsBuilder = () => {
                     >
                       <td className="p-2">
                         <div className="text-center">
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium rounded">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[0.6rem] font-medium rounded">
                             {leg.legId}
                           </span>
                         </div>
@@ -628,7 +655,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "symbol", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="NIFTY">NIFTY</option>
                           <option value="BANKNIFTY">BANKNIFTY</option>
@@ -642,7 +669,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "expiry", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {expiryOptions.map((option) => (
                             <option key={option} value={option}>
@@ -684,7 +711,7 @@ const AdvancedOptionsBuilder = () => {
                               parseInt(e.target.value) || 1
                             )
                           }
-                          className="w-16 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           min="1"
                           style={{ fontSize: "0.6rem" }}
                         />
@@ -696,8 +723,10 @@ const AdvancedOptionsBuilder = () => {
                             updateLeg(leg.id, "strike", e.target.value)
                           }
                           className="w-full text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          style={{ maxHeight: "200px", overflowY: "auto" }}
+                          size="1"
                         >
-                          {strikeOptions.map((option) => (
+                          {getStrikeOptions(leg.symbol).map((option) => (
                             <option key={option} value={option}>
                               {option}
                             </option>
@@ -710,7 +739,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "target", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {targetOptions.map((option) => (
                             <option key={option} value={option}>
@@ -730,7 +759,7 @@ const AdvancedOptionsBuilder = () => {
                               parseFloat(e.target.value) || 0
                             )
                           }
-                          className="w-12 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-12 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           step="0.01"
                           style={{ fontSize: "0.6rem" }}
                         />
@@ -741,7 +770,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "stoploss", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {stoplossOptions.map((option) => (
                             <option key={option} value={option}>
@@ -761,7 +790,7 @@ const AdvancedOptionsBuilder = () => {
                               parseFloat(e.target.value) || 0
                             )
                           }
-                          className="w-12 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-12 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           step="0.01"
                           style={{ fontSize: "0.6rem" }}
                         />
@@ -772,7 +801,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "priceType", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {priceTypeOptions.map((option) => (
                             <option key={option} value={option}>
@@ -791,7 +820,7 @@ const AdvancedOptionsBuilder = () => {
                               parseInt(e.target.value)
                             )
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value={0}>0</option>
                           <option value={1}>1</option>
@@ -806,7 +835,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "legOrderType", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {orderTypeOptions.map((option) => (
                             <option key={option} value={option}>
@@ -822,7 +851,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "startTime", e.target.value)
                           }
-                          className="w-32 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-32 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                         />
                       </td>
                       <td className="p-2">
@@ -831,7 +860,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "dynamicExpiry", e.target.value)
                           }
-                          className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {dynamicExpiryOptions.map((option) => (
                             <option key={option} value={option}>
@@ -841,21 +870,57 @@ const AdvancedOptionsBuilder = () => {
                         </select>
                       </td>
                       <td className="p-2">
+                        <select
+                          value={leg.waitAndTradeLogic}
+                          onChange={(e) =>
+                            updateLeg(
+                              leg.id,
+                              "waitAndTradeLogic",
+                              e.target.value
+                            )
+                          }
+                          className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="Absolute">Absolute</option>
+                          <option value="Percentage">Percentage</option>
+                        </select>
+                      </td>
+                      <td className="p-2">
                         <input
-                          type="text"
+                          type="number"
                           value={leg.waitAndTrade}
                           onChange={(e) =>
-                            updateLeg(leg.id, "waitAndTrade", e.target.value)
+                            updateLeg(
+                              leg.id,
+                              "waitAndTrade",
+                              parseFloat(e.target.value) || 0
+                            )
                           }
-                          className="w-20 text-xs text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
-                          placeholder="0.5, -1%, etc"
-                          style={{ fontSize: "0.6rem" }}
+                          step="0.1"
+                          className="w-20 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          placeholder="0 or -1.5"
                         />
+                      </td>
+                      <td className="p-2">
+                        <div className="flex justify-center">
+                          <input
+                            type="checkbox"
+                            checked={leg.dynamicHedge || false}
+                            onChange={(e) =>
+                              updateLeg(
+                                leg.id,
+                                "dynamicHedge",
+                                e.target.checked
+                              )
+                            }
+                            className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          />
+                        </div>
                       </td>
                       <td className="p-2 text-center">
                         <button
                           onClick={() => removeLeg(leg.id)}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors"
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] font-medium rounded transition-colors"
                         >
                           Remove
                         </button>
@@ -876,7 +941,7 @@ const AdvancedOptionsBuilder = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-[0.6rem] whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600 dark:text-blue-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
@@ -892,7 +957,7 @@ const AdvancedOptionsBuilder = () => {
           <div className="mt-4">
             {activeTab === "strategy" && (
               <div className="space-y-6">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                   Execution Parameters
                 </h3>
 
@@ -902,7 +967,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Form Parameters
                       </h4>
                     </div>
@@ -911,17 +976,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Product
                             </td>
                             <td className="p-2">
@@ -933,7 +998,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               >
                                 {productOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -944,7 +1009,28 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
+                              Strategy Name{" "}
+                              <span className="text-red-500">*</span>
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={executionParams.strategyName}
+                                onChange={(e) =>
+                                  handleExecutionParamChange(
+                                    "strategyName",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Enter strategy name (required)"
+                                required
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-600">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Strategy Tag
                             </td>
                             <td className="p-2">
@@ -969,7 +1055,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 disabled={loadingTags}
                               >
                                 <option value="">
@@ -991,7 +1077,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Legs Execution
                             </td>
                             <td className="p-2">
@@ -1003,7 +1089,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               >
                                 {legsExecutionOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1014,7 +1100,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Portfolio Execution Mode
                             </td>
                             <td className="p-2">
@@ -1026,7 +1112,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               >
                                 {portfolioExecutionModeOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1037,7 +1123,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Entry Order Type
                             </td>
                             <td className="p-2">
@@ -1049,7 +1135,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               >
                                 {entryOrderTypeOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1068,7 +1154,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Time Parameters
                       </h4>
                     </div>
@@ -1077,17 +1163,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Run On Days
                             </td>
                             <td className="p-2">
@@ -1097,7 +1183,7 @@ const AdvancedOptionsBuilder = () => {
                                     key={day}
                                     type="button"
                                     onClick={() => handleDaysChange(day)}
-                                    className={`px-2 py-1 text-xs rounded transition-colors ${
+                                    className={`px-2 py-1 text-[0.6rem] rounded transition-colors ${
                                       executionParams.runOnDays.includes(day)
                                         ? "bg-blue-500 text-white"
                                         : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500"
@@ -1110,7 +1196,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Start Time
                             </td>
                             <td className="p-2">
@@ -1123,12 +1209,12 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-32 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                className="w-32 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                               />
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               End Time
                             </td>
                             <td className="p-2">
@@ -1141,12 +1227,12 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-32 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                className="w-32 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                               />
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Square Off Time
                             </td>
                             <td className="p-2">
@@ -1159,7 +1245,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-32 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                className="w-32 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                               />
                             </td>
                           </tr>
@@ -1190,17 +1276,17 @@ const AdvancedOptionsBuilder = () => {
                     <table className="w-full max-w-md mx-auto">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-600">
-                          <th className="text-center p-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          <th className="text-center p-3 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                             Parameter
                           </th>
-                          <th className="text-center p-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          <th className="text-center p-3 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                             Value
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b border-gray-100 dark:border-gray-600">
-                          <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                          <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
                             Target Type
                           </td>
                           <td className="p-3">
@@ -1212,7 +1298,7 @@ const AdvancedOptionsBuilder = () => {
                                   e.target.value
                                 )
                               }
-                              className="w-full text-xs text-center p-3 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              className="w-full text-[0.6rem] text-center p-3 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                             >
                               {targetTypeOptions.map((option) => (
                                 <option key={option} value={option}>
@@ -1223,7 +1309,7 @@ const AdvancedOptionsBuilder = () => {
                           </td>
                         </tr>
                         <tr>
-                          <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                          <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
                             Target Value
                           </td>
                           <td className="p-3">
@@ -1236,7 +1322,7 @@ const AdvancedOptionsBuilder = () => {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
+                              className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
                               step="0.01"
                               placeholder="Enter target value"
                             />
@@ -1249,10 +1335,10 @@ const AdvancedOptionsBuilder = () => {
                   {/* Target Summary */}
                   <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                     <div className="text-center">
-                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                      <div className="text-[0.6rem] text-orange-600 dark:text-orange-400 font-medium">
                         Current Target Configuration
                       </div>
-                      <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
+                      <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
                         {targetSettings.targetType}:{" "}
                         {targetSettings.targetValue}
                       </div>
@@ -1274,7 +1360,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Stoploss Configuration
                       </h4>
                     </div>
@@ -1283,17 +1369,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Stoploss Type
                             </td>
                             <td className="p-2">
@@ -1305,7 +1391,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
                               >
                                 {stoplossTypeOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1316,7 +1402,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Stoploss Value
                             </td>
                             <td className="p-2">
@@ -1329,14 +1415,14 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
                                 step="0.01"
                                 placeholder="Enter stoploss value"
                               />
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Stoploss Wait (seconds)
                             </td>
                             <td className="p-2">
@@ -1349,7 +1435,7 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
                                 step="0.1"
                                 placeholder="Wait time in seconds"
                               />
@@ -1364,7 +1450,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Square Off Options
                       </h4>
                     </div>
@@ -1373,17 +1459,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Option
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Enabled
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Square Off Only Loss Legs
                             </td>
                             <td className="p-2">
@@ -1403,7 +1489,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Square Off Only Profit Legs
                             </td>
                             <td className="p-2">
@@ -1433,15 +1519,15 @@ const AdvancedOptionsBuilder = () => {
                 {/* Stoploss Summary */}
                 <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
                   <div className="text-center">
-                    <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    <div className="text-[0.6rem] text-red-600 dark:text-red-400 font-medium">
                       Current Stoploss Configuration
                     </div>
-                    <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
+                    <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
                       Type: {stoplossSettings.stoplossType} | Value:{" "}
                       {stoplossSettings.stoplossValue} | Wait:{" "}
                       {stoplossSettings.stoplossWait}s
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
                       Loss Legs:{" "}
                       {stoplossSettings.sqrOffOnlyLossLegs
                         ? "Enabled"
@@ -1468,7 +1554,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Exit Configuration
                       </h4>
                     </div>
@@ -1477,17 +1563,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Exit Order Type
                             </td>
                             <td className="p-2">
@@ -1499,7 +1585,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                               >
                                 {exitOrderTypeOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1510,7 +1596,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Exit Sell First
                             </td>
                             <td className="p-2">
@@ -1530,7 +1616,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Hold Buy Time (seconds)
                             </td>
                             <td className="p-2">
@@ -1543,7 +1629,7 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 mx-auto"
                                 step="0.1"
                                 placeholder="Hold time in seconds"
                               />
@@ -1558,7 +1644,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Retry Settings
                       </h4>
                     </div>
@@ -1567,17 +1653,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Wait Between Retry (seconds)
                             </td>
                             <td className="p-2">
@@ -1590,14 +1676,14 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
                                 step="0.1"
                                 placeholder="Wait time between retries"
                               />
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Max Wait Time (seconds)
                             </td>
                             <td className="p-2">
@@ -1610,7 +1696,7 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
                                 step="0.1"
                                 placeholder="Maximum wait time"
                               />
@@ -1625,15 +1711,15 @@ const AdvancedOptionsBuilder = () => {
                 {/* Exit Summary */}
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
                   <div className="text-center">
-                    <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                    <div className="text-[0.6rem] text-yellow-600 dark:text-yellow-400 font-medium">
                       Current Exit Configuration
                     </div>
-                    <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
+                    <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
                       Order Type: {exitSettings.exitOrderType} | Sell First:{" "}
                       {exitSettings.exitSellFirst ? "Yes" : "No"} | Hold Buy:{" "}
                       {exitSettings.holdBuyTime}s
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
                       Wait Between Retry: {exitSettings.waitBtwnRetry}s | Max
                       Wait: {exitSettings.maxWaitTime}s
                     </div>
@@ -1654,7 +1740,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Hedge Parameters
                       </h4>
                     </div>
@@ -1663,17 +1749,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-2 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Hedge Type
                             </td>
                             <td className="p-2">
@@ -1685,7 +1771,7 @@ const AdvancedOptionsBuilder = () => {
                                     e.target.value
                                   )
                                 }
-                                className="w-full text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                               >
                                 {hedgeTypeOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -1696,7 +1782,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Min Hedge Distance
                             </td>
                             <td className="p-2">
@@ -1709,13 +1795,13 @@ const AdvancedOptionsBuilder = () => {
                                     parseInt(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                                 placeholder="Min distance"
                               />
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Max Hedge Distance
                             </td>
                             <td className="p-2">
@@ -1728,13 +1814,13 @@ const AdvancedOptionsBuilder = () => {
                                     parseInt(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                                 placeholder="Max distance"
                               />
                             </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Min Premium
                             </td>
                             <td className="p-2">
@@ -1748,13 +1834,13 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0.0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                                 placeholder="Min premium"
                               />
                             </td>
                           </tr>
                           <tr>
-                            <td className="p-2 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <td className="p-2 text-[0.6rem] text-center text-gray-700 dark:text-gray-300">
                               Max Premium
                             </td>
                             <td className="p-2">
@@ -1768,7 +1854,7 @@ const AdvancedOptionsBuilder = () => {
                                     parseFloat(e.target.value) || 0.0
                                   )
                                 }
-                                className="w-24 text-xs text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
+                                className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                                 placeholder="Max premium"
                               />
                             </td>
@@ -1782,7 +1868,7 @@ const AdvancedOptionsBuilder = () => {
                   <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <h4 className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                         Strike Configuration
                       </h4>
                     </div>
@@ -1791,17 +1877,17 @@ const AdvancedOptionsBuilder = () => {
                       <table className="w-full max-w-md mx-auto">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-center p-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-3 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Parameter
                             </th>
-                            <th className="text-center p-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <th className="text-center p-3 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300">
                               Value
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-600">
-                            <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                            <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
                               Strike Steps
                             </td>
                             <td className="p-3">
@@ -1818,7 +1904,7 @@ const AdvancedOptionsBuilder = () => {
                                     roundedValue
                                   );
                                 }}
-                                className="w-32 text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                                 step="100"
                                 min="100"
                                 placeholder="Multiples of 100"
@@ -1828,7 +1914,7 @@ const AdvancedOptionsBuilder = () => {
                           {dynamicHedgeSettings.hedgeType ===
                             "fixed Distance" && (
                             <tr className="border-b border-gray-100 dark:border-gray-600">
-                              <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                              <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
                                 Strike Distance
                               </td>
                               <td className="p-3">
@@ -1841,7 +1927,7 @@ const AdvancedOptionsBuilder = () => {
                                       parseInt(e.target.value) || 1
                                     )
                                   }
-                                  className="w-32 text-xs text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                                  className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                                   min="1"
                                   placeholder="Strike distance"
                                 />
@@ -1849,7 +1935,7 @@ const AdvancedOptionsBuilder = () => {
                             </tr>
                           )}
                           <tr>
-                            <td className="p-3 text-xs text-center text-gray-700 dark:text-gray-300 font-medium">
+                            <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
                               Strike 500
                             </td>
                             <td className="p-3">
@@ -1875,10 +1961,10 @@ const AdvancedOptionsBuilder = () => {
                     {/* Strike Configuration Info */}
                     <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="text-center">
-                        <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        <div className="text-[0.6rem] text-blue-600 dark:text-blue-400 font-medium">
                           Current Strike Configuration
                         </div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
+                        <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
                           Steps: {dynamicHedgeSettings.strikeSteps}
                           {dynamicHedgeSettings.hedgeType ===
                             "fixed Distance" && (
@@ -1900,17 +1986,17 @@ const AdvancedOptionsBuilder = () => {
                 {/* Dynamic Hedge Summary */}
                 <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                   <div className="text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    <div className="text-[0.6rem] text-green-600 dark:text-green-400 font-medium">
                       Current Dynamic Hedge Configuration
                     </div>
-                    <div className="text-xs font-semibold text-gray-900 dark:text-white mt-1">
+                    <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
                       Type: {dynamicHedgeSettings.hedgeType} | Distance:{" "}
                       {dynamicHedgeSettings.minHedgeDistance} -{" "}
                       {dynamicHedgeSettings.maxHedgeDistance} | Premium:{" "}
                       {dynamicHedgeSettings.minPremium} -{" "}
                       {dynamicHedgeSettings.maxPremium}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
                       Strike Steps: {dynamicHedgeSettings.strikeSteps}
                       {dynamicHedgeSettings.hedgeType === "fixed Distance" && (
                         <> | Distance: {dynamicHedgeSettings.strikeDistance}</>
@@ -1947,7 +2033,7 @@ const AdvancedOptionsBuilder = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Strategy Deployment
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-[0.6rem] text-gray-600 dark:text-gray-400">
               Deploy your complete strategy with all configured parameters
             </p>
           </div> */}
@@ -1957,34 +2043,34 @@ const AdvancedOptionsBuilder = () => {
             {/* Strategy Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
               <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg text-center">
-                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                <div className="text-[0.6rem] text-indigo-600 dark:text-indigo-400 font-medium">
                   Strategy ID
                 </div>
-                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                   {baseConfig.strategyId}
                 </div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
-                <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                <div className="text-[0.6rem] text-blue-600 dark:text-blue-400 font-medium">
                   Total Legs
                 </div>
-                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                   {legs.length}
                 </div>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
-                <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                <div className="text-[0.6rem] text-green-600 dark:text-green-400 font-medium">
                   Execution Mode
                 </div>
-                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                   {executionParams.legsExecution}
                 </div>
               </div>
               <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg text-center">
-                <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                <div className="text-[0.6rem] text-orange-600 dark:text-orange-400 font-medium">
                   Target Type
                 </div>
-                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
                   {targetSettings.targetType}
                 </div>
               </div>
@@ -1995,7 +2081,7 @@ const AdvancedOptionsBuilder = () => {
               <button
                 onClick={deployStrategy}
                 disabled={isDeploying}
-                className={`px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                className={`px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[0.6rem] font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
                   isDeploying ? "animate-pulse" : ""
                 }`}
               >
@@ -2092,7 +2178,7 @@ const AdvancedOptionsBuilder = () => {
                     setActiveTab("strategy");
                   }
                 }}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors"
+                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
               >
                 🗑️ Clear All
               </button>
@@ -2139,7 +2225,7 @@ const AdvancedOptionsBuilder = () => {
                   </svg>
                 )}
                 <p
-                  className={`text-sm font-medium ${
+                  className={`text-[0.6rem] font-medium ${
                     deploymentStatus === "success"
                       ? "text-green-800 dark:text-green-200"
                       : "text-red-800 dark:text-red-200"

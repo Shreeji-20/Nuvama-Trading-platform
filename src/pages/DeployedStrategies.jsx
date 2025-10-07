@@ -156,8 +156,10 @@ const DeployedStrategies = () => {
           ...leg,
           executionMode: leg.executionMode || "Regular", // Add default if missing
           startTime: leg.startTime || "",
-          waitAndTrade: leg.waitAndTrade || "",
+          waitAndTrade: leg.waitAndTrade || 0,
+          waitAndTradeLogic: leg.waitAndTradeLogic || "Absolute",
           dynamicExpiry: leg.dynamicExpiry || "None",
+          dynamicHedge: leg.dynamicHedge || false,
         })) || [],
       // Ensure dynamicHedgeSettings has strikeDistance if hedgeType is fixed Distance
       dynamicHedgeSettings: editValues.dynamicHedgeSettings
@@ -637,7 +639,13 @@ const DeployedStrategies = () => {
                                     Depth
                                   </th>
                                   <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                    W&T Logic
+                                  </th>
+                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
                                     Wait&Trade
+                                  </th>
+                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                    Dynamic Hedge
                                   </th>
                                 </tr>
                               </thead>
@@ -940,23 +948,76 @@ const DeployedStrategies = () => {
                                     <td className="p-1">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
+                                        <select
+                                          value={
+                                            leg.waitAndTradeLogic || "Absolute"
+                                          }
+                                          onChange={(e) =>
+                                            handleLegChange(
+                                              index,
+                                              "waitAndTradeLogic",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="w-20 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        >
+                                          <option value="Absolute">
+                                            Absolute
+                                          </option>
+                                          <option value="Percentage">
+                                            Percentage
+                                          </option>
+                                        </select>
+                                      ) : (
+                                        <span className="text-gray-900 dark:text-white">
+                                          {leg.waitAndTradeLogic || "Absolute"}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="p-1">
+                                      {editingStrategy ===
+                                      strategy.strategyId ? (
                                         <input
-                                          type="text"
-                                          value={leg.waitAndTrade || ""}
+                                          type="number"
+                                          value={leg.waitAndTrade || 0}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
                                               "waitAndTrade",
-                                              e.target.value
+                                              parseFloat(e.target.value) || 0
                                             )
                                           }
+                                          step="0.1"
                                           className="w-16 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
-                                          {leg.waitAndTrade || "-"}
+                                          {leg.waitAndTrade || 0}
                                         </span>
                                       )}
+                                    </td>
+                                    <td className="p-1">
+                                      <div className="flex justify-center">
+                                        {editingStrategy ===
+                                        strategy.strategyId ? (
+                                          <input
+                                            type="checkbox"
+                                            checked={leg.dynamicHedge || false}
+                                            onChange={(e) =>
+                                              handleLegChange(
+                                                index,
+                                                "dynamicHedge",
+                                                e.target.checked
+                                              )
+                                            }
+                                            className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                          />
+                                        ) : (
+                                          <span className="text-gray-900 dark:text-white">
+                                            {leg.dynamicHedge ? "✓" : "-"}
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 ))}
@@ -1004,6 +1065,37 @@ const DeployedStrategies = () => {
                                   strategy,
                                   "executionParams.product"
                                 )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Strategy Name
+                            </div>
+                            {editingStrategy === strategy.strategyId ? (
+                              <input
+                                type="text"
+                                value={
+                                  getEditValue(
+                                    strategy,
+                                    "executionParams.strategyName"
+                                  ) || ""
+                                }
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    "executionParams.strategyName",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Enter strategy name"
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                {getEditValue(
+                                  strategy,
+                                  "executionParams.strategyName"
+                                ) || "-"}
                               </div>
                             )}
                           </div>
