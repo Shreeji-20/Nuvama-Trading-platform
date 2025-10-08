@@ -177,7 +177,6 @@ const DeployedStrategies = () => {
           startTime: leg.startTime || "",
           waitAndTrade: leg.waitAndTrade || 0,
           waitAndTradeLogic: leg.waitAndTradeLogic || "Absolute",
-          dynamicExpiry: leg.dynamicExpiry || "None",
           dynamicHedge: leg.dynamicHedge || false,
         })) || [],
       // Ensure dynamicHedgeSettings has strikeDistance if hedgeType is fixed Distance
@@ -936,6 +935,8 @@ const DeployedStrategies = () => {
                                           <option value="LTP">LTP</option>
                                           <option value="BidAsk">BidAsk</option>
                                           <option value="Depth">Depth</option>
+                                          <option value="BID">BID</option>
+                                          <option value="ASK">ASK</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">

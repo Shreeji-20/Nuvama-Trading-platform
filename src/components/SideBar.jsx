@@ -102,9 +102,9 @@ export default function Navbar({
                 {/* <NavLink to="/advanced-options" icon="🚀">
                   Advanced Options
                 </NavLink> */}
-                {/* <NavLink to="/advanced-options-table" icon="📋">
+                <NavLink to="/advanced-options-table" icon="📋">
                   Advanced Options Table
-                </NavLink> */}
+                </NavLink>
                 <NavLink to="/advanced-options-builder" icon="🔧">
                   Options Strategy Builder
                 </NavLink>
@@ -125,10 +125,10 @@ export default function Navbar({
                 </NavLink> */}
                 {/* <NavLink to="/observation-dashboard" icon="🎯">
                   Observation Dashboard
-                </NavLink>
+                </NavLink> */}
                 <NavLink to="/observation-tables" icon="📊">
                   Observation Tables
-                </NavLink> */}
+                </NavLink>
               </div>
             </div>
 

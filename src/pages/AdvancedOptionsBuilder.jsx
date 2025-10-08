@@ -31,7 +31,7 @@ const AdvancedOptionsBuilder = () => {
     "Monthly",
   ];
   const underlyingOptions = ["Spot", "Futures"];
-  const priceTypeOptions = ["LTP", "BidAsk", "Depth"];
+  const priceTypeOptions = ["LTP", "BidAsk", "Depth", "BID", "ASK"];
   const orderTypeOptions = ["Limit", "Market"];
   // Generate dynamic strike options based on symbol
   const getStrikeOptions = (symbol) => {
@@ -375,7 +375,6 @@ const AdvancedOptionsBuilder = () => {
       depthIndex: 0,
       legOrderType: "Limit",
       startTime: "",
-      dynamicExpiry: "None",
       waitAndTrade: 0,
       waitAndTradeLogic: "Absolute",
       dynamicHedge: false,
@@ -403,6 +402,15 @@ const AdvancedOptionsBuilder = () => {
       const currentIndex = options.indexOf(value);
       const nextIndex = (currentIndex + 1) % options.length;
       onChange(options[nextIndex]);
+    };
+
+    // Get display label for the value
+    const getDisplayLabel = () => {
+      if (colorScheme === "buysell") {
+        if (value === "BUY") return "B";
+        if (value === "SELL") return "S";
+      }
+      return value;
     };
 
     // Get color classes based on colorScheme
@@ -434,9 +442,9 @@ const AdvancedOptionsBuilder = () => {
       <button
         type="button"
         onClick={handleToggle}
-        className={`px-3 py-1.5 text-[0.6rem] font-medium rounded-lg border transition-colors min-w-[60px] ${getColorClasses()}`}
+        className={`px-2 py-1 text-[0.6rem] font-medium rounded border transition-colors min-w-[40px] ${getColorClasses()}`}
       >
-        {value}
+        {getDisplayLabel()}
       </button>
     );
   };
@@ -604,67 +612,64 @@ const AdvancedOptionsBuilder = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-max table-auto">
+              <table className="w-full table-auto border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Leg ID
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Symbol
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Expiry
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Order
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Option
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[70px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Lots
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Strike
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Target
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Target Value
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Stop Loss
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Stop Loss Value
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Price Type
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Depth Index
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Order Type
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Start Time
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[130px]">
-                      Dynamic Expiry
-                    </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Wait & Trade Logic
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Wait & Trade
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Dynamic Hedge
                     </th>
-                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Actions
                     </th>
                   </tr>
@@ -692,7 +697,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "symbol", e.target.value)
                           }
-                          className="w-full min-w-[110px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="NIFTY">NIFTY</option>
                           <option value="BANKNIFTY">BANKNIFTY</option>
@@ -706,7 +711,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "expiry", e.target.value)
                           }
-                          className="w-full min-w-[110px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {expiryOptions.map((option) => (
                             <option key={option} value={option}>
@@ -750,7 +755,7 @@ const AdvancedOptionsBuilder = () => {
                               parseInt(e.target.value) || 1
                             )
                           }
-                          className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           min="1"
                           style={{ fontSize: "0.6rem" }}
                         />
@@ -761,7 +766,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "strike", e.target.value)
                           }
-                          className="w-full min-w-[110px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           style={{ maxHeight: "200px", overflowY: "auto" }}
                           size="1"
                         >
@@ -778,7 +783,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "target", e.target.value)
                           }
-                          className="w-full min-w-[90px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {targetOptions.map((option) => (
                             <option key={option} value={option}>
@@ -799,7 +804,7 @@ const AdvancedOptionsBuilder = () => {
                                 parseFloat(e.target.value) || 0
                               )
                             }
-                            className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             step="0.01"
                             style={{ fontSize: "0.6rem" }}
                           />
@@ -811,7 +816,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "stoploss", e.target.value)
                           }
-                          className="w-full min-w-[90px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {stoplossOptions.map((option) => (
                             <option key={option} value={option}>
@@ -832,7 +837,7 @@ const AdvancedOptionsBuilder = () => {
                                 parseFloat(e.target.value) || 0
                               )
                             }
-                            className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             step="0.01"
                             style={{ fontSize: "0.6rem" }}
                           />
@@ -844,7 +849,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "priceType", e.target.value)
                           }
-                          className="w-full min-w-[90px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {priceTypeOptions.map((option) => (
                             <option key={option} value={option}>
@@ -863,7 +868,7 @@ const AdvancedOptionsBuilder = () => {
                               parseInt(e.target.value)
                             )
                           }
-                          className="w-full min-w-[80px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value={0}>0</option>
                           <option value={1}>1</option>
@@ -878,7 +883,7 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "legOrderType", e.target.value)
                           }
-                          className="w-full min-w-[80px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           {orderTypeOptions.map((option) => (
                             <option key={option} value={option}>
@@ -894,23 +899,8 @@ const AdvancedOptionsBuilder = () => {
                           onChange={(e) =>
                             updateLeg(leg.id, "startTime", e.target.value)
                           }
-                          className="w-32 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                         />
-                      </td>
-                      <td className="p-1">
-                        <select
-                          value={leg.dynamicExpiry}
-                          onChange={(e) =>
-                            updateLeg(leg.id, "dynamicExpiry", e.target.value)
-                          }
-                          className="w-full min-w-[120px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {dynamicExpiryOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
                       </td>
                       <td className="p-1">
                         <select
@@ -922,7 +912,7 @@ const AdvancedOptionsBuilder = () => {
                               e.target.value
                             )
                           }
-                          className="w-full min-w-[110px] text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="Absolute">Absolute</option>
                           <option value="Percentage">Percentage</option>
@@ -940,7 +930,7 @@ const AdvancedOptionsBuilder = () => {
                             )
                           }
                           step="0.1"
-                          className="w-20 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           placeholder="0 or -1.5"
                         />
                       </td>
