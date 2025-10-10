@@ -22,7 +22,7 @@ const AdvancedOptionsBuilder = () => {
 
   // Options for dropdowns
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
-  const expiryOptions = ["Current Week", "Next Week", "Next Week+1", "Monthly"];
+  const expiryOptions = [0, 1, 2, 3, 4, 5];
   const dynamicExpiryOptions = [
     "None",
     "Current Week",
@@ -362,7 +362,7 @@ const AdvancedOptionsBuilder = () => {
       id: Date.now(), // Internal unique identifier
       legId: `LEG_${legCounter.toString().padStart(3, "0")}`, // User-friendly leg ID
       symbol: "NIFTY",
-      expiry: "Current Week",
+      expiry: 0,
       orderType: "BUY",
       optionType: "CE",
       lots: 1,

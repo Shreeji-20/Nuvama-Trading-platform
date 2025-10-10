@@ -703,18 +703,24 @@ const DeployedStrategies = () => {
                                     <td className="p-1">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
-                                        <input
-                                          type="text"
-                                          value={leg.expiry || ""}
+                                        <select
+                                          value={leg.expiry || 0}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
                                               "expiry",
-                                              e.target.value
+                                              parseInt(e.target.value)
                                             )
                                           }
                                           className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        />
+                                        >
+                                          <option value={0}>0</option>
+                                          <option value={1}>1</option>
+                                          <option value={2}>2</option>
+                                          <option value={3}>3</option>
+                                          <option value={4}>4</option>
+                                          <option value={5}>5</option>
+                                        </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
                                           {leg.expiry}
