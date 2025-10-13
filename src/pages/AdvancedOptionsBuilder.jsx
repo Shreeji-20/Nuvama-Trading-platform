@@ -19,6 +19,7 @@ const AdvancedOptionsBuilder = () => {
   const [legs, setLegs] = useState([]);
   const [activeTab, setActiveTab] = useState("strategy");
   const [legCounter, setLegCounter] = useState(1);
+  const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState(null); // Track which leg's modal is open
 
   // Options for dropdowns
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
@@ -378,6 +379,16 @@ const AdvancedOptionsBuilder = () => {
       waitAndTrade: 0,
       waitAndTradeLogic: "Absolute",
       dynamicHedge: false,
+      premiumBasedStrike: false,
+      premiumBasedStrikeConfig: {
+        strikeType: "NearestPremium",
+        maxDepth: 5,
+        searchSide: "BOTH",
+        value: 0,
+        condition: "Greaterthanequal",
+        between: 0,
+        and: 0,
+      },
     };
     setLegs((prev) => [...prev, newLeg]);
     setLegCounter((prev) => prev + 1);
@@ -387,6 +398,23 @@ const AdvancedOptionsBuilder = () => {
   const updateLeg = (legId, field, value) => {
     setLegs((prev) =>
       prev.map((leg) => (leg.id === legId ? { ...leg, [field]: value } : leg))
+    );
+  };
+
+  // Update premium based strike config for a specific leg
+  const updatePremiumStrikeConfig = (legId, field, value) => {
+    setLegs((prev) =>
+      prev.map((leg) =>
+        leg.id === legId
+          ? {
+              ...leg,
+              premiumBasedStrikeConfig: {
+                ...leg.premiumBasedStrikeConfig,
+                [field]: value,
+              },
+            }
+          : leg
+      )
     );
   };
 
@@ -761,21 +789,50 @@ const AdvancedOptionsBuilder = () => {
                         />
                       </td>
                       <td className="p-1">
-                        <select
-                          value={leg.strike}
-                          onChange={(e) =>
-                            updateLeg(leg.id, "strike", e.target.value)
-                          }
-                          className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          style={{ maxHeight: "200px", overflowY: "auto" }}
-                          size="1"
-                        >
-                          {getStrikeOptions(leg.symbol).map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={leg.premiumBasedStrike || false}
+                              onChange={(e) =>
+                                updateLeg(
+                                  leg.id,
+                                  "premiumBasedStrike",
+                                  e.target.checked
+                                )
+                              }
+                              className="w-3 h-3 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+                            />
+                            <span className="text-[0.7rem] text-gray-600 dark:text-gray-400">
+                              Premium
+                            </span>
+                          </div>
+                          {!leg.premiumBasedStrike ? (
+                            <select
+                              value={leg.strike}
+                              onChange={(e) =>
+                                updateLeg(leg.id, "strike", e.target.value)
+                              }
+                              className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              style={{ maxHeight: "200px", overflowY: "auto" }}
+                              size="1"
+                            >
+                              {getStrikeOptions(leg.symbol).map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setPremiumStrikeModalLeg(leg.id)}
+                              className="px-2 py-1 text-[0.6rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                            >
+                              Configure
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="p-1">
                         <select
@@ -2249,6 +2306,215 @@ const AdvancedOptionsBuilder = () => {
             </div>
           )}
         </div>
+
+        {/* Premium Based Strike Configuration Modal */}
+        {premiumStrikeModalLeg !== null && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+              {(() => {
+                const leg = legs.find((l) => l.id === premiumStrikeModalLeg);
+                if (!leg) return null;
+
+                return (
+                  <>
+                    <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Premium Based Strike - {leg.legId}
+                      </h3>
+                      <button
+                        onClick={() => setPremiumStrikeModalLeg(null)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Strike Type */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Strike Type
+                        </label>
+                        <select
+                          value={leg.premiumBasedStrikeConfig.strikeType}
+                          onChange={(e) =>
+                            updatePremiumStrikeConfig(
+                              leg.id,
+                              "strikeType",
+                              e.target.value
+                            )
+                          }
+                          className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="NearestPremium">
+                            Nearest Premium
+                          </option>
+                          <option value="premium">Premium</option>
+                        </select>
+                      </div>
+
+                      {/* Max Depth */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Max Depth
+                        </label>
+                        <input
+                          type="number"
+                          value={leg.premiumBasedStrikeConfig.maxDepth}
+                          onChange={(e) =>
+                            updatePremiumStrikeConfig(
+                              leg.id,
+                              "maxDepth",
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                          min="0"
+                        />
+                      </div>
+
+                      {/* Search Side */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Search Side
+                        </label>
+                        <select
+                          value={leg.premiumBasedStrikeConfig.searchSide}
+                          onChange={(e) =>
+                            updatePremiumStrikeConfig(
+                              leg.id,
+                              "searchSide",
+                              e.target.value
+                            )
+                          }
+                          className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="ITM">ITM</option>
+                          <option value="OTM">OTM</option>
+                          <option value="BOTH">BOTH</option>
+                        </select>
+                      </div>
+
+                      {/* Conditional Fields based on Strike Type */}
+                      {leg.premiumBasedStrikeConfig.strikeType ===
+                      "NearestPremium" ? (
+                        <>
+                          {/* Value */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Value
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={leg.premiumBasedStrikeConfig.value}
+                              onChange={(e) =>
+                                updatePremiumStrikeConfig(
+                                  leg.id,
+                                  "value",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          {/* Condition */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Condition
+                            </label>
+                            <select
+                              value={leg.premiumBasedStrikeConfig.condition}
+                              onChange={(e) =>
+                                updatePremiumStrikeConfig(
+                                  leg.id,
+                                  "condition",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="Greaterthanequal">
+                                Greater Than or Equal (≥)
+                              </option>
+                              <option value="lessthanequal">
+                                Less Than or Equal (≤)
+                              </option>
+                            </select>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Between */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Between
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={leg.premiumBasedStrikeConfig.between}
+                              onChange={(e) =>
+                                updatePremiumStrikeConfig(
+                                  leg.id,
+                                  "between",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          {/* And */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              And
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={leg.premiumBasedStrikeConfig.and}
+                              onChange={(e) =>
+                                updatePremiumStrikeConfig(
+                                  leg.id,
+                                  "and",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-2">
+                      <button
+                        onClick={() => setPremiumStrikeModalLeg(null)}
+                        className="px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
