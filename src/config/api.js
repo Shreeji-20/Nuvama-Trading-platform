@@ -23,6 +23,8 @@ const config = {
     STRATEGIES: "/stratergy/stratergy_1",
     STRATEGIES_ADD: "/stratergy/stratergy_1/add",
     STRATEGIES_UPDATE: "/stratergy/stratergy_1/update",
+    STRATEGY_ORDERS: "/strategy-orders/get",
+    STRATEGY_ORDERS_LIVE: "/strategy-orders/get",
 
     // Multi-leg spreads
     MULTILEG_SPREADS: "/multileg-spreads",
