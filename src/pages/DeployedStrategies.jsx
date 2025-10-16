@@ -183,6 +183,8 @@ const DeployedStrategies = () => {
           waitAndTrade: leg.waitAndTrade || 0,
           waitAndTradeLogic: leg.waitAndTradeLogic || "Absolute",
           dynamicHedge: leg.dynamicHedge || false,
+          onTargetAction: leg.onTargetAction || "REENTRY",
+          onStoplossAction: leg.onStoplossAction || "REENTRY",
         })) || [],
       // Ensure dynamicHedgeSettings has strikeDistance if hedgeType is fixed Distance
       dynamicHedgeSettings: editValues.dynamicHedgeSettings
@@ -741,6 +743,12 @@ const DeployedStrategies = () => {
                                   <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
                                     Dynamic Hedge
                                   </th>
+                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                    On Target Action
+                                  </th>
+                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                    On Stoploss Action
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1158,6 +1166,64 @@ const DeployedStrategies = () => {
                                           </span>
                                         )}
                                       </div>
+                                    </td>
+                                    <td className="p-1">
+                                      {editingStrategy ===
+                                      strategy.strategyId ? (
+                                        <select
+                                          value={
+                                            leg.onTargetAction || "REENTRY"
+                                          }
+                                          onChange={(e) =>
+                                            handleLegChange(
+                                              index,
+                                              "onTargetAction",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                          <option value="REENTRY">
+                                            REENTRY
+                                          </option>
+                                          <option value="REEXECUTE">
+                                            REEXECUTE
+                                          </option>
+                                        </select>
+                                      ) : (
+                                        <span className="text-gray-900 dark:text-white">
+                                          {leg.onTargetAction || "REENTRY"}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="p-1">
+                                      {editingStrategy ===
+                                      strategy.strategyId ? (
+                                        <select
+                                          value={
+                                            leg.onStoplossAction || "REENTRY"
+                                          }
+                                          onChange={(e) =>
+                                            handleLegChange(
+                                              index,
+                                              "onStoplossAction",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                          <option value="REENTRY">
+                                            REENTRY
+                                          </option>
+                                          <option value="REEXECUTE">
+                                            REEXECUTE
+                                          </option>
+                                        </select>
+                                      ) : (
+                                        <span className="text-gray-900 dark:text-white">
+                                          {leg.onStoplossAction || "REENTRY"}
+                                        </span>
+                                      )}
                                     </td>
                                   </tr>
                                 ))}

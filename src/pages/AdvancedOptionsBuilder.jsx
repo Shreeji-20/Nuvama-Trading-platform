@@ -57,6 +57,7 @@ const AdvancedOptionsBuilder = () => {
   const targetOptions = ["Absolute", "Percentage", "Points"];
   const stoplossOptions = ["Absolute", "Percentage"];
   const depthOptions = [1, 2, 3, 4, 5];
+  const actionOptions = ["REENTRY", "REEXECUTE"];
   const tabs = [
     { id: "strategy", label: "Execution Parameters" },
     { id: "analysis", label: "Target Settings" },
@@ -379,6 +380,8 @@ const AdvancedOptionsBuilder = () => {
       waitAndTrade: 0,
       waitAndTradeLogic: "Absolute",
       dynamicHedge: false,
+      onTargetAction: "REENTRY",
+      onStoplossAction: "REENTRY",
       premiumBasedStrike: false,
       premiumBasedStrikeConfig: {
         strikeType: "NearestPremium",
@@ -698,6 +701,12 @@ const AdvancedOptionsBuilder = () => {
                       Dynamic Hedge
                     </th>
                     <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      On Target Action
+                    </th>
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      On Stoploss Action
+                    </th>
+                    <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Actions
                     </th>
                   </tr>
@@ -1006,6 +1015,40 @@ const AdvancedOptionsBuilder = () => {
                             className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                           />
                         </div>
+                      </td>
+                      <td className="p-1">
+                        <select
+                          value={leg.onTargetAction || "REENTRY"}
+                          onChange={(e) =>
+                            updateLeg(leg.id, "onTargetAction", e.target.value)
+                          }
+                          className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {actionOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-1">
+                        <select
+                          value={leg.onStoplossAction || "REENTRY"}
+                          onChange={(e) =>
+                            updateLeg(
+                              leg.id,
+                              "onStoplossAction",
+                              e.target.value
+                            )
+                          }
+                          className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {actionOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-2 text-center">
                         <button
