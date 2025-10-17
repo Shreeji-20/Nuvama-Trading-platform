@@ -54,10 +54,10 @@ const AdvancedOptionsBuilder = () => {
 
     return strikes;
   };
-  const targetOptions = ["Absolute", "Percentage", "Points"];
-  const stoplossOptions = ["Absolute", "Percentage"];
+  const targetOptions = ["None", "Absolute", "Percentage", "Points"];
+  const stoplossOptions = ["None", "Absolute", "Percentage", "Points"];
   const depthOptions = [1, 2, 3, 4, 5];
-  const actionOptions = ["REENTRY", "REEXECUTE"];
+  const actionOptions = ["None", "REENTRY", "REEXECUTE"];
   const tabs = [
     { id: "strategy", label: "Execution Parameters" },
     { id: "analysis", label: "Target Settings" },
@@ -179,14 +179,33 @@ const AdvancedOptionsBuilder = () => {
   // Handle base config changes
   const handleBaseConfigChange = (field, value) => {
     setBaseConfig((prev) => ({ ...prev, [field]: value }));
+
+    // Update all legs when strategyId or strategyName changes
+    if (field === "strategyId" || field === "strategyName") {
+      setLegs((prev) =>
+        prev.map((leg) => ({
+          ...leg,
+          [field]: value,
+        }))
+      );
+    }
   };
 
   // Generate new strategy ID
   const generateNewStrategyId = () => {
+    const newStrategyId = `STRATEGY_${Date.now().toString().slice(-6)}`;
     setBaseConfig((prev) => ({
       ...prev,
-      strategyId: `STRATEGY_${Date.now().toString().slice(-6)}`,
+      strategyId: newStrategyId,
     }));
+
+    // Update all legs with new strategyId
+    setLegs((prev) =>
+      prev.map((leg) => ({
+        ...leg,
+        strategyId: newStrategyId,
+      }))
+    );
   };
 
   // Fetch available strategy tags
@@ -214,19 +233,7 @@ const AdvancedOptionsBuilder = () => {
 
   // Handle execution parameters changes
   const handleExecutionParamChange = (field, value) => {
-    if (field === "strategyTag") {
-      // If a tag is selected, store the full tag data
-      if (value) {
-        const selectedTag = availableTags.find((tag) => tag.id === value);
-        if (selectedTag) {
-          setExecutionParams((prev) => ({
-            ...prev,
-            [field]: JSON.stringify({ strategyTag: selectedTag }),
-          }));
-          return;
-        }
-      }
-    }
+    // For strategyTag, just store the tagId directly
     setExecutionParams((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -283,11 +290,18 @@ const AdvancedOptionsBuilder = () => {
         if (!leg.symbol) {
           throw new Error(`Symbol is required for Leg ${leg.legId}`);
         }
-        if (!leg.expiry) {
+        if (
+          leg.expiry === undefined ||
+          leg.expiry === null ||
+          leg.expiry === ""
+        ) {
           throw new Error(`Expiry is required for Leg ${leg.legId}`);
         }
         if (!leg.priceType) {
           throw new Error(`Price Type is required for Leg ${leg.legId}`);
+        }
+        if (!leg.action) {
+          throw new Error(`Action is required for Leg ${leg.legId}`);
         }
         if (!leg.orderType) {
           throw new Error(`Order Type is required for Leg ${leg.legId}`);
@@ -296,9 +310,44 @@ const AdvancedOptionsBuilder = () => {
       // Note: strategyTag is now optional, so no validation needed
 
       // Prepare strategy data for API
+      // Transform legs to ensure correct field mapping (handle any legacy data)
+      const transformedLegs = legs.map((leg) => {
+        const transformed = { ...leg };
+
+        console.log("Original leg:", leg);
+
+        // If orderType contains BUY/SELL instead of Limit/Market, it's old structure
+        if (
+          transformed.orderType === "BUY" ||
+          transformed.orderType === "SELL"
+        ) {
+          console.log("Transforming old structure leg...");
+          transformed.action = transformed.orderType;
+          transformed.orderType =
+            transformed.legOrderType || leg.legOrderType || "Limit";
+          delete transformed.legOrderType;
+        }
+
+        // Ensure action exists
+        if (!transformed.action) {
+          transformed.action = "BUY"; // Default value
+        }
+
+        // Ensure orderType is valid
+        if (
+          transformed.orderType !== "Limit" &&
+          transformed.orderType !== "Market"
+        ) {
+          transformed.orderType = "Limit"; // Default value
+        }
+
+        console.log("Transformed leg:", transformed);
+        return transformed;
+      });
+
       const strategyData = {
         baseConfig,
-        legs,
+        legs: transformedLegs,
         executionParams,
         targetSettings,
         stoplossSettings,
@@ -306,6 +355,8 @@ const AdvancedOptionsBuilder = () => {
         dynamicHedgeSettings, // Include dynamic hedge settings
         timestamp: new Date().toISOString(),
       };
+
+      console.log("Deploying Strategy Data:", strategyData);
 
       console.log("Deploying Strategy Data:", strategyData);
 
@@ -363,9 +414,11 @@ const AdvancedOptionsBuilder = () => {
     const newLeg = {
       id: Date.now(), // Internal unique identifier
       legId: `LEG_${legCounter.toString().padStart(3, "0")}`, // User-friendly leg ID
+      strategyId: baseConfig.strategyId,
+      strategyName: baseConfig.strategyName,
       symbol: "NIFTY",
       expiry: 0,
-      orderType: "BUY",
+      action: "BUY",
       optionType: "CE",
       lots: 1,
       strike: "ATM",
@@ -375,7 +428,7 @@ const AdvancedOptionsBuilder = () => {
       stoplossValue: 0,
       priceType: "LTP",
       depthIndex: 0,
-      legOrderType: "Limit",
+      orderType: "Limit",
       startTime: "",
       waitAndTrade: 0,
       waitAndTradeLogic: "Absolute",
@@ -656,7 +709,7 @@ const AdvancedOptionsBuilder = () => {
                       Expiry
                     </th>
                     <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      Order
+                      Action
                     </th>
                     <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       Option
@@ -736,10 +789,11 @@ const AdvancedOptionsBuilder = () => {
                           }
                           className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          <option value="NIFTY">NIFTY</option>
-                          <option value="BANKNIFTY">BANKNIFTY</option>
-                          <option value="FINNIFTY">FINNIFTY</option>
-                          <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                          {symbolOptions.map((symbol) => (
+                            <option key={symbol} value={symbol}>
+                              {symbol}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="p-1">
@@ -760,9 +814,9 @@ const AdvancedOptionsBuilder = () => {
                       <td className="p-1">
                         <div className="flex justify-center">
                           <ToggleButton
-                            value={leg.orderType}
+                            value={leg.action}
                             onChange={(value) =>
-                              updateLeg(leg.id, "orderType", value)
+                              updateLeg(leg.id, "action", value)
                             }
                             options={["BUY", "SELL"]}
                             colorScheme="buysell"
@@ -945,9 +999,9 @@ const AdvancedOptionsBuilder = () => {
                       </td>
                       <td className="p-1">
                         <select
-                          value={leg.legOrderType || "Limit"}
+                          value={leg.orderType || "Limit"}
                           onChange={(e) =>
-                            updateLeg(leg.id, "legOrderType", e.target.value)
+                            updateLeg(leg.id, "orderType", e.target.value)
                           }
                           className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
@@ -980,21 +1034,24 @@ const AdvancedOptionsBuilder = () => {
                           }
                           className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
+                          <option value="NONE">NONE</option>
                           <option value="Absolute">Absolute</option>
                           <option value="Percentage">Percentage</option>
+                          <option value="POINTS">POINTS</option>
                         </select>
                       </td>
                       <td className="p-1">
                         <input
                           type="number"
                           value={leg.waitAndTrade}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const value = e.target.value;
                             updateLeg(
                               leg.id,
                               "waitAndTrade",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
+                              value === "" ? 0 : parseFloat(value)
+                            );
+                          }}
                           step="0.1"
                           className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           placeholder="0 or -1.5"
@@ -1147,20 +1204,7 @@ const AdvancedOptionsBuilder = () => {
                             </td>
                             <td className="p-2">
                               <select
-                                value={
-                                  executionParams.strategyTag
-                                    ? (() => {
-                                        try {
-                                          const parsed = JSON.parse(
-                                            executionParams.strategyTag
-                                          );
-                                          return parsed.strategyTag?.id || "";
-                                        } catch {
-                                          return executionParams.strategyTag;
-                                        }
-                                      })()
-                                    : ""
-                                }
+                                value={executionParams.strategyTag || ""}
                                 onChange={(e) =>
                                   handleExecutionParamChange(
                                     "strategyTag",
@@ -2007,19 +2051,19 @@ const AdvancedOptionsBuilder = () => {
                                 type="number"
                                 value={dynamicHedgeSettings.strikeSteps}
                                 onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 100;
-                                  // Ensure value is multiple of 100
-                                  const roundedValue =
-                                    Math.round(value / 100) * 100;
+                                  const value =
+                                    e.target.value === ""
+                                      ? 1
+                                      : parseInt(e.target.value);
                                   handleDynamicHedgeSettingsChange(
                                     "strikeSteps",
-                                    roundedValue
+                                    value
                                   );
                                 }}
                                 className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
-                                step="100"
-                                min="100"
-                                placeholder="Multiples of 100"
+                                step="1"
+                                min="1"
+                                placeholder="Any integer value"
                               />
                             </td>
                           </tr>
@@ -2235,14 +2279,11 @@ const AdvancedOptionsBuilder = () => {
                     // Reset all states
                     setBaseConfig({
                       strategyId: `STRATEGY_${Date.now().toString().slice(-6)}`,
-                      symbol: "NIFTY",
-                      expiry: "",
+                      strategyName: "",
                       lots: 1,
                       underlying: "Spot",
-                      priceType: "LTP",
-                      orderType: "Limit",
                       buyTradesFirst: false,
-                      depthIndex: 1,
+                      executionMode: "Live Mode",
                     });
                     setLegs([]);
                     setLegCounter(1);

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 
 const DeployedStrategies = () => {
+  // Symbol options for dropdown
+  const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
+
   const [strategies, setStrategies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,6 +20,9 @@ const DeployedStrategies = () => {
   const [loadingOrders, setLoadingOrders] = useState({}); // Loading state for orders (keyed by strategyId)
 
   const API_BASE_URL = "http://localhost:8000";
+
+  // Options for dynamic hedge settings
+  const hedgeTypeOptions = ["premium Based", "fixed Distance"];
 
   // Tab configuration
   const tabs = [
@@ -178,6 +184,8 @@ const DeployedStrategies = () => {
       legs:
         editValues.legs?.map((leg) => ({
           ...leg,
+          strategyId: editValues.baseConfig?.strategyId || strategyId,
+          strategyName: editValues.baseConfig?.strategyName || "",
           executionMode: leg.executionMode || "Regular", // Add default if missing
           startTime: leg.startTime || "",
           waitAndTrade: leg.waitAndTrade || 0,
@@ -220,6 +228,21 @@ const DeployedStrategies = () => {
       }
 
       current[keys[keys.length - 1]] = value;
+
+      // Update all legs when strategyId or strategyName changes
+      if (
+        path === "baseConfig.strategyId" ||
+        path === "baseConfig.strategyName"
+      ) {
+        const field = keys[keys.length - 1];
+        if (newValues.legs) {
+          newValues.legs = newValues.legs.map((leg) => ({
+            ...leg,
+            [field]: value,
+          }));
+        }
+      }
+
       return newValues;
     });
   };
@@ -235,6 +258,59 @@ const DeployedStrategies = () => {
         ...newValues.legs[legIndex],
         [field]: value,
       };
+      return newValues;
+    });
+  };
+
+  // Add new leg function
+  const handleAddLeg = (strategyId) => {
+    setEditValues((prev) => {
+      const newValues = { ...prev };
+      if (!newValues.legs) {
+        newValues.legs = [...prev.legs];
+      }
+
+      const legCounter = newValues.legs.length + 1;
+      const newLeg = {
+        id: Date.now(),
+        legId: `LEG_${legCounter.toString().padStart(3, "0")}`,
+        strategyId: newValues.baseConfig?.strategyId || strategyId,
+        strategyName: newValues.baseConfig?.strategyName || "",
+        symbol: "NIFTY",
+        expiry: 0,
+        action: "BUY",
+        optionType: "CE",
+        lots: 1,
+        strike: "ATM",
+        target: "Absolute",
+        targetValue: 0,
+        stoploss: "Absolute",
+        stoplossValue: 0,
+        priceType: "LTP",
+        depthIndex: 0,
+        orderType: "Limit",
+        startTime: "",
+        waitAndTrade: 0,
+        waitAndTradeLogic: "Absolute",
+        dynamicHedge: false,
+        onTargetAction: "REENTRY",
+        onStoplossAction: "REENTRY",
+        premiumBasedStrike: false,
+      };
+
+      newValues.legs.push(newLeg);
+      return newValues;
+    });
+  };
+
+  // Delete leg function
+  const handleDeleteLeg = (legIndex) => {
+    setEditValues((prev) => {
+      const newValues = { ...prev };
+      if (!newValues.legs) {
+        newValues.legs = [...prev.legs];
+      }
+      newValues.legs.splice(legIndex, 1);
       return newValues;
     });
   };
@@ -692,63 +768,68 @@ const DeployedStrategies = () => {
                             legs)
                           </h4>
                           <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
+                            <table className="w-full text-xs table-auto border-collapse">
                               <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-600">
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Leg ID
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Symbol
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Expiry
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
-                                    Order
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    Action
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Option
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Lots
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Strike
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Target
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Target Val
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     SL
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     SL Val
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Price Type
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Depth
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     W&T Logic
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Wait&Trade
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     Dynamic Hedge
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     On Target Action
                                   </th>
-                                  <th className="text-left p-1 font-semibold text-gray-700 dark:text-gray-300">
+                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     On Stoploss Action
                                   </th>
+                                  {editingStrategy === strategy.strategyId && (
+                                    <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                      Actions
+                                    </th>
+                                  )}
                                 </tr>
                               </thead>
                               <tbody>
@@ -760,14 +841,13 @@ const DeployedStrategies = () => {
                                     key={leg.id || index}
                                     className="border-b border-gray-100 dark:border-gray-600"
                                   >
-                                    <td className="p-1 text-gray-900 dark:text-white">
+                                    <td className="p-2 text-center text-gray-900 dark:text-white">
                                       {leg.legId}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
-                                        <input
-                                          type="text"
+                                        <select
                                           value={leg.symbol || ""}
                                           onChange={(e) =>
                                             handleLegChange(
@@ -776,15 +856,24 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        />
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                          <option value="">
+                                            Select Symbol
+                                          </option>
+                                          {symbolOptions.map((symbol) => (
+                                            <option key={symbol} value={symbol}>
+                                              {symbol}
+                                            </option>
+                                          ))}
+                                        </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
                                           {leg.symbol}
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -796,7 +885,7 @@ const DeployedStrategies = () => {
                                               parseInt(e.target.value)
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value={0}>0</option>
                                           <option value={1}>1</option>
@@ -811,19 +900,21 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={leg.orderType || "BUY"}
+                                          value={
+                                            leg.action || leg.orderType || "BUY"
+                                          }
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
-                                              "orderType",
+                                              "action",
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value="BUY">BUY</option>
                                           <option value="SELL">SELL</option>
@@ -831,16 +922,20 @@ const DeployedStrategies = () => {
                                       ) : (
                                         <span
                                           className={`px-1 py-0.5 rounded text-xs font-medium ${
-                                            leg.orderType === "BUY"
+                                            (leg.action || leg.orderType) ===
+                                            "BUY"
                                               ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500"
-                                              : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
+                                              : (leg.action ||
+                                                  leg.orderType) === "SELL"
+                                              ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
+                                              : "bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500"
                                           }`}
                                         >
-                                          {leg.orderType}
+                                          {leg.action || leg.orderType || "N/A"}
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -852,7 +947,7 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value="CE">CE</option>
                                           <option value="PE">PE</option>
@@ -869,7 +964,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <input
@@ -882,7 +977,7 @@ const DeployedStrategies = () => {
                                               parseInt(e.target.value) || 0
                                             )
                                           }
-                                          className="w-16 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -890,7 +985,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <div className="flex flex-col items-center gap-1">
@@ -949,7 +1044,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -961,8 +1056,9 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
+                                          <option value="None">None</option>
                                           <option value="Absolute">
                                             Absolute
                                           </option>
@@ -977,7 +1073,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <input
@@ -990,7 +1086,7 @@ const DeployedStrategies = () => {
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
-                                          className="w-16 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -998,7 +1094,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -1010,14 +1106,16 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
+                                          <option value="None">None</option>
                                           <option value="Absolute">
                                             Absolute
                                           </option>
                                           <option value="Percentage">
                                             Percentage
                                           </option>
+                                          <option value="Points">Points</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1025,7 +1123,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <input
@@ -1038,7 +1136,7 @@ const DeployedStrategies = () => {
                                               parseFloat(e.target.value) || 0
                                             )
                                           }
-                                          className="w-16 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1046,7 +1144,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -1058,7 +1156,7 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value="LTP">LTP</option>
                                           <option value="BidAsk">BidAsk</option>
@@ -1072,7 +1170,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <input
@@ -1085,7 +1183,7 @@ const DeployedStrategies = () => {
                                               parseInt(e.target.value) || 0
                                             )
                                           }
-                                          className="w-12 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-12 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1093,7 +1191,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -1107,14 +1205,16 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-20 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
+                                          <option value="NONE">NONE</option>
                                           <option value="Absolute">
                                             Absolute
                                           </option>
                                           <option value="Percentage">
                                             Percentage
                                           </option>
+                                          <option value="POINTS">POINTS</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1122,21 +1222,25 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <input
                                           type="number"
                                           value={leg.waitAndTrade || 0}
-                                          onChange={(e) =>
+                                          onChange={(e) => {
+                                            const value = e.target.value;
                                             handleLegChange(
                                               index,
                                               "waitAndTrade",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
+                                              value === ""
+                                                ? 0
+                                                : parseFloat(value)
+                                            );
+                                          }}
                                           step="0.1"
-                                          className="w-16 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          placeholder="0 or -1.5"
+                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1167,7 +1271,7 @@ const DeployedStrategies = () => {
                                         )}
                                       </div>
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-2">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -1181,8 +1285,9 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
+                                          <option value="None">None</option>
                                           <option value="REENTRY">
                                             REENTRY
                                           </option>
@@ -1196,7 +1301,7 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-1">
+                                    <td className="p-1 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
@@ -1210,8 +1315,9 @@ const DeployedStrategies = () => {
                                               e.target.value
                                             )
                                           }
-                                          className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
+                                          <option value="None">None</option>
                                           <option value="REENTRY">
                                             REENTRY
                                           </option>
@@ -1225,10 +1331,35 @@ const DeployedStrategies = () => {
                                         </span>
                                       )}
                                     </td>
+                                    {editingStrategy ===
+                                      strategy.strategyId && (
+                                      <td className="p-2 text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteLeg(index)}
+                                          className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                                        >
+                                          Delete
+                                        </button>
+                                      </td>
+                                    )}
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
+                            {editingStrategy === strategy.strategyId && (
+                              <div className="mt-2 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleAddLeg(strategy.strategyId)
+                                  }
+                                  className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                                >
+                                  + Add Leg
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1338,44 +1469,17 @@ const DeployedStrategies = () => {
                                     </div>
                                     {editingStrategy === strategy.strategyId ? (
                                       <select
-                                        value={(() => {
-                                          const tagValue = getEditValue(
+                                        value={
+                                          getEditValue(
                                             strategy,
                                             "executionParams.strategyTag"
-                                          );
-                                          try {
-                                            if (tagValue) {
-                                              const parsed =
-                                                JSON.parse(tagValue);
-                                              return (
-                                                parsed.strategyTag?.id || ""
-                                              );
-                                            }
-                                          } catch {}
-                                          return tagValue || "";
-                                        })()}
+                                          ) || ""
+                                        }
                                         onChange={(e) => {
-                                          const selectedTagId = e.target.value;
-                                          if (selectedTagId) {
-                                            const selectedTag =
-                                              availableTags.find(
-                                                (tag) =>
-                                                  tag.id === selectedTagId
-                                              );
-                                            if (selectedTag) {
-                                              handleEditChange(
-                                                "executionParams.strategyTag",
-                                                JSON.stringify({
-                                                  strategyTag: selectedTag,
-                                                })
-                                              );
-                                            }
-                                          } else {
-                                            handleEditChange(
-                                              "executionParams.strategyTag",
-                                              ""
-                                            );
-                                          }
+                                          handleEditChange(
+                                            "executionParams.strategyTag",
+                                            e.target.value
+                                          );
                                         }}
                                         className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         disabled={loadingTags}
@@ -1400,21 +1504,17 @@ const DeployedStrategies = () => {
                                     ) : (
                                       <div className="text-xs font-semibold text-gray-900 dark:text-white">
                                         {(() => {
-                                          const tagValue = getEditValue(
+                                          const tagId = getEditValue(
                                             strategy,
                                             "executionParams.strategyTag"
                                           );
-                                          try {
-                                            if (tagValue) {
-                                              const parsed =
-                                                JSON.parse(tagValue);
-                                              return (
-                                                parsed.strategyTag?.tagName ||
-                                                "None"
-                                              );
-                                            }
-                                          } catch {}
-                                          return tagValue || "None";
+                                          if (tagId) {
+                                            const tag = availableTags.find(
+                                              (t) => t.id === tagId
+                                            );
+                                            return tag?.tagName || tagId;
+                                          }
+                                          return "None";
                                         })()}
                                       </div>
                                     )}
@@ -1880,12 +1980,19 @@ const DeployedStrategies = () => {
                                             "dynamicHedgeSettings.strikeSteps"
                                           ) || ""
                                         }
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                          const value =
+                                            e.target.value === ""
+                                              ? 1
+                                              : parseInt(e.target.value);
                                           handleEditChange(
                                             "dynamicHedgeSettings.strikeSteps",
-                                            parseInt(e.target.value) || 100
-                                          )
-                                        }
+                                            value
+                                          );
+                                        }}
+                                        step="1"
+                                        min="1"
+                                        placeholder="Any integer"
                                         className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                       />
                                     ) : (
@@ -1894,6 +2001,42 @@ const DeployedStrategies = () => {
                                           strategy,
                                           "dynamicHedgeSettings.strikeSteps"
                                         )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      Strike 500
+                                    </div>
+                                    {editingStrategy === strategy.strategyId ? (
+                                      <select
+                                        value={
+                                          getEditValue(
+                                            strategy,
+                                            "dynamicHedgeSettings.strike500"
+                                          )
+                                            ? "true"
+                                            : "false"
+                                        }
+                                        onChange={(e) =>
+                                          handleEditChange(
+                                            "dynamicHedgeSettings.strike500",
+                                            e.target.value === "true"
+                                          )
+                                        }
+                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                      >
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                      </select>
+                                    ) : (
+                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                        {getEditValue(
+                                          strategy,
+                                          "dynamicHedgeSettings.strike500"
+                                        )
+                                          ? "Yes"
+                                          : "No"}
                                       </div>
                                     )}
                                   </div>
@@ -1934,42 +2077,149 @@ const DeployedStrategies = () => {
                                       )}
                                     </div>
                                   )}
-                                  <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Strike 500
-                                    </div>
-                                    {editingStrategy === strategy.strategyId ? (
-                                      <select
-                                        value={
-                                          getEditValue(
-                                            strategy,
-                                            "dynamicHedgeSettings.strike500"
-                                          )
-                                            ? "true"
-                                            : "false"
-                                        }
-                                        onChange={(e) =>
-                                          handleEditChange(
-                                            "dynamicHedgeSettings.strike500",
-                                            e.target.value === "true"
-                                          )
-                                        }
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      >
-                                        <option value="false">No</option>
-                                        <option value="true">Yes</option>
-                                      </select>
-                                    ) : (
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {getEditValue(
-                                          strategy,
-                                          "dynamicHedgeSettings.strike500"
-                                        )
-                                          ? "Yes"
-                                          : "No"}
+                                  {getEditValue(
+                                    strategy,
+                                    "dynamicHedgeSettings.hedgeType"
+                                  ) === "premium Based" && (
+                                    <>
+                                      <div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Min Hedge Distance
+                                        </div>
+                                        {editingStrategy ===
+                                        strategy.strategyId ? (
+                                          <input
+                                            type="number"
+                                            value={
+                                              getEditValue(
+                                                strategy,
+                                                "dynamicHedgeSettings.minHedgeDistance"
+                                              ) || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleEditChange(
+                                                "dynamicHedgeSettings.minHedgeDistance",
+                                                parseInt(e.target.value) || 0
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            min="0"
+                                            placeholder="Min distance"
+                                          />
+                                        ) : (
+                                          <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {getEditValue(
+                                              strategy,
+                                              "dynamicHedgeSettings.minHedgeDistance"
+                                            ) || 0}
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
-                                  </div>
+                                      <div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Max Hedge Distance
+                                        </div>
+                                        {editingStrategy ===
+                                        strategy.strategyId ? (
+                                          <input
+                                            type="number"
+                                            value={
+                                              getEditValue(
+                                                strategy,
+                                                "dynamicHedgeSettings.maxHedgeDistance"
+                                              ) || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleEditChange(
+                                                "dynamicHedgeSettings.maxHedgeDistance",
+                                                parseInt(e.target.value) || 0
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            min="0"
+                                            placeholder="Max distance"
+                                          />
+                                        ) : (
+                                          <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {getEditValue(
+                                              strategy,
+                                              "dynamicHedgeSettings.maxHedgeDistance"
+                                            ) || 0}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Min Premium
+                                        </div>
+                                        {editingStrategy ===
+                                        strategy.strategyId ? (
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              getEditValue(
+                                                strategy,
+                                                "dynamicHedgeSettings.minPremium"
+                                              ) || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleEditChange(
+                                                "dynamicHedgeSettings.minPremium",
+                                                parseFloat(e.target.value) ||
+                                                  0.0
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            min="0"
+                                            placeholder="Min premium"
+                                          />
+                                        ) : (
+                                          <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {getEditValue(
+                                              strategy,
+                                              "dynamicHedgeSettings.minPremium"
+                                            ) || 0.0}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Max Premium
+                                        </div>
+                                        {editingStrategy ===
+                                        strategy.strategyId ? (
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              getEditValue(
+                                                strategy,
+                                                "dynamicHedgeSettings.maxPremium"
+                                              ) || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleEditChange(
+                                                "dynamicHedgeSettings.maxPremium",
+                                                parseFloat(e.target.value) ||
+                                                  0.0
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            min="0"
+                                            placeholder="Max premium"
+                                          />
+                                        ) : (
+                                          <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {getEditValue(
+                                              strategy,
+                                              "dynamicHedgeSettings.maxPremium"
+                                            ) || 0.0}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -2068,7 +2318,7 @@ const DeployedStrategies = () => {
                                         return order.entry === true;
                                       })
                                       .map((order, idx) => {
-                                        const liveDetails = order.liveDetails;
+                                        const liveDetails = order;
                                         const isExited = order.exited === true;
 
                                         return (
@@ -2250,39 +2500,42 @@ const DeployedStrategies = () => {
                                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                     {strategyOrders[strategy.strategyId]
                                       .filter((order) => {
+                                        console.log(order);
                                         // Show only pending orders (not rejected, not complete, not cancelled)
-                                        const liveDetails = order.liveDetails;
-                                        const status =
-                                          liveDetails?.status || "unknown";
+                                        const liveDetails = order;
+                                        const status = (
+                                          liveDetails?.status || "unknown"
+                                        ).toUpperCase();
                                         const isPending =
-                                          status === "pending" ||
-                                          status === "open";
+                                          status === "PENDING" ||
+                                          status === "OPEN";
 
                                         // Exclude rejected, complete, executed, and cancelled orders
                                         const isCompleted =
-                                          status === "rejected" ||
-                                          status === "complete" ||
-                                          status === "executed" ||
-                                          status === "cancelled" ||
-                                          status === "canceled";
+                                          status === "REJECTED" ||
+                                          status === "COMPLETE" ||
+                                          status === "EXECUTED" ||
+                                          status === "CANCELLED" ||
+                                          status === "CANCELED";
 
                                         return (
                                           isPending ||
-                                          (!isCompleted && status === "unknown")
+                                          (!isCompleted && status === "UNKNOWN")
                                         );
                                       })
                                       .map((order, idx) => {
-                                        const liveDetails = order.liveDetails;
-                                        const status =
-                                          liveDetails?.status || "unknown";
+                                        const liveDetails = order;
+                                        const status = (
+                                          liveDetails?.status || "unknown"
+                                        ).toUpperCase();
                                         const isRejected =
-                                          status === "rejected";
+                                          status === "REJECTED";
                                         const isComplete =
-                                          status === "complete" ||
-                                          status === "executed";
+                                          status === "COMPLETE" ||
+                                          status === "EXECUTED";
                                         const isPending =
-                                          status === "pending" ||
-                                          status === "open";
+                                          status === "PENDING" ||
+                                          status === "OPEN";
 
                                         return (
                                           <tr
@@ -2406,20 +2659,21 @@ const DeployedStrategies = () => {
                                 </table>
                                 {strategyOrders[strategy.strategyId].filter(
                                   (order) => {
-                                    const liveDetails = order.liveDetails;
-                                    const status =
-                                      liveDetails?.status || "unknown";
+                                    const liveDetails = order;
+                                    const status = (
+                                      liveDetails?.status || "unknown"
+                                    ).toUpperCase();
                                     const isPending =
-                                      status === "pending" || status === "open";
+                                      status === "PENDING" || status === "OPEN";
                                     const isCompleted =
-                                      status === "rejected" ||
-                                      status === "complete" ||
-                                      status === "executed" ||
-                                      status === "cancelled" ||
-                                      status === "canceled";
+                                      status === "REJECTED" ||
+                                      status === "COMPLETE" ||
+                                      status === "EXECUTED" ||
+                                      status === "CANCELLED" ||
+                                      status === "CANCELED";
                                     return (
                                       isPending ||
-                                      (!isCompleted && status === "unknown")
+                                      (!isCompleted && status === "UNKNOWN")
                                     );
                                   }
                                 ).length === 0 && (
@@ -2525,14 +2779,15 @@ const DeployedStrategies = () => {
                                     {strategyOrders[strategy.strategyId]
                                       .filter((order) => {
                                         // Show rejected, complete, executed, and cancelled orders
-                                        const liveStatus =
-                                          order.liveDetails?.status;
+                                        const liveStatus = (
+                                          order?.status || ""
+                                        ).toUpperCase();
                                         const isCompleted =
-                                          liveStatus === "rejected" ||
-                                          liveStatus === "complete" ||
-                                          liveStatus === "executed" ||
-                                          liveStatus === "cancelled" ||
-                                          liveStatus === "canceled";
+                                          liveStatus === "REJECTED" ||
+                                          liveStatus === "COMPLETE" ||
+                                          liveStatus === "EXECUTED" ||
+                                          liveStatus === "CANCELLED" ||
+                                          liveStatus === "CANCELED";
 
                                         const oldStatus =
                                           order.response?.data?.msg?.includes(
@@ -2545,14 +2800,15 @@ const DeployedStrategies = () => {
                                         return isCompleted || oldStatus;
                                       })
                                       .map((order, idx) => {
-                                        const liveDetails = order.liveDetails;
-                                        const status =
-                                          liveDetails?.status || "unknown";
+                                        const liveDetails = order;
+                                        const status = (
+                                          liveDetails?.status || "unknown"
+                                        ).toUpperCase();
                                         const isRejected =
-                                          status === "rejected";
+                                          status === "REJECTED";
                                         const isCancelled =
-                                          status === "cancelled" ||
-                                          status === "canceled";
+                                          status === "CANCELLED" ||
+                                          status === "CANCELED";
 
                                         return (
                                           <tr
@@ -2629,10 +2885,10 @@ const DeployedStrategies = () => {
                                                   ? "Rejected"
                                                   : isCancelled
                                                   ? "Cancelled"
-                                                  : liveDetails?.status ===
-                                                      "complete" ||
-                                                    liveDetails?.status ===
-                                                      "executed"
+                                                  : liveDetails?.status?.toUpperCase() ===
+                                                      "COMPLETE" ||
+                                                    liveDetails?.status?.toUpperCase() ===
+                                                      "EXECUTED"
                                                   ? "Completed"
                                                   : order.response?.data?.msg ||
                                                     "Completed"}
@@ -2649,14 +2905,15 @@ const DeployedStrategies = () => {
                                 </table>
                                 {strategyOrders[strategy.strategyId].filter(
                                   (order) => {
-                                    const liveStatus =
-                                      order.liveDetails?.status;
+                                    const liveStatus = (
+                                      order?.status || ""
+                                    ).toUpperCase();
                                     const isCompleted =
-                                      liveStatus === "rejected" ||
-                                      liveStatus === "complete" ||
-                                      liveStatus === "executed" ||
-                                      liveStatus === "cancelled" ||
-                                      liveStatus === "canceled";
+                                      liveStatus === "REJECTED" ||
+                                      liveStatus === "COMPLETE" ||
+                                      liveStatus === "EXECUTED" ||
+                                      liveStatus === "CANCELLED" ||
+                                      liveStatus === "CANCELED";
 
                                     const oldStatus =
                                       order.response?.data?.msg?.includes(
