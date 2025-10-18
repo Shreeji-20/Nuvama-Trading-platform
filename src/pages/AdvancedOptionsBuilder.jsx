@@ -32,8 +32,8 @@ const AdvancedOptionsBuilder = () => {
     "Monthly",
   ];
   const underlyingOptions = ["Spot", "Futures"];
-  const priceTypeOptions = ["LTP", "BidAsk", "Depth", "BID", "ASK"];
-  const orderTypeOptions = ["Limit", "Market"];
+  const priceTypeOptions = ["LTP", "BIDASK", "DEPTH", "BID", "ASK"];
+  const orderTypeOptions = ["LIMIT", "MARKET"];
   // Generate dynamic strike options based on symbol
   const getStrikeOptions = (symbol) => {
     // Determine step size: 50 for NIFTY and FINNIFTY, 100 for others
@@ -54,10 +54,10 @@ const AdvancedOptionsBuilder = () => {
 
     return strikes;
   };
-  const targetOptions = ["None", "Absolute", "Percentage", "Points"];
-  const stoplossOptions = ["None", "Absolute", "Percentage", "Points"];
+  const targetOptions = ["NONE", "ABSOLUTE", "PERCENTAGE", "POINTS"];
+  const stoplossOptions = ["NONE", "ABSOLUTE", "PERCENTAGE", "POINTS"];
   const depthOptions = [1, 2, 3, 4, 5];
-  const actionOptions = ["None", "REENTRY", "REEXECUTE"];
+  const actionOptions = ["NONE", "REENTRY", "REEXECUTE"];
   const tabs = [
     { id: "strategy", label: "Execution Parameters" },
     { id: "analysis", label: "Target Settings" },
@@ -75,7 +75,7 @@ const AdvancedOptionsBuilder = () => {
     strategyTag: "",
     legsExecution: "Parallel",
     portfolioExecutionMode: "startTime",
-    entryOrderType: "Limit",
+    entryOrderType: "LIMIT",
     // Card 2: Time Parameters
     runOnDays: [],
     startTime: "",
@@ -94,7 +94,7 @@ const AdvancedOptionsBuilder = () => {
     "underlyingPremium",
     "combinedPremium",
   ];
-  const entryOrderTypeOptions = ["Limit", "Market", "SL", "SL-M"];
+  const entryOrderTypeOptions = ["LIMIT", "MARKET", "SL", "SL-M"];
   const daysOptions = [
     "Monday",
     "Tuesday",
@@ -130,7 +130,7 @@ const AdvancedOptionsBuilder = () => {
   ];
 
   // Options for exit settings
-  const exitOrderTypeOptions = ["Limit", "Market", "SL", "SL-M", "SL-L"];
+  const exitOrderTypeOptions = ["LIMIT", "MARKET", "SL", "SL-M", "SL-L"];
 
   // Stoploss settings state
   const [stoplossSettings, setStoplossSettings] = useState({
@@ -146,7 +146,7 @@ const AdvancedOptionsBuilder = () => {
   // Exit settings state
   const [exitSettings, setExitSettings] = useState({
     // Card 1: Exit Configuration
-    exitOrderType: "Limit",
+    exitOrderType: "LIMIT",
     exitSellFirst: false,
     holdBuyTime: 0,
     // Card 2: Retry Settings
@@ -310,13 +310,13 @@ const AdvancedOptionsBuilder = () => {
       // Note: strategyTag is now optional, so no validation needed
 
       // Prepare strategy data for API
-      // Transform legs to ensure correct field mapping (handle any legacy data)
+      // Transform legs to ensure correct field mapping and apply defaults
       const transformedLegs = legs.map((leg) => {
         const transformed = { ...leg };
 
         console.log("Original leg:", leg);
 
-        // If orderType contains BUY/SELL instead of Limit/Market, it's old structure
+        // If orderType contains BUY/SELL instead of LIMIT/MARKET, it's old structure
         if (
           transformed.orderType === "BUY" ||
           transformed.orderType === "SELL"
@@ -324,22 +324,36 @@ const AdvancedOptionsBuilder = () => {
           console.log("Transforming old structure leg...");
           transformed.action = transformed.orderType;
           transformed.orderType =
-            transformed.legOrderType || leg.legOrderType || "Limit";
+            transformed.legOrderType || leg.legOrderType || "LIMIT";
           delete transformed.legOrderType;
         }
 
-        // Ensure action exists
-        if (!transformed.action) {
-          transformed.action = "BUY"; // Default value
-        }
-
-        // Ensure orderType is valid
-        if (
-          transformed.orderType !== "Limit" &&
-          transformed.orderType !== "Market"
-        ) {
-          transformed.orderType = "Limit"; // Default value
-        }
+        // Apply defaults for all fields
+        transformed.action = transformed.action || "BUY";
+        transformed.orderType = transformed.orderType || "LIMIT";
+        transformed.target = transformed.target || "NONE";
+        transformed.targetValue =
+          transformed.targetValue !== undefined ? transformed.targetValue : 0;
+        transformed.stoploss = transformed.stoploss || "NONE";
+        transformed.stoplossValue =
+          transformed.stoplossValue !== undefined
+            ? transformed.stoplossValue
+            : 0;
+        transformed.priceType = transformed.priceType || "BIDASK";
+        transformed.depthIndex = transformed.depthIndex || 1;
+        transformed.waitAndTrade =
+          transformed.waitAndTrade !== undefined ? transformed.waitAndTrade : 0;
+        transformed.waitAndTradeLogic = transformed.waitAndTradeLogic || "NONE";
+        transformed.onTargetAction = transformed.onTargetAction || "NONE";
+        transformed.onStoplossAction = transformed.onStoplossAction || "NONE";
+        transformed.dynamicHedge =
+          transformed.dynamicHedge !== undefined
+            ? transformed.dynamicHedge
+            : false;
+        transformed.premiumBasedStrike =
+          transformed.premiumBasedStrike !== undefined
+            ? transformed.premiumBasedStrike
+            : false;
 
         console.log("Transformed leg:", transformed);
         return transformed;
@@ -422,19 +436,19 @@ const AdvancedOptionsBuilder = () => {
       optionType: "CE",
       lots: 1,
       strike: "ATM",
-      target: "Absolute",
+      target: "NONE",
       targetValue: 0,
-      stoploss: "Absolute",
+      stoploss: "NONE",
       stoplossValue: 0,
-      priceType: "LTP",
-      depthIndex: 0,
-      orderType: "Limit",
+      priceType: "BIDASK",
+      depthIndex: 1,
+      orderType: "LIMIT",
       startTime: "",
       waitAndTrade: 0,
-      waitAndTradeLogic: "Absolute",
+      waitAndTradeLogic: "NONE",
       dynamicHedge: false,
-      onTargetAction: "REENTRY",
-      onStoplossAction: "REENTRY",
+      onTargetAction: "NONE",
+      onStoplossAction: "NONE",
       premiumBasedStrike: false,
       premiumBasedStrikeConfig: {
         strikeType: "NearestPremium",
@@ -990,11 +1004,11 @@ const AdvancedOptionsBuilder = () => {
                           }
                           className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          <option value={0}>0</option>
                           <option value={1}>1</option>
                           <option value={2}>2</option>
                           <option value={3}>3</option>
                           <option value={4}>4</option>
+                          <option value={5}>5</option>
                         </select>
                       </td>
                       <td className="p-1">
@@ -2292,7 +2306,7 @@ const AdvancedOptionsBuilder = () => {
                       strategyTag: "",
                       legsExecution: "Parallel",
                       portfolioExecutionMode: "startTime",
-                      entryOrderType: "Limit",
+                      entryOrderType: "LIMIT",
                       runOnDays: [],
                       startTime: "",
                       endTime: "",
@@ -2310,7 +2324,7 @@ const AdvancedOptionsBuilder = () => {
                       sqrOffOnlyProfitLegs: false,
                     });
                     setExitSettings({
-                      exitOrderType: "Limit",
+                      exitOrderType: "LIMIT",
                       exitSellFirst: false,
                       holdBuyTime: 0,
                       waitBtwnRetry: 0,

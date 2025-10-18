@@ -1,4 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  PositionRow,
+  OrderRow,
+  LiveIndicator,
+  TabNavigation,
+  LoadingSpinner,
+  EmptyState,
+} from "../components/DeployedStrategies";
+import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 
 const DeployedStrategies = () => {
   // Symbol options for dropdown
@@ -18,6 +27,16 @@ const DeployedStrategies = () => {
     useState(null); // Track which strategy is being edited
   const [strategyOrders, setStrategyOrders] = useState({}); // Orders for each strategy (keyed by strategyId)
   const [loadingOrders, setLoadingOrders] = useState({}); // Loading state for orders (keyed by strategyId)
+
+  // Use refs to store P&L data without triggering re-renders
+  const positionPnLRef = useRef({}); // P&L data for positions (keyed by orderId)
+  const loadingPnLRef = useRef({}); // Loading state for P&L calculation (keyed by orderId)
+
+  // Trigger counter to force re-render only when needed (initial load/tab switch)
+  const [renderTrigger, setRenderTrigger] = useState(0);
+
+  // Ref to store interval IDs for auto-refresh (keyed by strategyId)
+  const refreshIntervalsRef = useRef({});
 
   const API_BASE_URL = "http://localhost:8000";
 
@@ -40,6 +59,17 @@ const DeployedStrategies = () => {
   // Set active tab for a strategy
   const setStrategyTab = (strategyId, tabId) => {
     setActiveTab((prev) => ({ ...prev, [strategyId]: tabId }));
+
+    // Start auto-refresh only for order-related tabs
+    if (tabId === "positions" || tabId === "orders" || tabId === "completed") {
+      // Fetch orders immediately when switching to order tabs
+      fetchStrategyOrders(strategyId);
+      // Start auto-refresh
+      startAutoRefresh(strategyId);
+    } else {
+      // Stop auto-refresh when switching to non-order tabs (like "parameters")
+      stopAutoRefresh(strategyId);
+    }
   };
 
   // Fetch all deployed strategies
@@ -186,14 +216,43 @@ const DeployedStrategies = () => {
           ...leg,
           strategyId: editValues.baseConfig?.strategyId || strategyId,
           strategyName: editValues.baseConfig?.strategyName || "",
-          executionMode: leg.executionMode || "Regular", // Add default if missing
+          // Apply defaults for all fields
+          action: leg.action || "BUY",
+          orderType: leg.orderType || "LIMIT",
+          target: leg.target || "NONE",
+          targetValue: leg.targetValue !== undefined ? leg.targetValue : 0,
+          stoploss: leg.stoploss || "NONE",
+          stoplossValue:
+            leg.stoplossValue !== undefined ? leg.stoplossValue : 0,
+          priceType: leg.priceType || "BIDASK",
+          depthIndex: leg.depthIndex || 1,
           startTime: leg.startTime || "",
-          waitAndTrade: leg.waitAndTrade || 0,
-          waitAndTradeLogic: leg.waitAndTradeLogic || "Absolute",
-          dynamicHedge: leg.dynamicHedge || false,
-          onTargetAction: leg.onTargetAction || "REENTRY",
-          onStoplossAction: leg.onStoplossAction || "REENTRY",
+          waitAndTrade: leg.waitAndTrade !== undefined ? leg.waitAndTrade : 0,
+          waitAndTradeLogic: leg.waitAndTradeLogic || "NONE",
+          dynamicHedge:
+            leg.dynamicHedge !== undefined ? leg.dynamicHedge : false,
+          onTargetAction: leg.onTargetAction || "NONE",
+          onStoplossAction: leg.onStoplossAction || "NONE",
+          premiumBasedStrike:
+            leg.premiumBasedStrike !== undefined
+              ? leg.premiumBasedStrike
+              : false,
         })) || [],
+      // Ensure executionParams has defaults
+      executionParams: editValues.executionParams
+        ? {
+            ...editValues.executionParams,
+            entryOrderType:
+              editValues.executionParams.entryOrderType || "LIMIT",
+          }
+        : undefined,
+      // Ensure exitSettings has defaults
+      exitSettings: editValues.exitSettings
+        ? {
+            ...editValues.exitSettings,
+            exitOrderType: editValues.exitSettings.exitOrderType || "LIMIT",
+          }
+        : undefined,
       // Ensure dynamicHedgeSettings has strikeDistance if hedgeType is fixed Distance
       dynamicHedgeSettings: editValues.dynamicHedgeSettings
         ? {
@@ -282,19 +341,19 @@ const DeployedStrategies = () => {
         optionType: "CE",
         lots: 1,
         strike: "ATM",
-        target: "Absolute",
+        target: "NONE",
         targetValue: 0,
-        stoploss: "Absolute",
+        stoploss: "NONE",
         stoplossValue: 0,
-        priceType: "LTP",
-        depthIndex: 0,
-        orderType: "Limit",
+        priceType: "BIDASK",
+        depthIndex: 1,
+        orderType: "LIMIT",
         startTime: "",
         waitAndTrade: 0,
-        waitAndTradeLogic: "Absolute",
+        waitAndTradeLogic: "NONE",
         dynamicHedge: false,
-        onTargetAction: "REENTRY",
-        onStoplossAction: "REENTRY",
+        onTargetAction: "NONE",
+        onStoplossAction: "NONE",
         premiumBasedStrike: false,
       };
 
@@ -366,16 +425,28 @@ const DeployedStrategies = () => {
 
   // Toggle strategy expansion
   const toggleExpand = (strategyId) => {
-    setExpandedStrategy(expandedStrategy === strategyId ? null : strategyId);
+    const isExpanding = expandedStrategy !== strategyId;
 
-    // Fetch orders when expanding a strategy
-    if (expandedStrategy !== strategyId) {
+    setExpandedStrategy(isExpanding ? strategyId : null);
+
+    if (isExpanding) {
+      // Fetch orders immediately when expanding
       fetchStrategyOrders(strategyId);
+      // Check if current tab is one of the order tabs before starting auto-refresh
+      const currentTab = getActiveTab(strategyId);
+      if (
+        currentTab === "positions" ||
+        currentTab === "orders" ||
+        currentTab === "completed"
+      ) {
+        startAutoRefresh(strategyId);
+      }
+    } else {
+      // Stop auto-refresh when collapsing
+      stopAutoRefresh(strategyId);
     }
-  };
-
-  // Fetch orders for a specific strategy
-  const fetchStrategyOrders = async (strategyId) => {
+  }; // Fetch orders for a specific strategy (memoized for performance)
+  const fetchStrategyOrders = useCallback(async (strategyId) => {
     try {
       setLoadingOrders((prev) => ({ ...prev, [strategyId]: true }));
 
@@ -399,6 +470,11 @@ const DeployedStrategies = () => {
         ...prev,
         [strategyId]: data.orders || null,
       }));
+
+      // Calculate P&L for positions
+      if (data.orders) {
+        calculatePnLForPositions(data.orders);
+      }
     } catch (err) {
       console.error(`Error fetching orders for strategy ${strategyId}:`, err);
       // Set null for this strategy to indicate fetch was attempted but failed
@@ -409,15 +485,269 @@ const DeployedStrategies = () => {
     } finally {
       setLoadingOrders((prev) => ({ ...prev, [strategyId]: false }));
     }
+  }, []);
+
+  // Start auto-refresh for a strategy
+  const startAutoRefresh = useCallback(
+    (strategyId) => {
+      // Clear any existing interval for this strategy
+      if (refreshIntervalsRef.current[strategyId]) {
+        clearInterval(refreshIntervalsRef.current[strategyId]);
+      }
+
+      // Set up new interval to refresh every 1 second
+      const intervalId = setInterval(() => {
+        fetchStrategyOrders(strategyId);
+      }, 1000);
+
+      refreshIntervalsRef.current[strategyId] = intervalId;
+    },
+    [fetchStrategyOrders]
+  );
+
+  // Stop auto-refresh for a strategy
+  const stopAutoRefresh = useCallback((strategyId) => {
+    if (refreshIntervalsRef.current[strategyId]) {
+      clearInterval(refreshIntervalsRef.current[strategyId]);
+      delete refreshIntervalsRef.current[strategyId];
+    }
+  }, []);
+
+  // Fetch market depth for live price
+  const fetchMarketDepth = async (symbol, strike, optionType, expiry) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/strategy-orders/depth/${symbol}/${strike}/${optionType}/${expiry}`
+      );
+
+      if (!response.ok) {
+        console.warn(
+          `Depth data not found for ${symbol} ${strike} ${optionType}`
+        );
+        return null;
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (err) {
+      console.error("Error fetching market depth:", err);
+      return null;
+    }
+  };
+
+  // Fetch exit order for closed position
+  const fetchExitOrder = async (orderDetailsKey) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/strategy-orders/exit-order/${orderDetailsKey}`
+      );
+
+      if (!response.ok) {
+        console.warn(`Exit order not found for ${orderDetailsKey}`);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (err) {
+      console.error("Error fetching exit order:", err);
+      return null;
+    }
+  };
+
+  // Calculate P&L for all positions
+  const calculatePnLForPositions = async (orders) => {
+    const positionsWithEntry = orders.filter((order) => order.entered === true);
+
+    for (const order of positionsWithEntry) {
+      await calculateSinglePositionPnL(order);
+    }
+  };
+
+  // Calculate P&L for a single position
+  const calculateSinglePositionPnL = async (order) => {
+    const orderId = order?.response?.data?.orderId || order.exchangeOrderNumber;
+    if (!orderId) return;
+
+    // Update loading ref directly (no re-render)
+    loadingPnLRef.current[orderId] = true;
+
+    try {
+      const isExited = order.exited === true;
+      const entryPrice = parseFloat(
+        order?.response?.data?.fPrc || order.liveDetails?.fillPrice || 0
+      );
+      const quantity = parseInt(
+        order?.response?.data?.fQty || order.liveDetails?.fillQuantity || 0
+      );
+      const action = order.action || order.liveDetails?.transactionType;
+
+      if (!entryPrice || !quantity || !action) {
+        console.warn(`Incomplete data for order ${orderId}`);
+        return;
+      }
+
+      let pnl = 0;
+      let exitPrice = 0;
+      let currentPrice = 0;
+
+      if (isExited) {
+        // Fetch exit order for closed position
+        const orderDetailsKey = order.orderDetailsKey || orderId;
+        const exitOrder = await fetchExitOrder(orderDetailsKey);
+        console.log(exitOrder);
+        if (exitOrder && exitOrder?.response?.data?.fPrc) {
+          exitPrice = parseFloat(exitOrder.response.data.fPrc);
+
+          // Calculate realized P&L
+          if (action === "BUY") {
+            pnl = (exitPrice - entryPrice) * quantity;
+          } else if (action === "SELL") {
+            pnl = (entryPrice - exitPrice) * quantity;
+          }
+
+          // Update ref directly (no re-render)
+          positionPnLRef.current[orderId] = {
+            pnl: pnl.toFixed(2),
+            entryPrice: entryPrice.toFixed(2),
+            exitPrice: exitPrice.toFixed(2),
+            currentPrice: null,
+            quantity,
+            action,
+            isExited: true,
+          };
+
+          // Update DOM directly without re-render
+          updatePnLInDOM(orderId);
+        }
+      } else {
+        // Fetch live market depth for open position
+        const depthData = await fetchMarketDepth(
+          order.symbol,
+          order.strike,
+          order.optionType,
+          order.expiry
+        );
+
+        if (depthData) {
+          // Get current price based on action
+          if (
+            action === "BUY" &&
+            depthData?.response?.data?.bidValues &&
+            depthData.response.data.bidValues[0]
+          ) {
+            currentPrice = parseFloat(
+              depthData.response.data.bidValues[0].price || 0
+            );
+          } else if (
+            action === "SELL" &&
+            depthData.askValues &&
+            depthData.askValues[0]
+          ) {
+            currentPrice = parseFloat(
+              depthData.response.data.askValues[0].price || 0
+            );
+          }
+          console.log(currentPrice);
+          // Calculate unrealized P&L
+          if (currentPrice > 0) {
+            if (action === "BUY") {
+              pnl = (currentPrice - entryPrice) * quantity;
+            } else if (action === "SELL") {
+              pnl = (entryPrice - currentPrice) * quantity;
+            }
+
+            // Update ref directly (no re-render)
+            positionPnLRef.current[orderId] = {
+              pnl: pnl.toFixed(2),
+              entryPrice: entryPrice.toFixed(2),
+              exitPrice: null,
+              currentPrice: currentPrice.toFixed(2),
+              quantity,
+              action,
+              isExited: false,
+            };
+
+            // Update DOM directly without re-render
+            updatePnLInDOM(orderId);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`Error calculating P&L for order ${orderId}:`, err);
+    } finally {
+      // Update loading ref directly (no re-render)
+      loadingPnLRef.current[orderId] = false;
+    }
+  };
+
+  // Update P&L values in DOM directly without React re-render
+  const updatePnLInDOM = (orderId) => {
+    const pnlData = positionPnLRef.current[orderId];
+    if (!pnlData) return;
+
+    // Find all cells for this order (by data attribute)
+    const entryPriceCell = document.querySelector(
+      `[data-order-entry-price="${orderId}"]`
+    );
+    const currentPriceCell = document.querySelector(
+      `[data-order-current-price="${orderId}"]`
+    );
+    const pnlCell = document.querySelector(`[data-order-pnl="${orderId}"]`);
+
+    // Update entry price
+    if (entryPriceCell) {
+      entryPriceCell.textContent = `₹${pnlData.entryPrice}`;
+    }
+
+    // Update current/exit price
+    if (currentPriceCell) {
+      if (pnlData.isExited && pnlData.exitPrice) {
+        currentPriceCell.textContent = `₹${pnlData.exitPrice}`;
+      } else if (pnlData.currentPrice) {
+        currentPriceCell.textContent = `₹${pnlData.currentPrice}`;
+      }
+    }
+
+    // Update P&L with color
+    if (pnlCell) {
+      const pnlValue = parseFloat(pnlData.pnl);
+      const pnlText = `${pnlValue >= 0 ? "+" : ""}₹${pnlData.pnl}`;
+      pnlCell.textContent = pnlText;
+
+      // Update color classes
+      pnlCell.className = `px-3 py-2 whitespace-nowrap text-xs font-bold ${
+        pnlValue >= 0
+          ? "text-green-600 dark:text-green-400"
+          : "text-red-600 dark:text-red-400"
+      }`;
+    }
   };
 
   useEffect(() => {
     fetchStrategies();
     fetchStrategyTags();
-    // Auto-refresh every 30 seconds
+    // Auto-refresh strategies list every 30 seconds
     const interval = setInterval(fetchStrategies, 30000);
-    return () => clearInterval(interval);
+
+    // Cleanup: Stop all auto-refresh intervals when component unmounts
+    return () => {
+      clearInterval(interval);
+      // Clear all strategy order refresh intervals
+      Object.keys(refreshIntervalsRef.current).forEach((strategyId) => {
+        clearInterval(refreshIntervalsRef.current[strategyId]);
+      });
+      refreshIntervalsRef.current = {};
+    };
   }, []);
+
+  // Cleanup interval when expandedStrategy changes
+  useEffect(() => {
+    return () => {
+      // When expandedStrategy changes, cleanup happens automatically via toggleExpand
+      // This effect ensures cleanup if component re-renders unexpectedly
+    };
+  }, [expandedStrategy]);
 
   if (loading && strategies.length === 0) {
     return (
@@ -1048,7 +1378,7 @@ const DeployedStrategies = () => {
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={leg.target || "Absolute"}
+                                          value={leg.target || "NONE"}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
@@ -1058,14 +1388,14 @@ const DeployedStrategies = () => {
                                           }
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                          <option value="None">None</option>
-                                          <option value="Absolute">
-                                            Absolute
+                                          <option value="NONE">NONE</option>
+                                          <option value="ABSOLUTE">
+                                            ABSOLUTE
                                           </option>
-                                          <option value="Percentage">
-                                            Percentage
+                                          <option value="PERCENTAGE">
+                                            PERCENTAGE
                                           </option>
-                                          <option value="Points">Points</option>
+                                          <option value="POINTS">POINTS</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1098,7 +1428,7 @@ const DeployedStrategies = () => {
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={leg.stoploss || "Absolute"}
+                                          value={leg.stoploss || "NONE"}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
@@ -1108,14 +1438,14 @@ const DeployedStrategies = () => {
                                           }
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                          <option value="None">None</option>
-                                          <option value="Absolute">
-                                            Absolute
+                                          <option value="NONE">NONE</option>
+                                          <option value="ABSOLUTE">
+                                            ABSOLUTE
                                           </option>
-                                          <option value="Percentage">
-                                            Percentage
+                                          <option value="PERCENTAGE">
+                                            PERCENTAGE
                                           </option>
-                                          <option value="Points">Points</option>
+                                          <option value="POINTS">POINTS</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
@@ -1148,7 +1478,7 @@ const DeployedStrategies = () => {
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={leg.priceType || "LTP"}
+                                          value={leg.priceType || "BIDASK"}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
@@ -1159,8 +1489,8 @@ const DeployedStrategies = () => {
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value="LTP">LTP</option>
-                                          <option value="BidAsk">BidAsk</option>
-                                          <option value="Depth">Depth</option>
+                                          <option value="BIDASK">BIDASK</option>
+                                          <option value="DEPTH">DEPTH</option>
                                           <option value="BID">BID</option>
                                           <option value="ASK">ASK</option>
                                         </select>
@@ -1173,18 +1503,23 @@ const DeployedStrategies = () => {
                                     <td className="p-2 text-center">
                                       {editingStrategy ===
                                       strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={leg.depthIndex || ""}
+                                        <select
+                                          value={leg.depthIndex || 1}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
                                               "depthIndex",
-                                              parseInt(e.target.value) || 0
+                                              parseInt(e.target.value)
                                             )
                                           }
-                                          className="w-12 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
+                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                          <option value={1}>1</option>
+                                          <option value={2}>2</option>
+                                          <option value={3}>3</option>
+                                          <option value={4}>4</option>
+                                          <option value={5}>5</option>
+                                        </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
                                           {leg.depthIndex}
@@ -1196,7 +1531,7 @@ const DeployedStrategies = () => {
                                       strategy.strategyId ? (
                                         <select
                                           value={
-                                            leg.waitAndTradeLogic || "Absolute"
+                                            leg.waitAndTradeLogic || "NONE"
                                           }
                                           onChange={(e) =>
                                             handleLegChange(
@@ -1208,17 +1543,17 @@ const DeployedStrategies = () => {
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                           <option value="NONE">NONE</option>
-                                          <option value="Absolute">
-                                            Absolute
+                                          <option value="ABSOLUTE">
+                                            ABSOLUTE
                                           </option>
-                                          <option value="Percentage">
-                                            Percentage
+                                          <option value="PERCENTAGE">
+                                            PERCENTAGE
                                           </option>
                                           <option value="POINTS">POINTS</option>
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
-                                          {leg.waitAndTradeLogic || "Absolute"}
+                                          {leg.waitAndTradeLogic || "NONE"}
                                         </span>
                                       )}
                                     </td>
@@ -1275,9 +1610,7 @@ const DeployedStrategies = () => {
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={
-                                            leg.onTargetAction || "REENTRY"
-                                          }
+                                          value={leg.onTargetAction || "NONE"}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
@@ -1287,7 +1620,7 @@ const DeployedStrategies = () => {
                                           }
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                          <option value="None">None</option>
+                                          <option value="NONE">NONE</option>
                                           <option value="REENTRY">
                                             REENTRY
                                           </option>
@@ -1297,7 +1630,7 @@ const DeployedStrategies = () => {
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
-                                          {leg.onTargetAction || "REENTRY"}
+                                          {leg.onTargetAction || "NONE"}
                                         </span>
                                       )}
                                     </td>
@@ -1305,9 +1638,7 @@ const DeployedStrategies = () => {
                                       {editingStrategy ===
                                       strategy.strategyId ? (
                                         <select
-                                          value={
-                                            leg.onStoplossAction || "REENTRY"
-                                          }
+                                          value={leg.onStoplossAction || "NONE"}
                                           onChange={(e) =>
                                             handleLegChange(
                                               index,
@@ -1317,7 +1648,7 @@ const DeployedStrategies = () => {
                                           }
                                           className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                          <option value="None">None</option>
+                                          <option value="NONE">NONE</option>
                                           <option value="REENTRY">
                                             REENTRY
                                           </option>
@@ -1327,7 +1658,7 @@ const DeployedStrategies = () => {
                                         </select>
                                       ) : (
                                         <span className="text-gray-900 dark:text-white">
-                                          {leg.onStoplossAction || "REENTRY"}
+                                          {leg.onStoplossAction || "NONE"}
                                         </span>
                                       )}
                                     </td>
@@ -1568,7 +1899,7 @@ const DeployedStrategies = () => {
                                           getEditValue(
                                             strategy,
                                             "executionParams.entryOrderType"
-                                          ) || "Limit"
+                                          ) || "LIMIT"
                                         }
                                         onChange={(e) =>
                                           handleEditChange(
@@ -1578,8 +1909,8 @@ const DeployedStrategies = () => {
                                         }
                                         className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                       >
-                                        <option value="Limit">Limit</option>
-                                        <option value="Market">Market</option>
+                                        <option value="LIMIT">LIMIT</option>
+                                        <option value="MARKET">MARKET</option>
                                         <option value="SL">SL</option>
                                         <option value="SL-M">SL-M</option>
                                       </select>
@@ -1827,7 +2158,7 @@ const DeployedStrategies = () => {
                                           getEditValue(
                                             strategy,
                                             "exitSettings.exitOrderType"
-                                          ) || "Limit"
+                                          ) || "LIMIT"
                                         }
                                         onChange={(e) =>
                                           handleEditChange(
@@ -1837,8 +2168,8 @@ const DeployedStrategies = () => {
                                         }
                                         className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                       >
-                                        <option value="Limit">Limit</option>
-                                        <option value="Market">Market</option>
+                                        <option value="LIMIT">LIMIT</option>
+                                        <option value="MARKET">MARKET</option>
                                         <option value="SL">SL</option>
                                         <option value="SL-M">SL-M</option>
                                         <option value="SL-L">SL-L</option>
@@ -2233,26 +2564,24 @@ const DeployedStrategies = () => {
                               <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                                 Open Positions
                               </h3>
-                              <button
-                                onClick={() =>
-                                  fetchStrategyOrders(strategy.strategyId)
-                                }
-                                className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                              >
-                                🔄 Refresh
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {refreshIntervalsRef.current[
+                                  strategy.strategyId
+                                ] && <LiveIndicator />}
+                                <button
+                                  onClick={() =>
+                                    fetchStrategyOrders(strategy.strategyId)
+                                  }
+                                  className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                >
+                                  🔄 Refresh
+                                </button>
+                              </div>
                             </div>
 
-                            {loadingOrders[strategy.strategyId] ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                  Loading positions...
-                                </p>
-                              </div>
-                            ) : strategyOrders[strategy.strategyId] === null ||
-                              strategyOrders[strategy.strategyId] ===
-                                undefined ? (
+                            {strategyOrders[strategy.strategyId] === null ||
+                            strategyOrders[strategy.strategyId] ===
+                              undefined ? (
                               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
                                 <div className="text-gray-400 dark:text-gray-500 mb-2">
                                   <svg
@@ -2270,7 +2599,9 @@ const DeployedStrategies = () => {
                                   </svg>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  No positions found
+                                  {loadingOrders[strategy.strategyId]
+                                    ? "Loading positions..."
+                                    : "No positions found"}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                   Positions will appear here when orders are
@@ -2301,97 +2632,45 @@ const DeployedStrategies = () => {
                                         Quantity
                                       </th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Avg Price
+                                        Entry Price
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Current/Exit Price
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        P&L
                                       </th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Entry Time
                                       </th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Position Status
+                                        Status
                                       </th>
                                     </tr>
                                   </thead>
                                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                     {strategyOrders[strategy.strategyId]
-                                      .filter((order) => {
-                                        // Show positions with entry:true
-                                        return order.entry === true;
-                                      })
+                                      .filter((order) => order.entered === true)
                                       .map((order, idx) => {
                                         const liveDetails = order;
                                         const isExited = order.exited === true;
+                                        const orderId =
+                                          order?.response?.data?.orderId ||
+                                          liveDetails?.exchangeOrderNumber;
+                                        const pnlData =
+                                          positionPnLRef.current[orderId];
+                                        const isPnLLoading =
+                                          loadingPnLRef.current[orderId];
 
                                         return (
-                                          <tr
-                                            key={idx}
-                                            className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                              isExited ? "opacity-50" : ""
-                                            }`}
-                                          >
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {order.orderId ||
-                                                liveDetails?.exchangeOrderNumber ||
-                                                "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {order.legId || "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {order.symbol || "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {order.strike || "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs">
-                                              <span
-                                                className={`px-2 py-1 rounded-full ${
-                                                  order.action === "BUY" ||
-                                                  liveDetails?.transactionType ===
-                                                    "BUY"
-                                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                                }`}
-                                              >
-                                                {order.action ||
-                                                  liveDetails?.transactionType ||
-                                                  "N/A"}
-                                              </span>
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
-                                              {liveDetails?.fillQuantity ||
-                                                liveDetails?.totalQuantity ||
-                                                order.quantity ||
-                                                "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
-                                              {liveDetails?.averagePrice &&
-                                              liveDetails.averagePrice !==
-                                                "0.00"
-                                                ? `₹${liveDetails.averagePrice}`
-                                                : order.limitPrice
-                                                ? `₹${order.limitPrice}`
-                                                : "N/A"}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {liveDetails?.orderTime ||
-                                                (order.placedTime
-                                                  ? new Date(
-                                                      order.placedTime
-                                                    ).toLocaleString()
-                                                  : "N/A")}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-xs">
-                                              <span
-                                                className={`px-2 py-1 rounded-full ${
-                                                  isExited
-                                                    ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                                                    : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                }`}
-                                              >
-                                                {isExited ? "Exited" : "Active"}
-                                              </span>
-                                            </td>
-                                          </tr>
+                                          <PositionRow
+                                            key={`${orderId}-${idx}`}
+                                            order={order}
+                                            liveDetails={liveDetails}
+                                            pnlData={pnlData}
+                                            isPnLLoading={isPnLLoading}
+                                            isExited={isExited}
+                                          />
                                         );
                                       })}
                                   </tbody>
@@ -2417,26 +2696,24 @@ const DeployedStrategies = () => {
                               <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                                 Open Orders
                               </h3>
-                              <button
-                                onClick={() =>
-                                  fetchStrategyOrders(strategy.strategyId)
-                                }
-                                className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                              >
-                                🔄 Refresh
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {refreshIntervalsRef.current[
+                                  strategy.strategyId
+                                ] && <LiveIndicator />}
+                                <button
+                                  onClick={() =>
+                                    fetchStrategyOrders(strategy.strategyId)
+                                  }
+                                  className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                >
+                                  🔄 Refresh
+                                </button>
+                              </div>
                             </div>
 
-                            {loadingOrders[strategy.strategyId] ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                  Loading orders...
-                                </p>
-                              </div>
-                            ) : strategyOrders[strategy.strategyId] === null ||
-                              strategyOrders[strategy.strategyId] ===
-                                undefined ? (
+                            {strategyOrders[strategy.strategyId] === null ||
+                            strategyOrders[strategy.strategyId] ===
+                              undefined ? (
                               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
                                 <div className="text-gray-400 dark:text-gray-500 mb-2">
                                   <svg
@@ -2454,7 +2731,9 @@ const DeployedStrategies = () => {
                                   </svg>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  No orders found
+                                  {loadingOrders[strategy.strategyId]
+                                    ? "Loading orders..."
+                                    : "No orders found"}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                   Orders will appear here when placed
@@ -2695,26 +2974,24 @@ const DeployedStrategies = () => {
                               <h3 className="text-md font-semibold text-gray-900 dark:text-white">
                                 Completed Orders
                               </h3>
-                              <button
-                                onClick={() =>
-                                  fetchStrategyOrders(strategy.strategyId)
-                                }
-                                className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                              >
-                                🔄 Refresh
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {refreshIntervalsRef.current[
+                                  strategy.strategyId
+                                ] && <LiveIndicator />}
+                                <button
+                                  onClick={() =>
+                                    fetchStrategyOrders(strategy.strategyId)
+                                  }
+                                  className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                >
+                                  🔄 Refresh
+                                </button>
+                              </div>
                             </div>
 
-                            {loadingOrders[strategy.strategyId] ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                  Loading orders...
-                                </p>
-                              </div>
-                            ) : strategyOrders[strategy.strategyId] === null ||
-                              strategyOrders[strategy.strategyId] ===
-                                undefined ? (
+                            {strategyOrders[strategy.strategyId] === null ||
+                            strategyOrders[strategy.strategyId] ===
+                              undefined ? (
                               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
                                 <div className="text-gray-400 dark:text-gray-500 mb-2">
                                   <svg
@@ -2732,7 +3009,9 @@ const DeployedStrategies = () => {
                                   </svg>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  No completed orders
+                                  {loadingOrders[strategy.strategyId]
+                                    ? "Loading orders..."
+                                    : "No completed orders"}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                   Order history will appear here
