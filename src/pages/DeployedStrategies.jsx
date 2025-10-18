@@ -561,6 +561,41 @@ const DeployedStrategies = () => {
     }
   };
 
+  // Handle Square Off for a position
+  const handleSquareOff = async (order) => {
+    const orderId = order?.response?.data?.orderId || order.exchangeOrderNumber;
+    const userId = order?.userId;
+
+    if (!orderId || !userId) {
+      alert("Cannot square off: Missing order ID or user ID");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to square off this position?\n\nOrder ID: ${orderId}\nUser: ${userId}`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // TODO: Implement the square off API call here
+      // Example:
+      // const response = await fetch(`${API_BASE_URL}/square-off/${orderId}/${userId}`, {
+      //   method: "POST",
+      // });
+      // if (!response.ok) throw new Error("Square off failed");
+
+      alert(`Square off initiated for Order ID: ${orderId}`);
+      // Refresh orders after square off
+      // You can add the actual API endpoint when available
+    } catch (error) {
+      console.error("Error squaring off position:", error);
+      alert(`Failed to square off position: ${error.message}`);
+    }
+  };
+
   // Calculate P&L for a single position
   const calculateSinglePositionPnL = async (order) => {
     const orderId = order?.response?.data?.orderId || order.exchangeOrderNumber;
@@ -2479,37 +2514,43 @@ const DeployedStrategies = () => {
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                                     <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Order ID
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        User ID
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Leg ID
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Symbol
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                        Strike
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Action
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Order ID
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Leg ID
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Symbol
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Strike
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                        Action
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Quantity
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Entry Price
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Current/Exit Price
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         P&L
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Entry Time
                                       </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                         Status
                                       </th>
                                     </tr>
@@ -2532,13 +2573,14 @@ const DeployedStrategies = () => {
                                             liveDetails={liveDetails}
                                             pnlData={pnlData}
                                             isExited={isExited}
+                                            onSquareOff={handleSquareOff}
                                           />
                                         );
                                       })}
                                   </tbody>
                                 </table>
                                 {strategyOrders[strategy.strategyId].filter(
-                                  (order) => order.entry === true
+                                  (order) => order.entered === true
                                 ).length === 0 && (
                                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center mt-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
