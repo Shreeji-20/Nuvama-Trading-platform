@@ -1,122 +1,109 @@
 import React, { memo } from "react";
 
-const PositionRow = memo(
-  ({ order, liveDetails, pnlData, isPnLLoading, isExited }) => {
-    const orderId =
-      order?.response?.data?.orderId || liveDetails?.exchangeOrderNumber;
+const PositionRow = memo(({ order, liveDetails, pnlData, isExited }) => {
+  const orderId =
+    order?.response?.data?.orderId || liveDetails?.exchangeOrderNumber;
 
-    return (
-      <tr
-        className={`${
-          isExited
-            ? "bg-gray-50 dark:bg-gray-800 opacity-60"
-            : "hover:bg-gray-50 dark:hover:bg-gray-800"
+  return (
+    <tr
+      className={`${
+        isExited
+          ? "bg-gray-50 dark:bg-gray-800 opacity-60"
+          : "hover:bg-gray-50 dark:hover:bg-gray-800"
+      }`}
+    >
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
+        {orderId || "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
+        {order.legId || "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
+        {order.symbol || "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
+        {order.strike || "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs">
+        <span
+          className={`px-2 py-1 rounded-full ${
+            order.action === "BUY" || liveDetails?.transactionType === "BUY"
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+          }`}
+        >
+          {order.action || liveDetails?.transactionType || "N/A"}
+        </span>
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
+        {order?.response?.data?.fQty ||
+          liveDetails?.fillQuantity ||
+          liveDetails?.totalQuantity ||
+          "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
+        {pnlData
+          ? `₹${pnlData.entryPrice}`
+          : order.fPrc
+          ? `₹${parseFloat(order.fPrc).toFixed(2)}`
+          : liveDetails?.averagePrice && liveDetails.averagePrice !== "0.00"
+          ? `₹${liveDetails.averagePrice}`
+          : order.limitPrice
+          ? `₹${order.limitPrice}`
+          : "N/A"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
+        {pnlData ? (
+          isExited ? (
+            `₹${pnlData.exitPrice}`
+          ) : (
+            `₹${pnlData.currentPrice}`
+          )
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </td>
+      <td
+        className={`px-3 py-2 whitespace-nowrap text-xs font-bold ${
+          pnlData && parseFloat(pnlData.pnl) >= 0
+            ? "text-green-600 dark:text-green-400"
+            : "text-red-600 dark:text-red-400"
         }`}
       >
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-          {orderId || "N/A"}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-          {order.legId || "N/A"}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-          {order.symbol || "N/A"}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-          {order.strike || "N/A"}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs">
+        {pnlData ? (
           <span
-            className={`px-2 py-1 rounded-full ${
-              order.action === "BUY" || liveDetails?.transactionType === "BUY"
-                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+            className={`${
+              parseFloat(pnlData.pnl) >= 0
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
             }`}
           >
-            {order.action || liveDetails?.transactionType || "N/A"}
+            {parseFloat(pnlData.pnl) >= 0 ? "+" : ""}₹{pnlData.pnl}
           </span>
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold">
-          {order?.response?.data?.fQty ||
-            liveDetails?.fillQuantity ||
-            liveDetails?.totalQuantity ||
-            "N/A"}
-        </td>
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold"
-          data-order-entry-price={orderId}
-        >
-          {pnlData
-            ? `₹${pnlData.entryPrice}`
-            : order.fPrc
-            ? `₹${parseFloat(order.fPrc).toFixed(2)}`
-            : liveDetails?.averagePrice && liveDetails.averagePrice !== "0.00"
-            ? `₹${liveDetails.averagePrice}`
-            : order.limitPrice
-            ? `₹${order.limitPrice}`
-            : "N/A"}
-        </td>
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold"
-          data-order-current-price={orderId}
-        >
-          {isPnLLoading ? (
-            <span className="text-gray-400">Loading...</span>
-          ) : pnlData ? (
-            isExited ? (
-              `₹${pnlData.exitPrice}`
-            ) : (
-              `₹${pnlData.currentPrice}`
-            )
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
-        </td>
-        <td
-          className={`px-3 py-2 whitespace-nowrap text-xs font-bold ${
-            pnlData && parseFloat(pnlData.pnl) >= 0
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
+        {liveDetails?.orderTime ||
+          (order.placedTime
+            ? new Date(order.placedTime).toLocaleString()
+            : "N/A")}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-xs">
+        <span
+          className={`px-2 py-1 rounded-full ${
+            isExited
+              ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
           }`}
-          data-order-pnl={orderId}
         >
-          {isPnLLoading ? (
-            <span className="text-gray-400">Calculating...</span>
-          ) : pnlData ? (
-            <span
-              className={`${
-                parseFloat(pnlData.pnl) >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-              }`}
-            >
-              {parseFloat(pnlData.pnl) >= 0 ? "+" : ""}₹{pnlData.pnl}
-            </span>
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-          {liveDetails?.orderTime ||
-            (order.placedTime
-              ? new Date(order.placedTime).toLocaleString()
-              : "N/A")}
-        </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs">
-          <span
-            className={`px-2 py-1 rounded-full ${
-              isExited
-                ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-            }`}
-          >
-            {isExited ? "Closed" : "Open"}
-          </span>
-        </td>
-      </tr>
-    );
-  }
-);
+          {isExited ? "Closed" : "Open"}
+        </span>
+      </td>
+    </tr>
+  );
+});
 
 PositionRow.displayName = "PositionRow";
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
+  StrategyCard,
   PositionRow,
   OrderRow,
   LiveIndicator,
   TabNavigation,
-  LoadingSpinner,
   EmptyState,
 } from "../components/DeployedStrategies";
 import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
@@ -28,12 +28,9 @@ const DeployedStrategies = () => {
   const [strategyOrders, setStrategyOrders] = useState({}); // Orders for each strategy (keyed by strategyId)
   const [loadingOrders, setLoadingOrders] = useState({}); // Loading state for orders (keyed by strategyId)
 
-  // Use refs to store P&L data without triggering re-renders
-  const positionPnLRef = useRef({}); // P&L data for positions (keyed by orderId)
-  const loadingPnLRef = useRef({}); // Loading state for P&L calculation (keyed by orderId)
-
-  // Trigger counter to force re-render only when needed (initial load/tab switch)
-  const [renderTrigger, setRenderTrigger] = useState(0);
+  // Use state for P&L data - React will handle updates efficiently with memo
+  const [positionPnL, setPositionPnL] = useState({}); // P&L data for positions (keyed by orderId)
+  const [loadingPnL, setLoadingPnL] = useState({}); // Loading state for P&L calculation (keyed by orderId)
 
   // Ref to store interval IDs for auto-refresh (keyed by strategyId)
   const refreshIntervalsRef = useRef({});
@@ -569,8 +566,8 @@ const DeployedStrategies = () => {
     const orderId = order?.response?.data?.orderId || order.exchangeOrderNumber;
     if (!orderId) return;
 
-    // Update loading ref directly (no re-render)
-    loadingPnLRef.current[orderId] = true;
+    // Set loading state
+    setLoadingPnL((prev) => ({ ...prev, [orderId]: true }));
 
     try {
       const isExited = order.exited === true;
@@ -584,6 +581,7 @@ const DeployedStrategies = () => {
 
       if (!entryPrice || !quantity || !action) {
         console.warn(`Incomplete data for order ${orderId}`);
+        setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
         return;
       }
 
@@ -606,19 +604,19 @@ const DeployedStrategies = () => {
             pnl = (entryPrice - exitPrice) * quantity;
           }
 
-          // Update ref directly (no re-render)
-          positionPnLRef.current[orderId] = {
-            pnl: pnl.toFixed(2),
-            entryPrice: entryPrice.toFixed(2),
-            exitPrice: exitPrice.toFixed(2),
-            currentPrice: null,
-            quantity,
-            action,
-            isExited: true,
-          };
-
-          // Update DOM directly without re-render
-          updatePnLInDOM(orderId);
+          // Update state with P&L data
+          setPositionPnL((prev) => ({
+            ...prev,
+            [orderId]: {
+              pnl: pnl.toFixed(2),
+              entryPrice: entryPrice.toFixed(2),
+              exitPrice: exitPrice.toFixed(2),
+              currentPrice: null,
+              quantity,
+              action,
+              isExited: true,
+            },
+          }));
         }
       } else {
         // Fetch live market depth for open position
@@ -657,70 +655,27 @@ const DeployedStrategies = () => {
               pnl = (entryPrice - currentPrice) * quantity;
             }
 
-            // Update ref directly (no re-render)
-            positionPnLRef.current[orderId] = {
-              pnl: pnl.toFixed(2),
-              entryPrice: entryPrice.toFixed(2),
-              exitPrice: null,
-              currentPrice: currentPrice.toFixed(2),
-              quantity,
-              action,
-              isExited: false,
-            };
-
-            // Update DOM directly without re-render
-            updatePnLInDOM(orderId);
+            // Update state with P&L data
+            setPositionPnL((prev) => ({
+              ...prev,
+              [orderId]: {
+                pnl: pnl.toFixed(2),
+                entryPrice: entryPrice.toFixed(2),
+                exitPrice: null,
+                currentPrice: currentPrice.toFixed(2),
+                quantity,
+                action,
+                isExited: false,
+              },
+            }));
           }
         }
       }
     } catch (err) {
       console.error(`Error calculating P&L for order ${orderId}:`, err);
     } finally {
-      // Update loading ref directly (no re-render)
-      loadingPnLRef.current[orderId] = false;
-    }
-  };
-
-  // Update P&L values in DOM directly without React re-render
-  const updatePnLInDOM = (orderId) => {
-    const pnlData = positionPnLRef.current[orderId];
-    if (!pnlData) return;
-
-    // Find all cells for this order (by data attribute)
-    const entryPriceCell = document.querySelector(
-      `[data-order-entry-price="${orderId}"]`
-    );
-    const currentPriceCell = document.querySelector(
-      `[data-order-current-price="${orderId}"]`
-    );
-    const pnlCell = document.querySelector(`[data-order-pnl="${orderId}"]`);
-
-    // Update entry price
-    if (entryPriceCell) {
-      entryPriceCell.textContent = `₹${pnlData.entryPrice}`;
-    }
-
-    // Update current/exit price
-    if (currentPriceCell) {
-      if (pnlData.isExited && pnlData.exitPrice) {
-        currentPriceCell.textContent = `₹${pnlData.exitPrice}`;
-      } else if (pnlData.currentPrice) {
-        currentPriceCell.textContent = `₹${pnlData.currentPrice}`;
-      }
-    }
-
-    // Update P&L with color
-    if (pnlCell) {
-      const pnlValue = parseFloat(pnlData.pnl);
-      const pnlText = `${pnlValue >= 0 ? "+" : ""}₹${pnlData.pnl}`;
-      pnlCell.textContent = pnlText;
-
-      // Update color classes
-      pnlCell.className = `px-3 py-2 whitespace-nowrap text-xs font-bold ${
-        pnlValue >= 0
-          ? "text-green-600 dark:text-green-400"
-          : "text-red-600 dark:text-red-400"
-      }`;
+      // Clear loading state
+      setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -839,94 +794,16 @@ const DeployedStrategies = () => {
                 className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-lg border border-light-border dark:border-dark-border overflow-hidden"
               >
                 {/* Strategy Header */}
-                <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => toggleExpand(strategy.strategyId)}
-                        className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        <svg
-                          className={`w-5 h-5 transition-transform ${
-                            expandedStrategy === strategy.strategyId
-                              ? "rotate-90"
-                              : ""
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                          {strategy.strategyId}
-                        </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          Deployed:{" "}
-                          {new Date(strategy.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-4 mr-4">
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Symbols
-                          </div>
-                          <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                            {strategy.symbols?.join(", ") || "N/A"}
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Legs
-                          </div>
-                          <div className="text-xs font-semibold text-green-600 dark:text-green-400">
-                            {strategy.config?.legs?.length || 0}
-                          </div>
-                        </div>
-                      </div>
-                      {editingStrategy === strategy.strategyId ? (
-                        <>
-                          <button
-                            onClick={() => saveEdit(strategy.strategyId)}
-                            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            💾 Save
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            ✕ Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => startEditing(strategy)}
-                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            onClick={() => deleteStrategy(strategy.strategyId)}
-                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <StrategyCard
+                  strategy={strategy}
+                  isExpanded={expandedStrategy === strategy.strategyId}
+                  isEditing={editingStrategy === strategy.strategyId}
+                  onToggleExpand={toggleExpand}
+                  onStartEdit={startEditing}
+                  onDelete={deleteStrategy}
+                  onSave={saveEdit}
+                  onCancelEdit={cancelEditing}
+                />
 
                 {/* Expanded Details */}
                 {expandedStrategy === strategy.strategyId && (
@@ -1699,21 +1576,13 @@ const DeployedStrategies = () => {
                     <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-lg border border-light-border dark:border-dark-border p-3 mt-4">
                       <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
                         <nav className="flex space-x-8 overflow-x-auto">
-                          {tabs.map((tab) => (
-                            <button
-                              key={tab.id}
-                              onClick={() =>
-                                setStrategyTab(strategy.strategyId, tab.id)
-                              }
-                              className={`py-2 px-1 border-b-2 font-medium text-[0.6rem] whitespace-nowrap transition-colors ${
-                                getActiveTab(strategy.strategyId) === tab.id
-                                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                                  : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
-                              }`}
-                            >
-                              {tab.label}
-                            </button>
-                          ))}
+                          <TabNavigation
+                            tabs={tabs}
+                            activeTabId={getActiveTab(strategy.strategyId)}
+                            onTabChange={(tabId) =>
+                              setStrategyTab(strategy.strategyId, tabId)
+                            }
+                          />
                         </nav>
                       </div>
 
@@ -2582,8 +2451,8 @@ const DeployedStrategies = () => {
                             {strategyOrders[strategy.strategyId] === null ||
                             strategyOrders[strategy.strategyId] ===
                               undefined ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="text-gray-400 dark:text-gray-500 mb-2">
+                              <EmptyState
+                                icon={
                                   <svg
                                     className="w-12 h-12 mx-auto"
                                     fill="none"
@@ -2597,17 +2466,14 @@ const DeployedStrategies = () => {
                                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                                     />
                                   </svg>
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {loadingOrders[strategy.strategyId]
+                                }
+                                message={
+                                  loadingOrders[strategy.strategyId]
                                     ? "Loading positions..."
-                                    : "No positions found"}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                  Positions will appear here when orders are
-                                  executed
-                                </p>
-                              </div>
+                                    : "No positions found"
+                                }
+                                description="Positions will appear here when orders are executed"
+                              />
                             ) : (
                               <div className="overflow-x-auto overflow-y-auto max-h-[600px] border border-gray-200 dark:border-gray-700 rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -2657,10 +2523,7 @@ const DeployedStrategies = () => {
                                         const orderId =
                                           order?.response?.data?.orderId ||
                                           liveDetails?.exchangeOrderNumber;
-                                        const pnlData =
-                                          positionPnLRef.current[orderId];
-                                        const isPnLLoading =
-                                          loadingPnLRef.current[orderId];
+                                        const pnlData = positionPnL[orderId];
 
                                         return (
                                           <PositionRow
@@ -2668,7 +2531,6 @@ const DeployedStrategies = () => {
                                             order={order}
                                             liveDetails={liveDetails}
                                             pnlData={pnlData}
-                                            isPnLLoading={isPnLLoading}
                                             isExited={isExited}
                                           />
                                         );
@@ -2714,8 +2576,8 @@ const DeployedStrategies = () => {
                             {strategyOrders[strategy.strategyId] === null ||
                             strategyOrders[strategy.strategyId] ===
                               undefined ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="text-gray-400 dark:text-gray-500 mb-2">
+                              <EmptyState
+                                icon={
                                   <svg
                                     className="w-12 h-12 mx-auto"
                                     fill="none"
@@ -2729,16 +2591,14 @@ const DeployedStrategies = () => {
                                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                                     />
                                   </svg>
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {loadingOrders[strategy.strategyId]
+                                }
+                                message={
+                                  loadingOrders[strategy.strategyId]
                                     ? "Loading orders..."
-                                    : "No orders found"}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                  Orders will appear here when placed
-                                </p>
-                              </div>
+                                    : "No orders found"
+                                }
+                                description="Orders will appear here when placed"
+                              />
                             ) : (
                               <div className="overflow-x-auto overflow-y-auto max-h-[600px] border border-gray-200 dark:border-gray-700 rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -2992,8 +2852,8 @@ const DeployedStrategies = () => {
                             {strategyOrders[strategy.strategyId] === null ||
                             strategyOrders[strategy.strategyId] ===
                               undefined ? (
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-                                <div className="text-gray-400 dark:text-gray-500 mb-2">
+                              <EmptyState
+                                icon={
                                   <svg
                                     className="w-12 h-12 mx-auto"
                                     fill="none"
@@ -3007,16 +2867,14 @@ const DeployedStrategies = () => {
                                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                     />
                                   </svg>
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {loadingOrders[strategy.strategyId]
+                                }
+                                message={
+                                  loadingOrders[strategy.strategyId]
                                     ? "Loading orders..."
-                                    : "No completed orders"}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                  Order history will appear here
-                                </p>
-                              </div>
+                                    : "No completed orders"
+                                }
+                                description="Order history will appear here"
+                              />
                             ) : (
                               <div className="overflow-x-auto overflow-y-auto max-h-[600px] border border-gray-200 dark:border-gray-700 rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
