@@ -849,18 +849,18 @@ const DeployedStrategies = () => {
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         Base Configuration
                       </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 ">
                         <div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                             Strategy ID
                           </div>
-                          <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                          <div className="text-xs font-semibold text-gray-900 dark:text-white p-1">
                             {getEditValue(strategy, "baseConfig.strategyId") ||
                               "N/A"}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                             Lots
                           </div>
                           {editingStrategy === strategy.strategyId ? (
@@ -875,17 +875,17 @@ const DeployedStrategies = () => {
                                   parseInt(e.target.value) || 0
                                 )
                               }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              className="w-full p-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             />
                           ) : (
-                            <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                            <div className="text-xs font-semibold text-gray-900 dark:text-white p-1">
                               {getEditValue(strategy, "baseConfig.lots") ||
                                 "N/A"}
                             </div>
                           )}
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                             Underlying
                           </div>
                           {editingStrategy === strategy.strategyId ? (
@@ -902,13 +902,13 @@ const DeployedStrategies = () => {
                                   e.target.value
                                 )
                               }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              className="w-full p-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             >
                               <option value="Spot">Spot</option>
                               <option value="Futures">Futures</option>
                             </select>
                           ) : (
-                            <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                            <div className="text-xs p-1 font-semibold text-gray-900 dark:text-white">
                               {getEditValue(
                                 strategy,
                                 "baseConfig.underlying"
@@ -917,7 +917,7 @@ const DeployedStrategies = () => {
                           )}
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                             Buy Trades First
                           </div>
                           {editingStrategy === strategy.strategyId ? (
@@ -936,13 +936,13 @@ const DeployedStrategies = () => {
                                   e.target.value === "true"
                                 )
                               }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              className="w-full p-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             >
                               <option value="false">No</option>
                               <option value="true">Yes</option>
                             </select>
                           ) : (
-                            <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                            <div className="text-xs p-1 font-semibold text-gray-900 dark:text-white">
                               {getEditValue(
                                 strategy,
                                 "baseConfig.buyTradesFirst"
@@ -953,8 +953,8 @@ const DeployedStrategies = () => {
                           )}
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Simulation Mode
+                          <div className="text-xs p-1 text-gray-500 dark:text-gray-400">
+                            Execution Mode
                           </div>
                           {editingStrategy === strategy.strategyId ? (
                             <select
@@ -970,7 +970,7 @@ const DeployedStrategies = () => {
                                   e.target.value
                                 )
                               }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              className="w-full p-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             >
                               <option value="Live Mode">Live Mode</option>
                               <option value="Simulation Mode">
@@ -980,7 +980,7 @@ const DeployedStrategies = () => {
                           ) : (
                             <div className="text-xs font-semibold text-gray-900 dark:text-white">
                               <span
-                                className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                className={`p-1 rounded text-xs font-medium ${
                                   getEditValue(
                                     strategy,
                                     "baseConfig.executionMode"
