@@ -3,8 +3,12 @@ import squareOffIcon from "../../assets/squareofficon.png";
 
 const PositionRow = memo(
   ({ order, liveDetails, pnlData, isExited, onSquareOff }) => {
+    // Use the same orderId logic as in calculateSinglePositionPnL
     const orderId =
-      order?.response?.data?.orderId || liveDetails?.exchangeOrderNumber;
+      order?.response?.data?.oID ||
+      order?.response?.data?.oid ||
+      order?.orderId ||
+      liveDetails?.exchangeOrderNumber;
     const userId = order?.userId || "N/A";
 
     return (
@@ -32,8 +36,17 @@ const PositionRow = memo(
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white text-center">
           {orderId || "N/A"}
         </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white text-center">
-          {order.legId || "N/A"}
+        <td className="px-3 py-2 text-xs text-center">
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-gray-900 dark:text-white">
+              {order.legId || "N/A"}
+            </span>
+            {order.isHedge === true && (
+              <span className="mt-0.5 px-1.5 py-0.5 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded text-[9px] font-semibold uppercase leading-tight">
+                Hedge
+              </span>
+            )}
+          </div>
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white text-center">
           {order.symbol || "N/A"}
@@ -102,10 +115,11 @@ const PositionRow = memo(
           )}
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white text-center">
-          {liveDetails?.orderTime ||
-            (order.placedTime
-              ? new Date(order.placedTime).toLocaleString()
-              : "N/A")}
+          {order?.executionTime
+            ? new Date(order.executionTime).toLocaleString()
+            : liveDetails?.executionTime
+            ? new Date(liveDetails.executionTime).toLocaleString()
+            : liveDetails?.orderTime || "N/A"}
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
           <span

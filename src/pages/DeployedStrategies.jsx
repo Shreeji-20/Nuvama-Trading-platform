@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
+import config from "../config/api";
 import {
   StrategyCard,
   PositionRow,
@@ -12,6 +14,14 @@ import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 const DeployedStrategies = () => {
   // Symbol options for dropdown
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
+
+  // Order status constants for matching various API responses
+  const ORDER_STATUS = {
+    COMPLETE: ["COMPLETE", "COMPLETED", "EXECUTED", "FILLED"],
+    REJECTED: ["REJECTED", "REJECT"],
+    CANCELLED: ["CANCELLED", "CANCELED", "CANCELLED_BY_USER", "CANCEL"],
+    PENDING: ["PENDING", "OPEN", "NEW", "ACCEPTED", "TRIGGER_PENDING"],
+  };
 
   const [strategies, setStrategies] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -32,13 +42,43 @@ const DeployedStrategies = () => {
   const [positionPnL, setPositionPnL] = useState({}); // P&L data for positions (keyed by orderId)
   const [loadingPnL, setLoadingPnL] = useState({}); // Loading state for P&L calculation (keyed by orderId)
 
+  // Option data cache - fetched once and used for all positions
+  const [optionDataCache, setOptionDataCache] = useState([]);
+  const [lastOptionDataFetch, setLastOptionDataFetch] = useState(null);
+
   // Ref to store interval IDs for auto-refresh (keyed by strategyId)
   const refreshIntervalsRef = useRef({});
+  const optionDataIntervalRef = useRef(null);
 
   const API_BASE_URL = "http://localhost:8000";
 
   // Options for dynamic hedge settings
   const hedgeTypeOptions = ["premium Based", "fixed Distance"];
+
+  // Helper functions to check order status
+  const isOrderComplete = (status) => {
+    return ORDER_STATUS.COMPLETE.includes(status?.toUpperCase());
+  };
+
+  const isOrderRejected = (status) => {
+    return ORDER_STATUS.REJECTED.includes(status?.toUpperCase());
+  };
+
+  const isOrderCancelled = (status) => {
+    return ORDER_STATUS.CANCELLED.includes(status?.toUpperCase());
+  };
+
+  const isOrderPending = (status) => {
+    return ORDER_STATUS.PENDING.includes(status?.toUpperCase());
+  };
+
+  const isOrderCompletedOrFinished = (status) => {
+    return (
+      isOrderComplete(status) ||
+      isOrderRejected(status) ||
+      isOrderCancelled(status)
+    );
+  };
 
   // Tab configuration
   const tabs = [
@@ -74,16 +114,11 @@ const DeployedStrategies = () => {
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetch(`${API_BASE_URL}/strategy/list`);
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
-      console.log("Fetched strategies:", data);
-
       setStrategies(data.strategies || []);
     } catch (err) {
       console.error("Error fetching strategies:", err);
@@ -114,11 +149,6 @@ const DeployedStrategies = () => {
   // Update strategy
   const updateStrategy = async (strategyId, updatedConfig) => {
     try {
-      console.log(
-        "Updating strategy with config:",
-        JSON.stringify(updatedConfig, null, 2)
-      );
-
       const response = await fetch(
         `${API_BASE_URL}/strategy/update/${strategyId}`,
         {
@@ -149,10 +179,7 @@ const DeployedStrategies = () => {
           errorData.detail || `HTTP error! status: ${response.status}`
         );
       }
-
       const result = await response.json();
-      console.log("Strategy updated:", result);
-
       // Refresh strategies list
       fetchStrategies();
       setEditingStrategy(null);
@@ -188,6 +215,63 @@ const DeployedStrategies = () => {
     } catch (err) {
       console.error("Error deleting strategy:", err);
       alert(`Failed to delete strategy: ${err.message}`);
+    }
+  };
+
+  // Copy strategy
+  const copyStrategy = async (strategy) => {
+    const originalId = strategy.strategyId;
+
+    // Generate new unique strategy ID with timestamp
+    const timestamp = Date.now();
+    const newStrategyId = `${originalId}_copy_${timestamp}`;
+
+    // Create a deep copy of the strategy config
+    const newConfig = JSON.parse(JSON.stringify(strategy.config));
+
+    // Update the strategy ID in the config
+    if (newConfig.baseConfig) {
+      newConfig.baseConfig.strategyId = newStrategyId;
+    }
+
+    if (
+      !confirm(
+        `Create a copy of strategy "${originalId}"?\n\nNew Strategy ID: ${newStrategyId}`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/stratergy/stratergy_1/add`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            strategyId: newStrategyId,
+            symbols: strategy.symbols || [],
+            config: newConfig,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.detail || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      alert(
+        `Strategy copied successfully!\n\nNew Strategy ID: ${newStrategyId}`
+      );
+      fetchStrategies();
+    } catch (err) {
+      console.error("Error copying strategy:", err);
+      alert(`Failed to copy strategy: ${err.message}`);
     }
   };
 
@@ -262,10 +346,6 @@ const DeployedStrategies = () => {
         : undefined,
     };
 
-    console.log(
-      "Sanitized config before update:",
-      JSON.stringify(sanitizedConfig, null, 2)
-    );
     updateStrategy(strategyId, sanitizedConfig);
   };
 
@@ -443,6 +523,7 @@ const DeployedStrategies = () => {
       stopAutoRefresh(strategyId);
     }
   }; // Fetch orders for a specific strategy (memoized for performance)
+
   const fetchStrategyOrders = useCallback(async (strategyId) => {
     try {
       setLoadingOrders((prev) => ({ ...prev, [strategyId]: true }));
@@ -455,13 +536,7 @@ const DeployedStrategies = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
-      console.log(
-        `Fetched orders with live details for strategy ${strategyId}:`,
-        data
-      );
-
       // Store orders for this strategy
       setStrategyOrders((prev) => ({
         ...prev,
@@ -473,7 +548,6 @@ const DeployedStrategies = () => {
         calculatePnLForPositions(data.orders);
       }
     } catch (err) {
-      console.error(`Error fetching orders for strategy ${strategyId}:`, err);
       // Set null for this strategy to indicate fetch was attempted but failed
       setStrategyOrders((prev) => ({
         ...prev,
@@ -510,44 +584,87 @@ const DeployedStrategies = () => {
     }
   }, []);
 
-  // Fetch market depth for live price
-  const fetchMarketDepth = async (symbol, strike, optionType, expiry) => {
+  // Fetch all option data once
+  const fetchOptionData = useCallback(async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/strategy-orders/depth/${symbol}/${strike}/${optionType}/${expiry}`
+        config.buildUrl(config.ENDPOINTS.OPTIONDATA)
       );
 
       if (!response.ok) {
-        console.warn(
-          `Depth data not found for ${symbol} ${strike} ${optionType}`
-        );
-        return null;
+        console.warn("Failed to fetch option data");
+        return;
       }
 
       const data = await response.json();
-      return data.data;
+      setOptionDataCache(data || []);
+      setLastOptionDataFetch(new Date());
     } catch (err) {
-      console.error("Error fetching market depth:", err);
-      return null;
+      console.error("Error fetching option data:", err);
     }
+  }, []);
+
+  // Get market depth from cached option data
+  const getMarketDepthFromCache = useCallback(
+    (symbol, strike, optionType, expiry) => {
+      try {
+        // Find matching option from cache
+        const option = optionDataCache.find((item) => {
+          const d = item?.response?.data;
+          if (!d) return false;
+
+          return (
+            d.symbolname?.includes(symbol) &&
+            Number(d.strikeprice) === Number(strike) &&
+            d.optiontype === optionType &&
+            String(d.expiry) === String(expiry)
+          );
+        });
+
+        if (!option?.response?.data) {
+          return null;
+        }
+
+        const data = option.response.data;
+
+        // Return depth data in the same format as the old API
+        return {
+          bid: data.bidValues?.[0]?.price || 0,
+          ask: data.askValues?.[0]?.price || 0,
+          ltp: data.ltp || 0,
+        };
+      } catch (err) {
+        console.error("Error getting market depth from cache:", err);
+        return null;
+      }
+    },
+    [optionDataCache]
+  );
+
+  // Fetch market depth for live price (deprecated - keeping for backward compatibility)
+  const fetchMarketDepth = async (symbol, strike, optionType, expiry) => {
+    // Use cached data instead of making individual API calls
+    return getMarketDepthFromCache(symbol, strike, optionType, expiry);
   };
 
   // Fetch exit order for closed position
   const fetchExitOrder = async (orderDetailsKey) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/strategy-orders/exit-order/${orderDetailsKey}`
+        `${API_BASE_URL}/strategy-orders/exit-order/${encodeURIComponent(
+          orderDetailsKey
+        )}`
       );
 
       if (!response.ok) {
-        console.warn(`Exit order not found for ${orderDetailsKey}`);
+        console.warn(`⚠️ Exit order not found for ${orderDetailsKey}`);
         return null;
       }
 
       const data = await response.json();
+
       return data.data;
     } catch (err) {
-      console.error("Error fetching exit order:", err);
       return null;
     }
   };
@@ -598,24 +715,56 @@ const DeployedStrategies = () => {
 
   // Calculate P&L for a single position
   const calculateSinglePositionPnL = async (order) => {
-    const orderId = order?.response?.data?.orderId || order.exchangeOrderNumber;
-    if (!orderId) return;
+    const orderId =
+      order?.response?.data?.oID ||
+      order?.response?.data?.oid ||
+      order?.orderId ||
+      order?.liveDetails?.exchangeOrderNumber;
+
+    if (!orderId) {
+      console.warn(`No orderId found for order:`, order);
+      return;
+    }
 
     // Set loading state
     setLoadingPnL((prev) => ({ ...prev, [orderId]: true }));
 
     try {
       const isExited = order.exited === true;
-      const entryPrice = parseFloat(
-        order?.response?.data?.fPrc || order.liveDetails?.fillPrice || 0
-      );
-      const quantity = parseInt(
-        order?.response?.data?.fQty || order.liveDetails?.fillQuantity || 0
-      );
+      const executionMode = order.executionMode || "SIMULATIONMODE";
+
+      // Get entry price - for LIVEMODE, fetch from live order key
+      let entryPrice = 0;
+      let quantity = 0;
+
+      // Fallback to response data if not fetched from live order
+      if (!entryPrice) {
+        entryPrice = parseFloat(
+          order?.response?.data?.fPrc ||
+            order?.fPrc ||
+            order?.liveDetails?.fillPrice ||
+            0
+        );
+      }
+
+      if (!quantity) {
+        quantity = parseInt(
+          order?.response?.data?.fQty ||
+            order?.quantity ||
+            order?.liveDetails?.fillQuantity ||
+            0
+        );
+      }
+
       const action = order.action || order.liveDetails?.transactionType;
 
       if (!entryPrice || !quantity || !action) {
-        console.warn(`Incomplete data for order ${orderId}`);
+        console.warn(`⚠️ Incomplete data for order ${orderId}:`, {
+          entryPrice,
+          quantity,
+          action,
+          executionMode,
+        });
         setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
         return;
       }
@@ -625,13 +774,21 @@ const DeployedStrategies = () => {
       let currentPrice = 0;
 
       if (isExited) {
-        // Fetch exit order for closed position
+        // CLOSED POSITION: Fetch exit order for realized P&L
         const orderDetailsKey = order.orderDetailsKey || orderId;
+
         const exitOrder = await fetchExitOrder(orderDetailsKey);
-        console.log(exitOrder);
+
+        // Get exit price from exit order
         if (exitOrder && exitOrder?.response?.data?.fPrc) {
           exitPrice = parseFloat(exitOrder.response.data.fPrc);
+        } else {
+          console.error(
+            `❌ No exit price found for closed position ${orderId}`
+          );
+        }
 
+        if (exitPrice > 0) {
           // Calculate realized P&L
           if (action === "BUY") {
             pnl = (exitPrice - entryPrice) * quantity;
@@ -654,7 +811,9 @@ const DeployedStrategies = () => {
           }));
         }
       } else {
-        // Fetch live market depth for open position
+        // OPEN POSITION: Calculate unrealized P&L using latest market price
+
+        // Fetch live market depth for current price
         const depthData = await fetchMarketDepth(
           order.symbol,
           order.strike,
@@ -663,25 +822,15 @@ const DeployedStrategies = () => {
         );
 
         if (depthData) {
-          // Get current price based on action
-          if (
-            action === "BUY" &&
-            depthData?.response?.data?.bidValues &&
-            depthData.response.data.bidValues[0]
-          ) {
-            currentPrice = parseFloat(
-              depthData.response.data.bidValues[0].price || 0
-            );
-          } else if (
-            action === "SELL" &&
-            depthData.askValues &&
-            depthData.askValues[0]
-          ) {
-            currentPrice = parseFloat(
-              depthData.response.data.askValues[0].price || 0
-            );
+          // Get current price based on action from cached data
+          if (action === "BUY") {
+            // For BUY positions, use bid price (price at which we can sell)
+            currentPrice = parseFloat(depthData.bid || 0);
+          } else if (action === "SELL") {
+            // For SELL positions, use ask price (price at which we need to buy back)
+            currentPrice = parseFloat(depthData.ask || 0);
           }
-          console.log(currentPrice);
+
           // Calculate unrealized P&L
           if (currentPrice > 0) {
             if (action === "BUY") {
@@ -703,33 +852,417 @@ const DeployedStrategies = () => {
                 isExited: false,
               },
             }));
+          } else {
+            console.warn(
+              `⚠️ No valid current price found for open position ${orderId}`
+            );
           }
+        } else {
+          console.warn(
+            `⚠️ No market depth data found for open position ${orderId}`
+          );
         }
       }
     } catch (err) {
-      console.error(`Error calculating P&L for order ${orderId}:`, err);
+      console.error(`❌ Error calculating P&L for order ${orderId}:`, err);
     } finally {
       // Clear loading state
       setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
+  // Calculate summary for a strategy
+  const getStrategySummary = useCallback(
+    (strategyId) => {
+      const orders = strategyOrders[strategyId] || [];
+
+      const openPositions = orders.filter(
+        (order) =>
+          order.exited !== true &&
+          (isOrderComplete(order.status || order.orderStatus) || order.fQty > 0)
+      ).length;
+
+      const openOrders = orders.filter(
+        (order) =>
+          !isOrderCompletedOrFinished(order.status || order.orderStatus)
+      ).length;
+
+      const completedOrders = orders.filter((order) =>
+        isOrderCompletedOrFinished(order.status || order.orderStatus)
+      ).length;
+
+      // Calculate total P&L from all positions
+      let totalPnL = 0;
+      orders.forEach((order) => {
+        // Use the same orderId logic as in calculateSinglePositionPnL
+        const orderId =
+          order?.response?.data?.oID ||
+          order?.response?.data?.oid ||
+          order?.orderId ||
+          order?.exchangeOrderNumber;
+        if (orderId && positionPnL[orderId]) {
+          const pnl = parseFloat(positionPnL[orderId].pnl);
+          if (!isNaN(pnl)) {
+            totalPnL += pnl;
+          }
+        }
+      });
+
+      return { openPositions, openOrders, completedOrders, totalPnL };
+    },
+    [strategyOrders, positionPnL]
+  );
+
+  // Export strategy data to Excel
+  const exportToExcel = useCallback(
+    (strategyId) => {
+      const strategy = strategies.find((s) => s.strategyId === strategyId);
+      const orders = strategyOrders[strategyId] || [];
+
+      if (!strategy) {
+        alert("Strategy not found");
+        return;
+      }
+
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+
+      // ===== SHEET 1: Strategy Overview =====
+      const overviewData = [
+        ["STRATEGY OVERVIEW"],
+        [],
+        ["Strategy ID", strategy.strategyId],
+        ["Symbols", strategy.symbols?.join(", ") || "N/A"],
+        ["Deployed At", new Date(strategy.timestamp).toLocaleString()],
+        ["Total Legs", strategy.config?.legs?.length || 0],
+        [],
+        ["BASE CONFIGURATION"],
+        [],
+        ["Lots", strategy.config?.baseConfig?.lots || "N/A"],
+        ["Underlying", strategy.config?.baseConfig?.underlying || "N/A"],
+        [
+          "Buy Trades First",
+          strategy.config?.baseConfig?.buyTradesFirst ? "Yes" : "No",
+        ],
+        [
+          "Max Open Orders",
+          strategy.config?.baseConfig?.maxOpenOrders || "N/A",
+        ],
+        [
+          "Max Open Trades",
+          strategy.config?.baseConfig?.maxOpenTrades || "N/A",
+        ],
+        [
+          "Max Profit Per Day",
+          strategy.config?.baseConfig?.maxProfitPerDay || "N/A",
+        ],
+        [
+          "Max Loss Per Day",
+          strategy.config?.baseConfig?.maxLossPerDay || "N/A",
+        ],
+        [
+          "Max Profit Per Trade",
+          strategy.config?.baseConfig?.maxProfitPerTrade || "N/A",
+        ],
+        [
+          "Max Loss Per Trade",
+          strategy.config?.baseConfig?.maxLossPerTrade || "N/A",
+        ],
+        ["Start Time", strategy.config?.baseConfig?.startTime || "N/A"],
+        ["End Time", strategy.config?.baseConfig?.endTime || "N/A"],
+        [
+          "Square Off Time",
+          strategy.config?.baseConfig?.squareOffTime || "N/A",
+        ],
+      ];
+
+      const ws_overview = XLSX.utils.aoa_to_sheet(overviewData);
+
+      // Style the overview sheet
+      ws_overview["!cols"] = [{ wch: 25 }, { wch: 40 }];
+
+      XLSX.utils.book_append_sheet(wb, ws_overview, "Strategy Overview");
+
+      // ===== SHEET 2: Legs Configuration =====
+      const legs = strategy.config?.legs || [];
+      if (legs.length > 0) {
+        const legsData = [
+          ["LEG CONFIGURATION"],
+          [],
+          [
+            "Leg ID",
+            "Leg Name",
+            "Lots",
+            "Position",
+            "Option Type",
+            "Expiry",
+            "Strike Type",
+            "Strike Distance",
+            "Premium Range",
+          ],
+        ];
+
+        legs.forEach((leg) => {
+          legsData.push([
+            leg.legId || "N/A",
+            leg.legName || "N/A",
+            leg.lots || "N/A",
+            leg.position || "N/A",
+            leg.optionType || "N/A",
+            leg.expiry || "N/A",
+            leg.strikeType || "N/A",
+            leg.strikeDistance || "N/A",
+            leg.premiumBasedStrikeConfig?.premiumRange
+              ? `${leg.premiumBasedStrikeConfig.premiumRange.min} - ${leg.premiumBasedStrikeConfig.premiumRange.max}`
+              : "N/A",
+          ]);
+        });
+
+        const ws_legs = XLSX.utils.aoa_to_sheet(legsData);
+        ws_legs["!cols"] = Array(9).fill({ wch: 15 });
+        XLSX.utils.book_append_sheet(wb, ws_legs, "Legs Configuration");
+      }
+
+      // ===== SHEET 3: All Orders =====
+      if (orders.length > 0) {
+        const allOrdersData = orders.map((order) => {
+          // Use the same orderId logic as in calculateSinglePositionPnL
+          const orderId =
+            order?.response?.data?.oID ||
+            order?.response?.data?.oid ||
+            order?.orderId ||
+            order?.exchangeOrderNumber;
+          const pnlData = positionPnL[orderId];
+          const status = order.status || order.orderStatus || "N/A";
+
+          return {
+            "User ID": order?.userId || "N/A",
+            "Order ID": orderId || "N/A",
+            "Leg ID": order.legId || "N/A",
+            Symbol: order.symbol || "N/A",
+            Strike: order.strike || "N/A",
+            "Option Type": order.optionType || "N/A",
+            Action: order.action || "N/A",
+            Quantity: order?.response?.data?.fQty || order?.fQty || "N/A",
+            "Entry Price": pnlData
+              ? pnlData.entryPrice
+              : order.fPrc || order.limitPrice || "N/A",
+            "Current/Exit Price": pnlData
+              ? order.exited
+                ? pnlData.exitPrice
+                : pnlData.currentPrice
+              : "N/A",
+            "P&L": pnlData ? pnlData.pnl : "N/A",
+            "Execution Time": order?.executionTime
+              ? new Date(order.executionTime).toLocaleString()
+              : "N/A",
+            "Position Status": order.exited ? "Closed" : "Open",
+            "Order Status": status.toUpperCase(),
+          };
+        });
+
+        const ws_all_orders = XLSX.utils.json_to_sheet(allOrdersData);
+        ws_all_orders["!cols"] = Array(14).fill({ wch: 15 });
+        XLSX.utils.book_append_sheet(wb, ws_all_orders, "All Orders");
+      }
+
+      // ===== SHEET 4: Open Positions =====
+      const openPositions = orders.filter(
+        (order) =>
+          order.exited !== true &&
+          (isOrderComplete(order.status || order.orderStatus) || order.fQty > 0)
+      );
+      if (openPositions.length > 0) {
+        const openPosData = openPositions.map((order) => {
+          // Use the same orderId logic as in calculateSinglePositionPnL
+          const orderId =
+            order?.response?.data?.oID ||
+            order?.response?.data?.oid ||
+            order?.orderId ||
+            order?.exchangeOrderNumber;
+          const pnlData = positionPnL[orderId];
+
+          return {
+            "User ID": order?.userId || "N/A",
+            "Order ID": orderId || "N/A",
+            "Leg ID": order.legId || "N/A",
+            Symbol: order.symbol || "N/A",
+            Strike: order.strike || "N/A",
+            Action: order.action || "N/A",
+            Quantity: order?.response?.data?.fQty || order?.fQty || "N/A",
+            "Entry Price": pnlData
+              ? pnlData.entryPrice
+              : order.fPrc || order.limitPrice || "N/A",
+            "Current Price": pnlData ? pnlData.currentPrice : "N/A",
+            "P&L": pnlData ? pnlData.pnl : "N/A",
+            "Execution Time": order?.executionTime
+              ? new Date(order.executionTime).toLocaleString()
+              : "N/A",
+          };
+        });
+
+        const ws_open_pos = XLSX.utils.json_to_sheet(openPosData);
+        ws_open_pos["!cols"] = Array(11).fill({ wch: 15 });
+        XLSX.utils.book_append_sheet(wb, ws_open_pos, "Open Positions");
+      }
+
+      // ===== SHEET 5: Closed Positions =====
+      const closedPositions = orders.filter((order) => order.exited === true);
+      if (closedPositions.length > 0) {
+        const closedPosData = closedPositions.map((order) => {
+          // Use the same orderId logic as in calculateSinglePositionPnL
+          const orderId =
+            order?.response?.data?.oID ||
+            order?.response?.data?.oid ||
+            order?.orderId ||
+            order?.exchangeOrderNumber;
+          const pnlData = positionPnL[orderId];
+
+          return {
+            "User ID": order?.userId || "N/A",
+            "Order ID": orderId || "N/A",
+            "Leg ID": order.legId || "N/A",
+            Symbol: order.symbol || "N/A",
+            Strike: order.strike || "N/A",
+            Action: order.action || "N/A",
+            Quantity: order?.response?.data?.fQty || order?.fQty || "N/A",
+            "Entry Price": pnlData
+              ? pnlData.entryPrice
+              : order.fPrc || order.limitPrice || "N/A",
+            "Exit Price": pnlData ? pnlData.exitPrice : "N/A",
+            "P&L": pnlData ? pnlData.pnl : "N/A",
+            "Execution Time": order?.executionTime
+              ? new Date(order.executionTime).toLocaleString()
+              : "N/A",
+          };
+        });
+
+        const ws_closed_pos = XLSX.utils.json_to_sheet(closedPosData);
+        ws_closed_pos["!cols"] = Array(11).fill({ wch: 15 });
+        XLSX.utils.book_append_sheet(wb, ws_closed_pos, "Closed Positions");
+      }
+
+      // ===== SHEET 6: P&L Summary =====
+      let totalPnL = 0;
+      let profitableOrders = 0;
+      let losingOrders = 0;
+      let totalProfit = 0;
+      let totalLoss = 0;
+
+      orders.forEach((order) => {
+        // Use the same orderId logic as in calculateSinglePositionPnL
+        const orderId =
+          order?.response?.data?.oID ||
+          order?.response?.data?.oid ||
+          order?.orderId ||
+          order?.exchangeOrderNumber;
+        if (orderId && positionPnL[orderId]) {
+          const pnl = parseFloat(positionPnL[orderId].pnl);
+          if (!isNaN(pnl)) {
+            totalPnL += pnl;
+            if (pnl > 0) {
+              profitableOrders++;
+              totalProfit += pnl;
+            } else if (pnl < 0) {
+              losingOrders++;
+              totalLoss += Math.abs(pnl);
+            }
+          }
+        }
+      });
+
+      const pnlSummaryData = [
+        ["P&L SUMMARY"],
+        [],
+        ["Metric", "Value"],
+        ["Total Orders", orders.length],
+        ["Open Positions", openPositions.length],
+        ["Closed Positions", closedPositions.length],
+        [],
+        ["Total P&L", `₹${totalPnL.toFixed(2)}`],
+        ["Total Profit", `₹${totalProfit.toFixed(2)}`],
+        ["Total Loss", `₹${totalLoss.toFixed(2)}`],
+        ["Profitable Orders", profitableOrders],
+        ["Losing Orders", losingOrders],
+        [
+          "Win Rate",
+          `${
+            orders.length > 0
+              ? ((profitableOrders / orders.length) * 100).toFixed(2)
+              : 0
+          }%`,
+        ],
+      ];
+
+      const ws_pnl_summary = XLSX.utils.aoa_to_sheet(pnlSummaryData);
+      ws_pnl_summary["!cols"] = [{ wch: 25 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, ws_pnl_summary, "P&L Summary");
+
+      // ===== SHEET 7: Order Status Breakdown =====
+      const statusBreakdown = {};
+      orders.forEach((order) => {
+        const status = (
+          order.status ||
+          order.orderStatus ||
+          "UNKNOWN"
+        ).toUpperCase();
+        statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
+      });
+
+      const statusData = [
+        ["ORDER STATUS BREAKDOWN"],
+        [],
+        ["Status", "Count"],
+        ...Object.entries(statusBreakdown).map(([status, count]) => [
+          status,
+          count,
+        ]),
+      ];
+
+      const ws_status = XLSX.utils.aoa_to_sheet(statusData);
+      ws_status["!cols"] = [{ wch: 20 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, ws_status, "Status Breakdown");
+
+      // Generate Excel file
+      XLSX.writeFile(
+        wb,
+        `${strategyId}_Complete_Report_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`
+      );
+    },
+    [strategies, strategyOrders, positionPnL, isOrderComplete]
+  );
+
   useEffect(() => {
     fetchStrategies();
     fetchStrategyTags();
+
+    // Fetch option data immediately
+    fetchOptionData();
+
     // Auto-refresh strategies list every 30 seconds
-    const interval = setInterval(fetchStrategies, 30000);
+    const strategiesInterval = setInterval(fetchStrategies, 30000);
+
+    // Auto-refresh option data every 1 second for live prices
+    optionDataIntervalRef.current = setInterval(fetchOptionData, 1000);
 
     // Cleanup: Stop all auto-refresh intervals when component unmounts
     return () => {
-      clearInterval(interval);
+      clearInterval(strategiesInterval);
+
+      // Clear option data interval
+      if (optionDataIntervalRef.current) {
+        clearInterval(optionDataIntervalRef.current);
+      }
+
       // Clear all strategy order refresh intervals
       Object.keys(refreshIntervalsRef.current).forEach((strategyId) => {
         clearInterval(refreshIntervalsRef.current[strategyId]);
       });
       refreshIntervalsRef.current = {};
     };
-  }, []);
+  }, [fetchOptionData]);
 
   // Cleanup interval when expandedStrategy changes
   useEffect(() => {
@@ -738,6 +1271,26 @@ const DeployedStrategies = () => {
       // This effect ensures cleanup if component re-renders unexpectedly
     };
   }, [expandedStrategy]);
+
+  // Recalculate P&L when option data updates
+  useEffect(() => {
+    if (optionDataCache.length === 0) return;
+
+    // Recalculate P&L for all open positions across all strategies
+    Object.keys(strategyOrders).forEach((strategyId) => {
+      const orders = strategyOrders[strategyId];
+      if (orders && Array.isArray(orders)) {
+        const openPositions = orders.filter(
+          (order) => order.entered === true && order.exited !== true
+        );
+
+        // Recalculate P&L for open positions
+        openPositions.forEach((order) => {
+          calculateSinglePositionPnL(order);
+        });
+      }
+    });
+  }, [optionDataCache]);
 
   if (loading && strategies.length === 0) {
     return (
@@ -838,6 +1391,9 @@ const DeployedStrategies = () => {
                   onDelete={deleteStrategy}
                   onSave={saveEdit}
                   onCancelEdit={cancelEditing}
+                  ordersSummary={getStrategySummary(strategy.strategyId)}
+                  onExportToExcel={exportToExcel}
+                  onCopyStrategy={copyStrategy}
                 />
 
                 {/* Expanded Details */}
@@ -2464,24 +3020,82 @@ const DeployedStrategies = () => {
                         {/* Open Positions Tab */}
                         {getActiveTab(strategy.strategyId) === "positions" && (
                           <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-md font-semibold text-gray-900 dark:text-white">
-                                Open Positions
-                              </h3>
-                              <div className="flex items-center gap-2">
-                                {refreshIntervalsRef.current[
-                                  strategy.strategyId
-                                ] && <LiveIndicator />}
-                                <button
-                                  onClick={() =>
-                                    fetchStrategyOrders(strategy.strategyId)
+                            {(() => {
+                              const allPositions =
+                                strategyOrders[strategy.strategyId]?.filter(
+                                  (order) => order.entered === true
+                                ) || [];
+                              const openPositions = allPositions.filter(
+                                (order) => order.exited !== true
+                              );
+                              const closedPositions = allPositions.filter(
+                                (order) => order.exited === true
+                              );
+
+                              // Calculate total P&L
+                              let totalPnL = 0;
+                              allPositions.forEach((order) => {
+                                // Use the same orderId logic as in calculateSinglePositionPnL
+                                const orderId =
+                                  order?.response?.data?.oID ||
+                                  order?.response?.data?.oid ||
+                                  order?.orderId ||
+                                  order?.exchangeOrderNumber;
+                                if (orderId && positionPnL[orderId]) {
+                                  const pnl = parseFloat(
+                                    positionPnL[orderId].pnl
+                                  );
+                                  if (!isNaN(pnl)) {
+                                    totalPnL += pnl;
                                   }
-                                  className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                                >
-                                  🔄 Refresh
-                                </button>
-                              </div>
-                            </div>
+                                }
+                              });
+
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                                        Open Positions
+                                      </h3>
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs font-medium">
+                                          Open: {openPositions.length}
+                                        </span>
+                                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-xs font-medium">
+                                          Closed: {closedPositions.length}
+                                        </span>
+                                        <span
+                                          className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                            totalPnL >= 0
+                                              ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                              : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                                          }`}
+                                        >
+                                          Total P&L: {totalPnL >= 0 ? "+" : ""}₹
+                                          {totalPnL.toFixed(2)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {refreshIntervalsRef.current[
+                                        strategy.strategyId
+                                      ] && <LiveIndicator />}
+                                      <button
+                                        onClick={() =>
+                                          fetchStrategyOrders(
+                                            strategy.strategyId
+                                          )
+                                        }
+                                        className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                      >
+                                        🔄 Refresh
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
 
                             {strategyOrders[strategy.strategyId] === null ||
                             strategyOrders[strategy.strategyId] ===
@@ -2561,8 +3175,11 @@ const DeployedStrategies = () => {
                                       .map((order, idx) => {
                                         const liveDetails = order;
                                         const isExited = order.exited === true;
+                                        // Use the same orderId logic as in calculateSinglePositionPnL
                                         const orderId =
-                                          order?.response?.data?.orderId ||
+                                          order?.response?.data?.oID ||
+                                          order?.response?.data?.oid ||
+                                          order?.orderId ||
                                           liveDetails?.exchangeOrderNumber;
                                         const pnlData = positionPnL[orderId];
 
@@ -2597,9 +3214,26 @@ const DeployedStrategies = () => {
                         {getActiveTab(strategy.strategyId) === "orders" && (
                           <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-md font-semibold text-gray-900 dark:text-white">
-                                Open Orders
-                              </h3>
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                                  Open Orders
+                                </h3>
+                                {(() => {
+                                  const allOrders =
+                                    strategyOrders[strategy.strategyId]?.filter(
+                                      (order) =>
+                                        !isOrderCompletedOrFinished(
+                                          order?.response?.data?.sts ||
+                                            order?.orderStatus
+                                        )
+                                    ) || [];
+                                  return (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium rounded">
+                                      Total: {allOrders.length}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               <div className="flex items-center gap-2">
                                 {refreshIntervalsRef.current[
                                   strategy.strategyId
@@ -2681,42 +3315,25 @@ const DeployedStrategies = () => {
                                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                     {strategyOrders[strategy.strategyId]
                                       .filter((order) => {
-                                        console.log(order);
                                         // Show only pending orders (not rejected, not complete, not cancelled)
                                         const liveDetails = order;
                                         const status = (
-                                          liveDetails?.status || "unknown"
+                                          liveDetails?.response?.data?.sts ||
+                                          "unknown"
                                         ).toUpperCase();
-                                        const isPending =
-                                          status === "PENDING" ||
-                                          status === "OPEN";
 
-                                        // Exclude rejected, complete, executed, and cancelled orders
-                                        const isCompleted =
-                                          status === "REJECTED" ||
-                                          status === "COMPLETE" ||
-                                          status === "EXECUTED" ||
-                                          status === "CANCELLED" ||
-                                          status === "CANCELED";
-
+                                        // Exclude completed/finished orders
                                         return (
-                                          isPending ||
-                                          (!isCompleted && status === "UNKNOWN")
+                                          !isOrderCompletedOrFinished(status) ||
+                                          status === "UNKNOWN"
                                         );
                                       })
                                       .map((order, idx) => {
                                         const liveDetails = order;
                                         const status = (
-                                          liveDetails?.status || "unknown"
+                                          liveDetails?.response?.data?.sts ||
+                                          "unknown"
                                         ).toUpperCase();
-                                        const isRejected =
-                                          status === "REJECTED";
-                                        const isComplete =
-                                          status === "COMPLETE" ||
-                                          status === "EXECUTED";
-                                        const isPending =
-                                          status === "PENDING" ||
-                                          status === "OPEN";
 
                                         return (
                                           <tr
@@ -2802,31 +3419,30 @@ const DeployedStrategies = () => {
                                               )}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {liveDetails?.orderTime ||
-                                                (order.placedTime
-                                                  ? new Date(
-                                                      order.placedTime
-                                                    ).toLocaleString()
-                                                  : "N/A")}
+                                              {order?.executionTime
+                                                ? new Date(
+                                                    order.executionTime
+                                                  ).toLocaleString()
+                                                : liveDetails?.executionTime
+                                                ? new Date(
+                                                    liveDetails.executionTime
+                                                  ).toLocaleString()
+                                                : liveDetails?.orderTime ||
+                                                  "N/A"}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-xs">
                                               <span
                                                 className={`px-2 py-1 rounded-full ${
-                                                  isRejected
+                                                  isOrderRejected(status)
                                                     ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                                    : isComplete
+                                                    : isOrderComplete(status)
                                                     ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                    : isPending
+                                                    : isOrderPending(status)
                                                     ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                                                     : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                                                 }`}
                                               >
-                                                {liveDetails?.status ||
-                                                  (order.response?.data?.msg?.includes(
-                                                    "success"
-                                                  )
-                                                    ? "Success"
-                                                    : "Pending")}
+                                                {status}
                                               </span>
                                             </td>
                                             <td className="px-3 py-2 text-xs text-gray-900 dark:text-white break-words">
@@ -2840,21 +3456,14 @@ const DeployedStrategies = () => {
                                 </table>
                                 {strategyOrders[strategy.strategyId].filter(
                                   (order) => {
-                                    const liveDetails = order;
                                     const status = (
-                                      liveDetails?.status || "unknown"
+                                      order?.response?.data?.sts ||
+                                      order?.orderStatus ||
+                                      "unknown"
                                     ).toUpperCase();
-                                    const isPending =
-                                      status === "PENDING" || status === "OPEN";
-                                    const isCompleted =
-                                      status === "REJECTED" ||
-                                      status === "COMPLETE" ||
-                                      status === "EXECUTED" ||
-                                      status === "CANCELLED" ||
-                                      status === "CANCELED";
                                     return (
-                                      isPending ||
-                                      (!isCompleted && status === "UNKNOWN")
+                                      !isOrderCompletedOrFinished(status) ||
+                                      status === "UNKNOWN"
                                     );
                                   }
                                 ).length === 0 && (
@@ -2873,9 +3482,26 @@ const DeployedStrategies = () => {
                         {getActiveTab(strategy.strategyId) === "completed" && (
                           <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-md font-semibold text-gray-900 dark:text-white">
-                                Completed Orders
-                              </h3>
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                                  Completed Orders
+                                </h3>
+                                {(() => {
+                                  const completedOrders =
+                                    strategyOrders[strategy.strategyId]?.filter(
+                                      (order) =>
+                                        isOrderCompletedOrFinished(
+                                          order?.response?.data?.sts ||
+                                            order.orderStatus
+                                        )
+                                    ) || [];
+                                  return (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs font-medium rounded">
+                                      Total: {completedOrders.length}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               <div className="flex items-center gap-2">
                                 {refreshIntervalsRef.current[
                                   strategy.strategyId
@@ -2957,37 +3583,18 @@ const DeployedStrategies = () => {
                                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                     {strategyOrders[strategy.strategyId]
                                       .filter((order) => {
-                                        // Show rejected, complete, executed, and cancelled orders
-                                        const liveStatus = (
-                                          order?.status || ""
-                                        ).toUpperCase();
-                                        const isCompleted =
-                                          liveStatus === "REJECTED" ||
-                                          liveStatus === "COMPLETE" ||
-                                          liveStatus === "EXECUTED" ||
-                                          liveStatus === "CANCELLED" ||
-                                          liveStatus === "CANCELED";
-
-                                        const oldStatus =
-                                          order.response?.data?.msg?.includes(
-                                            "success"
-                                          ) ||
-                                          order.response?.data?.msg?.includes(
-                                            "complete"
-                                          );
-
-                                        return isCompleted || oldStatus;
+                                        // Show completed, rejected, and cancelled orders
+                                        return isOrderCompletedOrFinished(
+                                          order?.response?.data?.sts ||
+                                            order.orderStatus
+                                        );
                                       })
                                       .map((order, idx) => {
                                         const liveDetails = order;
                                         const status = (
-                                          liveDetails?.status || "unknown"
+                                          liveDetails?.response?.data?.sts ||
+                                          liveDetails.orderStatus
                                         ).toUpperCase();
-                                        const isRejected =
-                                          status === "REJECTED";
-                                        const isCancelled =
-                                          status === "CANCELLED" ||
-                                          status === "CANCELED";
 
                                         return (
                                           <tr
@@ -3043,34 +3650,34 @@ const DeployedStrategies = () => {
                                                 : "N/A"}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
-                                              {liveDetails?.orderTime ||
-                                                (order.placedTime
-                                                  ? new Date(
-                                                      order.placedTime
-                                                    ).toLocaleString()
-                                                  : "N/A")}
+                                              {order?.executionTime
+                                                ? new Date(
+                                                    order.executionTime
+                                                  ).toLocaleString()
+                                                : liveDetails?.executionTime
+                                                ? new Date(
+                                                    liveDetails.executionTime
+                                                  ).toLocaleString()
+                                                : liveDetails?.orderTime ||
+                                                  "N/A"}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-xs">
                                               <span
                                                 className={`px-2 py-1 rounded-full ${
-                                                  isRejected
+                                                  isOrderRejected(status)
                                                     ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                                    : isCancelled
+                                                    : isOrderCancelled(status)
                                                     ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
                                                     : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                                 }`}
                                               >
-                                                {isRejected
-                                                  ? "Rejected"
-                                                  : isCancelled
-                                                  ? "Cancelled"
-                                                  : liveDetails?.status?.toUpperCase() ===
-                                                      "COMPLETE" ||
-                                                    liveDetails?.status?.toUpperCase() ===
-                                                      "EXECUTED"
-                                                  ? "Completed"
-                                                  : order.response?.data?.msg ||
-                                                    "Completed"}
+                                                {isOrderRejected(status)
+                                                  ? "REJECTED"
+                                                  : isOrderCancelled(status)
+                                                  ? "CANCELLED"
+                                                  : isOrderComplete(status)
+                                                  ? "COMPLETE"
+                                                  : status}
                                               </span>
                                             </td>
                                             <td className="px-3 py-2 text-xs text-gray-900 dark:text-white break-words">
@@ -3083,27 +3690,11 @@ const DeployedStrategies = () => {
                                   </tbody>
                                 </table>
                                 {strategyOrders[strategy.strategyId].filter(
-                                  (order) => {
-                                    const liveStatus = (
-                                      order?.status || ""
-                                    ).toUpperCase();
-                                    const isCompleted =
-                                      liveStatus === "REJECTED" ||
-                                      liveStatus === "COMPLETE" ||
-                                      liveStatus === "EXECUTED" ||
-                                      liveStatus === "CANCELLED" ||
-                                      liveStatus === "CANCELED";
-
-                                    const oldStatus =
-                                      order.response?.data?.msg?.includes(
-                                        "success"
-                                      ) ||
-                                      order.response?.data?.msg?.includes(
-                                        "complete"
-                                      );
-
-                                    return isCompleted || oldStatus;
-                                  }
+                                  (order) =>
+                                    isOrderCompletedOrFinished(
+                                      order?.response?.data?.sts ||
+                                        order.orderStatus
+                                    )
                                 ).length === 0 && (
                                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center mt-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">

@@ -1,5 +1,13 @@
 import React, { memo } from "react";
-import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Trash2,
+  Edit2,
+  Save,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+} from "lucide-react";
 
 const StrategyCard = memo(
   ({
@@ -11,6 +19,9 @@ const StrategyCard = memo(
     onDelete,
     onSave,
     onCancelEdit,
+    ordersSummary,
+    onExportToExcel,
+    onCopyStrategy,
   }) => {
     return (
       <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -63,6 +74,51 @@ const StrategyCard = memo(
                   {strategy.config?.legs?.length || 0}
                 </div>
               </div>
+              {!isExpanded && ordersSummary && (
+                <>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Open Positions
+                    </div>
+                    <div className="text-xs font-semibold text-green-600 dark:text-green-400">
+                      {ordersSummary.openPositions || 0}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Open Orders
+                    </div>
+                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      {ordersSummary.openOrders || 0}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Completed
+                    </div>
+                    <div className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                      {ordersSummary.completedOrders || 0}
+                    </div>
+                  </div>
+                  {ordersSummary.totalPnL !== undefined && (
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Total P&L
+                      </div>
+                      <div
+                        className={`text-xs font-bold ${
+                          ordersSummary.totalPnL >= 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {ordersSummary.totalPnL >= 0 ? "+" : ""}₹
+                        {ordersSummary.totalPnL.toFixed(2)}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             {isEditing ? (
               <>
@@ -81,6 +137,21 @@ const StrategyCard = memo(
               </>
             ) : (
               <>
+                <button
+                  onClick={() => onExportToExcel(strategy.strategyId)}
+                  className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded transition-colors"
+                  title="Export to Excel"
+                >
+                  📊 Export
+                </button>
+                <button
+                  onClick={() => onCopyStrategy(strategy)}
+                  className="px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+                  title="Copy Strategy"
+                >
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </button>
                 <button
                   onClick={() => onStartEdit(strategy)}
                   className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
