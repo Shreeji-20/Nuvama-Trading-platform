@@ -1,27 +1,48 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+interface NavbarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  theme?: "light" | "dark";
+  setTheme?: (theme: "light" | "dark") => void;
+}
+
+interface NavLinkProps {
+  to: string;
+  children: React.ReactNode;
+  icon?: string;
+  onClick?: () => void;
+  isMobile?: boolean;
+}
+
 export default function Navbar({
   isOpen = true,
   onClose = () => {},
   theme = "light",
   setTheme = () => {},
-}) {
+}: NavbarProps) {
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  const isActive = (path) => {
+  const isActive = (path: string): boolean => {
     if (path === "/" || path === "/dashboard") {
       return location.pathname === "/" || location.pathname === "/dashboard";
     }
     return location.pathname === path;
   };
 
-  const NavLink = ({ to, children, icon, onClick, isMobile = false }) => (
+  const NavLink: React.FC<NavLinkProps> = ({
+    to,
+    children,
+    icon,
+    onClick,
+    isMobile = false,
+  }) => (
     <Link
       to={to}
       className={`flex items-center gap-1 px-2 py-1.5 rounded transition-colors duration-200 whitespace-nowrap text-xs ${
@@ -43,11 +64,11 @@ export default function Navbar({
     </Link>
   );
 
-  const toggleMobileMenu = () => {
+  const toggleMobileMenu = (): void => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const closeMobileMenu = () => {
+  const closeMobileMenu = (): void => {
     setIsMobileMenuOpen(false);
   };
 

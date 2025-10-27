@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
 import config from "../config/api";
+import LegsConfigurationTable from "../components/LegsConfigurationTable";
 import {
   StrategyCard,
   PositionRow,
@@ -537,6 +538,7 @@ const DeployedStrategies = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      console.log("Fetched orders for strategy", strategyId, data);
       // Store orders for this strategy
       setStrategyOrders((prev) => ({
         ...prev,
@@ -1565,601 +1567,47 @@ const DeployedStrategies = () => {
                             Legs Configuration ({strategy.config.legs.length}{" "}
                             legs)
                           </h4>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs table-auto border-collapse">
-                              <thead>
-                                <tr className="border-b border-gray-200 dark:border-gray-600">
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Leg ID
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Symbol
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Expiry
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Action
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Option
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Lots
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Strike
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Target
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Target Val
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    SL
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    SL Val
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Price Type
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Depth
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    W&T Logic
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Wait&Trade
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    Dynamic Hedge
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    On Target Action
-                                  </th>
-                                  <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                    On Stoploss Action
-                                  </th>
-                                  {editingStrategy === strategy.strategyId && (
-                                    <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                      Actions
-                                    </th>
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(editingStrategy === strategy.strategyId
-                                  ? editValues.legs
-                                  : strategy.config.legs
-                                ).map((leg, index) => (
-                                  <tr
-                                    key={leg.id || index}
-                                    className="border-b border-gray-100 dark:border-gray-600"
-                                  >
-                                    <td className="p-2 text-center text-gray-900 dark:text-white">
-                                      {leg.legId}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.symbol || ""}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "symbol",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="">
-                                            Select Symbol
-                                          </option>
-                                          {symbolOptions.map((symbol) => (
-                                            <option key={symbol} value={symbol}>
-                                              {symbol}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.symbol}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.expiry || 0}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "expiry",
-                                              parseInt(e.target.value)
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value={0}>0</option>
-                                          <option value={1}>1</option>
-                                          <option value={2}>2</option>
-                                          <option value={3}>3</option>
-                                          <option value={4}>4</option>
-                                          <option value={5}>5</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.expiry}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={
-                                            leg.action || leg.orderType || "BUY"
-                                          }
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "action",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="BUY">BUY</option>
-                                          <option value="SELL">SELL</option>
-                                        </select>
-                                      ) : (
-                                        <span
-                                          className={`px-1 py-0.5 rounded text-xs font-medium ${
-                                            (leg.action || leg.orderType) ===
-                                            "BUY"
-                                              ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500"
-                                              : (leg.action ||
-                                                  leg.orderType) === "SELL"
-                                              ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
-                                              : "bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500"
-                                          }`}
-                                        >
-                                          {leg.action || leg.orderType || "N/A"}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.optionType || "CE"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "optionType",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="CE">CE</option>
-                                          <option value="PE">PE</option>
-                                        </select>
-                                      ) : (
-                                        <span
-                                          className={`px-1 py-0.5 rounded text-xs font-medium ${
-                                            leg.optionType === "CE"
-                                              ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500"
-                                              : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
-                                          }`}
-                                        >
-                                          {leg.optionType}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={leg.lots || ""}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "lots",
-                                              parseInt(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.lots}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <div className="flex flex-col items-center gap-1">
-                                          <div className="flex items-center gap-1">
-                                            <input
-                                              type="checkbox"
-                                              checked={
-                                                leg.premiumBasedStrike || false
-                                              }
-                                              onChange={(e) =>
-                                                handleLegChange(
-                                                  index,
-                                                  "premiumBasedStrike",
-                                                  e.target.checked
-                                                )
-                                              }
-                                              className="w-3 h-3 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
-                                            />
-                                            <span className="text-[0.5rem] text-gray-600 dark:text-gray-400">
-                                              Premium
-                                            </span>
-                                          </div>
-                                          {!leg.premiumBasedStrike ? (
-                                            <input
-                                              type="text"
-                                              value={leg.strike || ""}
-                                              onChange={(e) =>
-                                                handleLegChange(
-                                                  index,
-                                                  "strike",
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-20 px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                            />
-                                          ) : (
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setPremiumStrikeModalLeg(index);
-                                                setCurrentEditingStrategyId(
-                                                  strategy.strategyId
-                                                );
-                                              }}
-                                              className="px-2 py-1 text-[0.6rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                                            >
-                                              Configure
-                                            </button>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.premiumBasedStrike
-                                            ? "Premium Based"
-                                            : leg.strike}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.target || "NONE"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "target",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="NONE">NONE</option>
-                                          <option value="ABSOLUTE">
-                                            ABSOLUTE
-                                          </option>
-                                          <option value="PERCENTAGE">
-                                            PERCENTAGE
-                                          </option>
-                                          <option value="POINTS">POINTS</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.target}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={leg.targetValue || ""}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "targetValue",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.targetValue}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.stoploss || "NONE"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "stoploss",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="NONE">NONE</option>
-                                          <option value="ABSOLUTE">
-                                            ABSOLUTE
-                                          </option>
-                                          <option value="PERCENTAGE">
-                                            PERCENTAGE
-                                          </option>
-                                          <option value="POINTS">POINTS</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.stoploss}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={leg.stoplossValue || ""}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "stoplossValue",
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.stoplossValue}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.priceType || "BIDASK"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "priceType",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="LTP">LTP</option>
-                                          <option value="BIDASK">BIDASK</option>
-                                          <option value="DEPTH">DEPTH</option>
-                                          <option value="BID">BID</option>
-                                          <option value="ASK">ASK</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.priceType}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.depthIndex || 1}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "depthIndex",
-                                              parseInt(e.target.value)
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value={1}>1</option>
-                                          <option value={2}>2</option>
-                                          <option value={3}>3</option>
-                                          <option value={4}>4</option>
-                                          <option value={5}>5</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.depthIndex}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={
-                                            leg.waitAndTradeLogic || "NONE"
-                                          }
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "waitAndTradeLogic",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="NONE">NONE</option>
-                                          <option value="ABSOLUTE">
-                                            ABSOLUTE
-                                          </option>
-                                          <option value="PERCENTAGE">
-                                            PERCENTAGE
-                                          </option>
-                                          <option value="POINTS">POINTS</option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.waitAndTradeLogic || "NONE"}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <input
-                                          type="number"
-                                          value={leg.waitAndTrade || 0}
-                                          onChange={(e) => {
-                                            const value = e.target.value;
-                                            handleLegChange(
-                                              index,
-                                              "waitAndTrade",
-                                              value === ""
-                                                ? 0
-                                                : parseFloat(value)
-                                            );
-                                          }}
-                                          step="0.1"
-                                          placeholder="0 or -1.5"
-                                          className="w-16 text-xs text-center px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.waitAndTrade || 0}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-1">
-                                      <div className="flex justify-center">
-                                        {editingStrategy ===
-                                        strategy.strategyId ? (
-                                          <input
-                                            type="checkbox"
-                                            checked={leg.dynamicHedge || false}
-                                            onChange={(e) =>
-                                              handleLegChange(
-                                                index,
-                                                "dynamicHedge",
-                                                e.target.checked
-                                              )
-                                            }
-                                            className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                          />
-                                        ) : (
-                                          <span className="text-gray-900 dark:text-white">
-                                            {leg.dynamicHedge ? "✓" : "-"}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.onTargetAction || "NONE"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "onTargetAction",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="NONE">NONE</option>
-                                          <option value="REENTRY">
-                                            REENTRY
-                                          </option>
-                                          <option value="REEXECUTE">
-                                            REEXECUTE
-                                          </option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.onTargetAction || "NONE"}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-1 text-center">
-                                      {editingStrategy ===
-                                      strategy.strategyId ? (
-                                        <select
-                                          value={leg.onStoplossAction || "NONE"}
-                                          onChange={(e) =>
-                                            handleLegChange(
-                                              index,
-                                              "onStoplossAction",
-                                              e.target.value
-                                            )
-                                          }
-                                          className="w-auto text-xs text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                          <option value="NONE">NONE</option>
-                                          <option value="REENTRY">
-                                            REENTRY
-                                          </option>
-                                          <option value="REEXECUTE">
-                                            REEXECUTE
-                                          </option>
-                                        </select>
-                                      ) : (
-                                        <span className="text-gray-900 dark:text-white">
-                                          {leg.onStoplossAction || "NONE"}
-                                        </span>
-                                      )}
-                                    </td>
-                                    {editingStrategy ===
-                                      strategy.strategyId && (
-                                      <td className="p-2 text-center">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDeleteLeg(index)}
-                                          className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                                        >
-                                          Delete
-                                        </button>
-                                      </td>
-                                    )}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            {editingStrategy === strategy.strategyId && (
-                              <div className="mt-2 flex justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleAddLeg(strategy.strategyId)
-                                  }
-                                  className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                                >
-                                  + Add Leg
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <LegsConfigurationTable
+                            legs={
+                              editingStrategy === strategy.strategyId
+                                ? editValues.legs
+                                : strategy.config.legs
+                            }
+                            isEditing={editingStrategy === strategy.strategyId}
+                            onLegChange={(index, field, value) =>
+                              handleLegChange(index, field, value)
+                            }
+                            onDeleteLeg={(index) => handleDeleteLeg(index)}
+                            onAddLeg={() => handleAddLeg(strategy.strategyId)}
+                            onPremiumStrikeModalOpen={(index) => {
+                              setPremiumStrikeModalLeg(index);
+                              setCurrentEditingStrategyId(strategy.strategyId);
+                            }}
+                            symbolOptions={symbolOptions}
+                            expiryOptions={[0, 1, 2, 3, 4, 5]}
+                            targetOptions={[
+                              "NONE",
+                              "ABSOLUTE",
+                              "PERCENTAGE",
+                              "POINTS",
+                            ]}
+                            stoplossOptions={[
+                              "NONE",
+                              "ABSOLUTE",
+                              "PERCENTAGE",
+                              "POINTS",
+                            ]}
+                            priceTypeOptions={[
+                              "LTP",
+                              "BIDASK",
+                              "DEPTH",
+                              "BID",
+                              "ASK",
+                            ]}
+                            actionOptions={["NONE", "REENTRY", "REEXECUTE"]}
+                            orderTypeOptions={["LIMIT", "MARKET"]}
+                            strategyId={strategy.strategyId}
+                          />
                         </div>
                       )}
 
@@ -3175,6 +2623,7 @@ const DeployedStrategies = () => {
                                       .map((order, idx) => {
                                         const liveDetails = order;
                                         const isExited = order.exited === true;
+
                                         // Use the same orderId logic as in calculateSinglePositionPnL
                                         const orderId =
                                           order?.response?.data?.oID ||

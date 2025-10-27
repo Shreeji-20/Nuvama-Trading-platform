@@ -1,9 +1,34 @@
 import React, { useState, useEffect, useCallback } from "react";
 import config from "../config/api";
 
+interface IndexTheme {
+  bg: string;
+  icon: string;
+}
+
+interface IndexDataItem {
+  symbol: string;
+  name: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number | null;
+}
+
+interface IndexCardProps {
+  indexData: IndexDataItem;
+}
+
+interface IndexCardsProps {
+  indices?: string[] | IndexDataItem[];
+  className?: string;
+}
+
 // Icon mapping for different indices
-const getIndexIcon = (symbol) => {
-  const iconMap = {
+const getIndexIcon = (symbol: string): React.ReactElement => {
+  const iconMap: Record<string, React.ReactElement> = {
     NIFTY: (
       <svg
         className="w-6 h-6"
@@ -84,8 +109,8 @@ const getIndexIcon = (symbol) => {
 };
 
 // Color theme mapping for different indices
-const getIndexTheme = (symbol) => {
-  const themeMap = {
+const getIndexTheme = (symbol: string): IndexTheme => {
+  const themeMap: Record<string, IndexTheme> = {
     NIFTY: {
       bg: "bg-blue-100 dark:bg-blue-900/30",
       icon: "text-blue-600 dark:text-blue-400",
@@ -111,8 +136,8 @@ const getIndexTheme = (symbol) => {
 };
 
 // Exchange mapping for different indices
-const getExchangeName = (symbol) => {
-  const exchangeMap = {
+const getExchangeName = (symbol: string): string => {
+  const exchangeMap: Record<string, string> = {
     NIFTY: "National Stock Exchange",
     SENSEX: "Bombay Stock Exchange",
     BANKNIFTY: "National Stock Exchange",
@@ -122,7 +147,7 @@ const getExchangeName = (symbol) => {
 };
 
 // Individual Index Card Component
-const IndexCard = ({ indexData }) => {
+const IndexCard: React.FC<IndexCardProps> = ({ indexData }) => {
   const { symbol, name, price, change, changePercent, high, low, volume } =
     indexData;
   const theme = getIndexTheme(symbol);
@@ -135,7 +160,7 @@ const IndexCard = ({ indexData }) => {
     ? "text-green-600 dark:text-green-400"
     : "text-red-600 dark:text-red-400";
 
-  const formatNumber = (num) => {
+  const formatNumber = (num: number | null): string => {
     if (!num || num === 0) return "0";
     if (num >= 1e9) return `${(num / 1e9).toFixed(1)}B`;
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
@@ -224,10 +249,13 @@ const IndexCard = ({ indexData }) => {
 };
 
 // Main IndexCards Component
-const IndexCards = ({ indices = [], className = "" }) => {
-  const [indexData, setIndexData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const IndexCards: React.FC<IndexCardsProps> = ({
+  indices = [],
+  className = "",
+}) => {
+  const [indexData, setIndexData] = useState<IndexDataItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch index data from backend
   const fetchIndexData = useCallback(async () => {
@@ -252,11 +280,10 @@ const IndexCards = ({ indices = [], className = "" }) => {
 
           // Process and filter data for requested symbols
           if (Array.isArray(allData) && allData.length > 0) {
-            const processedData = indices.map((symbol) => {
+            const processedData = (indices as string[]).map((symbol) => {
               // Find matching data where response.data.symbol === symbol
-              const symbolData = allData.find((item) => {
+              const symbolData = allData.find((item: any) => {
                 const itemSymbol = item?.response?.data?.symbol;
-
                 return itemSymbol === symbol;
               });
 
@@ -275,7 +302,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
                 const changePercent =
                   previousClose !== 0 ? (change * 100) / previousClose : 0;
 
-                const processedItem = {
+                const processedItem: IndexDataItem = {
                   symbol,
                   name:
                     symbolData?.response?.data?.symbol ||
@@ -302,7 +329,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
                 console.log(
                   "Available symbols in response:",
                   allData.map(
-                    (item) =>
+                    (item: any) =>
                       item?.response?.data?.symbol || item?.symbol || "unknown"
                   )
                 );
@@ -328,12 +355,12 @@ const IndexCards = ({ indices = [], className = "" }) => {
               "No index data received from API or data is not an array"
             );
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Error fetching index data:", err);
           setError(`Failed to fetch index data: ${err.message}`);
 
           // Set default data structure for all symbols on error
-          const defaultData = indices.map((symbol) => ({
+          const defaultData = (indices as string[]).map((symbol) => ({
             symbol,
             name: symbol,
             price: null,
@@ -349,9 +376,9 @@ const IndexCards = ({ indices = [], className = "" }) => {
       } else {
         // If indices is already an array of objects, use it directly
         console.log("Using indices as object array:", indices);
-        setIndexData(indices);
+        setIndexData(indices as IndexDataItem[]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error in fetchIndexData:", err);
       setError("Failed to fetch index data");
     } finally {
@@ -361,18 +388,18 @@ const IndexCards = ({ indices = [], className = "" }) => {
 
   useEffect(() => {
     fetchIndexData();
-  }, [indices]);
+  }, [fetchIndexData]);
 
-  // Auto-refresh data every 30 seconds
+  // Auto-refresh data every 1 second
   useEffect(() => {
     if (!indices || indices.length === 0) return;
 
     const interval = setInterval(() => {
       fetchIndexData();
-    }, 1000); // 1 second
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [indices]);
+  }, [indices, fetchIndexData]);
 
   if (loading && indexData.length === 0) {
     console.log("Showing loading state");
@@ -439,7 +466,7 @@ const IndexCards = ({ indices = [], className = "" }) => {
   }
 
   // Determine grid columns based on number of cards
-  const getGridCols = (count) => {
+  const getGridCols = (count: number): string => {
     if (count === 1) return "grid-cols-1";
     if (count === 2) return "grid-cols-1 md:grid-cols-2";
     if (count === 3) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
