@@ -448,9 +448,31 @@ const DeployedStrategies: React.FC = () => {
     }
 
     try {
-      // TODO: Implement the square off API call here
-      alert(`Square off initiated for Order ID: ${orderId}`);
+      const response = await fetch(
+        `${API_BASE_URL}/strategy-orders/squareofforder`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(order),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.detail || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+      alert(`Square off initiated successfully!\n\nOrder ID: ${orderId}`);
+
       // Refresh orders after square off
+      if (order.strategyId) {
+        fetchOrders(order.strategyId);
+      }
     } catch (error: any) {
       console.error("Error squaring off position:", error);
       alert(`Failed to square off position: ${error.message}`);
@@ -763,19 +785,42 @@ const DeployedStrategies: React.FC = () => {
                               <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                                 Execution Mode
                               </div>
-                              <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                                <span
-                                  className={`p-1 rounded text-xs font-medium ${
-                                    (strategy.config as any)?.baseConfig
-                                      ?.executionMode === "LIVEMODE"
-                                      ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                                      : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
-                                  }`}
+                              {isEditing ? (
+                                <select
+                                  value={
+                                    getEditValue(
+                                      strategy,
+                                      "baseConfig.executionMode"
+                                    ) || "Simulation Mode"
+                                  }
+                                  onChange={(e) =>
+                                    handleEditChange(
+                                      "baseConfig.executionMode",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                 >
-                                  {(strategy.config as any)?.baseConfig
-                                    ?.executionMode || "N/A"}
-                                </span>
-                              </div>
+                                  <option value="Live Mode">Live Mode</option>
+                                  <option value="Simulation Mode">
+                                    Simulation Mode
+                                  </option>
+                                </select>
+                              ) : (
+                                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  <span
+                                    className={`p-1 rounded text-xs font-medium ${
+                                      (strategy.config as any)?.baseConfig
+                                        ?.executionMode === "Live Mode"
+                                        ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                        : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                    }`}
+                                  >
+                                    {(strategy.config as any)?.baseConfig
+                                      ?.executionMode || "N/A"}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

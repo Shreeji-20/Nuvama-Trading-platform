@@ -165,10 +165,19 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
         } else {
           // OPEN POSITION: Calculate unrealized P&L using market depth
           if (!order.symbol || !order.strike || !order.optionType) {
-            console.warn(`Missing instrument details for order ${orderId}`);
+            console.warn(`Missing instrument details for order ${orderId}:`, {
+              symbol: order.symbol,
+              strike: order.strike,
+              optionType: order.optionType,
+              expiry: order.expiry,
+            });
             setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
             return;
           }
+
+          console.log(
+            `Fetching market depth for ${order.symbol} ${order.strike} ${order.optionType} ${order.expiry}`
+          );
 
           const depthData = await getMarketDepth(
             order.symbol,
@@ -176,6 +185,8 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
             order.optionType,
             order.expiry || 0
           );
+
+          console.log(`Market depth data for ${orderId}:`, depthData);
 
           if (depthData) {
             // Get current price based on action
@@ -186,6 +197,10 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
               // For SELL positions, use ask price (price at which we need to buy back)
               currentPrice = depthData.ask;
             }
+
+            console.log(
+              `Calculated P&L for ${orderId}: action=${action}, currentPrice=${currentPrice}, entryPrice=${entryPrice}, qty=${quantity}`
+            );
 
             // Calculate unrealized P&L
             if (currentPrice && currentPrice > 0) {
@@ -210,7 +225,8 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
               }));
             } else {
               console.warn(
-                `No valid current price for open position ${orderId}`
+                `No valid current price for open position ${orderId}:`,
+                { currentPrice, action }
               );
             }
           } else {

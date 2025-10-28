@@ -121,7 +121,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
       <button
         type="button"
         onClick={handleToggle}
-        className={`px-2 py-1 text-[0.6rem] font-medium rounded border transition-colors min-w-[40px] ${getColorClasses()}`}
+        className={`px-2 py-1 text-[0.7rem] font-medium rounded border transition-colors min-w-[40px] ${getColorClasses()}`}
         disabled={!isEditing}
       >
         {getDisplayLabel()}
@@ -134,67 +134,67 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
       <table className="w-full table-auto border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] text-gray-700 dark:text-gray-300 whitespace-nowrap font-bold">
               Leg ID
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Symbol
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Expiry
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Action
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Option
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Lots
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Strike
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Target
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Target Value
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Stop Loss
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Stop Loss Value
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Price Type
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Depth Index
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Order Type
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Start Time
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Wait & Trade Logic
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Wait & Trade
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Dynamic Hedge
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               On Target Action
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               On Stoploss Action
             </th>
-            <th className="text-center p-1 text-[0.6rem] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Actions
             </th>
           </tr>
@@ -212,7 +212,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
               {/* Leg ID */}
               <td className="p-1">
                 <div className="text-center">
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[0.6rem] font-medium rounded">
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[0.7rem] font-medium rounded">
                     {leg.legId}
                   </span>
                 </div>
@@ -226,7 +226,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "symbol", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {symbolOptions.map((symbol) => (
                       <option key={symbol} value={symbol}>
@@ -235,7 +235,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.symbol}
                   </span>
                 )}
@@ -249,7 +249,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "expiry", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {expiryOptions.map((option) => (
                       <option key={option} value={option}>
@@ -258,7 +258,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.expiry}
                   </span>
                 )}
@@ -276,7 +276,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     />
                   ) : (
                     <span
-                      className={`px-1 py-0.5 rounded text-[0.6rem] font-medium ${
+                      className={`px-1 py-0.5 rounded text-[0.7rem] font-medium ${
                         leg.action === "BUY"
                           ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500"
                           : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
@@ -302,7 +302,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     />
                   ) : (
                     <span
-                      className={`px-1 py-0.5 rounded text-[0.6rem] font-medium ${
+                      className={`px-1 py-0.5 rounded text-[0.7rem] font-medium ${
                         leg.optionType === "CE"
                           ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500"
                           : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500"
@@ -323,11 +323,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "lots", parseInt(e.target.value) || 1)
                     }
-                    className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                     min="1"
                   />
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.lots}
                   </span>
                 )}
@@ -362,7 +362,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                         onChange={(e) =>
                           onLegChange(index, "strike", e.target.value)
                         }
-                        className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         style={{ maxHeight: "200px", overflowY: "auto" }}
                         size={1}
                       >
@@ -373,7 +373,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                         ))}
                       </select>
                     ) : (
-                      <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                      <span className="text-gray-900 dark:text-white text-[0.7rem]">
                         {leg.strike}
                       </span>
                     )
@@ -384,7 +384,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                         onPremiumStrikeModalOpen &&
                         onPremiumStrikeModalOpen(index)
                       }
-                      className="px-2 py-1 text-[0.6rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                      className="px-2 py-1 text-[0.7rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       disabled={!isEditing}
                     >
                       {isEditing ? "Configure" : "Premium Based"}
@@ -401,7 +401,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "target", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {targetOptions.map((option) => (
                       <option key={option} value={option}>
@@ -410,7 +410,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.target}
                   </span>
                 )}
@@ -439,12 +439,12 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                           onLegChange(index, "targetValue", 0);
                         }
                       }}
-                      className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       step="0.01"
                       placeholder="Enter value"
                     />
                   ) : (
-                    <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                    <span className="text-gray-900 dark:text-white text-[0.7rem]">
                       {leg.targetValue}
                     </span>
                   )}
@@ -459,7 +459,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "stoploss", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {stoplossOptions.map((option) => (
                       <option key={option} value={option}>
@@ -468,7 +468,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.stoploss}
                   </span>
                 )}
@@ -497,12 +497,12 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                           onLegChange(index, "stoplossValue", 0);
                         }
                       }}
-                      className="w-14 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       step="0.01"
                       placeholder="Enter value"
                     />
                   ) : (
-                    <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                    <span className="text-gray-900 dark:text-white text-[0.7rem]">
                       {leg.stoplossValue}
                     </span>
                   )}
@@ -517,7 +517,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "priceType", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {priceTypeOptions.map((option) => (
                       <option key={option} value={option}>
@@ -526,7 +526,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.priceType}
                   </span>
                 )}
@@ -540,7 +540,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "depthIndex", parseInt(e.target.value))
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     <option value={1}>1</option>
                     <option value={2}>2</option>
@@ -549,7 +549,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     <option value={5}>5</option>
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.depthIndex}
                   </span>
                 )}
@@ -563,7 +563,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "orderType", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {orderTypeOptions.map((option) => (
                       <option key={option} value={option}>
@@ -572,7 +572,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.orderType}
                   </span>
                 )}
@@ -587,10 +587,10 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "startTime", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   />
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.startTime || "-"}
                   </span>
                 )}
@@ -604,7 +604,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "waitAndTradeLogic", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     <option value="NONE">NONE</option>
                     <option value="ABSOLUTE">ABSOLUTE</option>
@@ -612,7 +612,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     <option value="POINTS">POINTS</option>
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.waitAndTradeLogic}
                   </span>
                 )}
@@ -641,11 +641,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       }
                     }}
                     step="0.01"
-                    className="w-16 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
+                    className="w-16 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
                     placeholder="Enter value"
                   />
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.waitAndTrade || 0}
                   </span>
                 )}
@@ -664,7 +664,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                     />
                   ) : (
-                    <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                    <span className="text-gray-900 dark:text-white text-[0.7rem]">
                       {leg.dynamicHedge ? "✓" : "-"}
                     </span>
                   )}
@@ -679,7 +679,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "onTargetAction", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {actionOptions.map((option) => (
                       <option key={option} value={option}>
@@ -688,7 +688,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.onTargetAction || "NONE"}
                   </span>
                 )}
@@ -702,7 +702,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) =>
                       onLegChange(index, "onStoplossAction", e.target.value)
                     }
-                    className="w-auto text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
                     {actionOptions.map((option) => (
                       <option key={option} value={option}>
@@ -711,7 +711,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-900 dark:text-white text-[0.6rem]">
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
                     {leg.onStoplossAction || "NONE"}
                   </span>
                 )}
@@ -724,7 +724,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     {onCopyLeg && (
                       <button
                         onClick={() => onCopyLeg(index)}
-                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded transition-colors"
+                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.7rem] font-medium rounded transition-colors"
                         title="Copy this leg"
                       >
                         Copy
@@ -733,7 +733,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     {onDeleteLeg && (
                       <button
                         onClick={() => onDeleteLeg(index)}
-                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] font-medium rounded transition-colors"
+                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.7rem] font-medium rounded transition-colors"
                         title="Remove this leg"
                       >
                         Remove
@@ -753,7 +753,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
           <button
             type="button"
             onClick={onAddLeg}
-            className="px-3 py-1.5 text-[0.6rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+            className="px-3 py-1.5 text-[0.7rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
           >
             + Add Leg
           </button>

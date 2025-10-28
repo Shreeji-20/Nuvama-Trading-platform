@@ -204,16 +204,21 @@ export const getMarketDepth = async (
     }
 
     const data: MarketDepthResponse = await response.json();
-
-    if (!data.data) {
+    console.log(data.data?.response);
+    if (!data.data || !data.data.response || !data.data.response.data) {
       return null;
     }
 
-    // Extract bid/ask/ltp from the response
-    const bid = data.data.bidValues?.[0]?.price || 0;
-    const ask = data.data.askValues?.[0]?.price || 0;
-    const ltp = data.data.ltp || 0;
+    // Extract bid/ask from the response (prices are strings, need to parse)
+    const bidPrice = data.data.response.data.bidValues?.[0]?.price;
+    const askPrice = data.data.response.data.askValues?.[0]?.price;
 
+    const bid = bidPrice ? parseFloat(bidPrice) : 0;
+    const ask = askPrice ? parseFloat(askPrice) : 0;
+    // LTP can be calculated as mid-price since it's not in the response
+    const ltp = bid && ask ? (bid + ask) / 2 : 0;
+
+    console.log(bid, ask, ltp);
     return { bid, ask, ltp };
   } catch (error) {
     console.error("Error fetching market depth:", error);

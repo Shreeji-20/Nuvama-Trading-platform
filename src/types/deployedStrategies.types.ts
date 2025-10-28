@@ -124,31 +124,40 @@ export interface PositionPnLData {
 
 // Market depth bid/ask data
 export interface DepthValue {
-  price?: number;
-  quantity?: number;
-  orders?: number;
+  no?: string; // Number of orders
+  price?: string; // Price as string
+  qty?: string; // Quantity as string
 }
 
 // Market depth response from API (depth endpoint)
 export interface MarketDepthResponse {
-  message: string;
-  redisKey: string;
-  data: {
-    symbolname?: string;
-    strikeprice?: number;
-    optiontype?: string;
-    expiry?: string;
-    ltp?: number;
-    bidValues?: DepthValue[];
-    askValues?: DepthValue[];
-    // Additional market depth fields
-    open?: number;
-    high?: number;
-    low?: number;
-    close?: number;
-    volume?: number;
-    oi?: number; // Open Interest
-  } | null;
+  message?: string;
+  redisKey?: string;
+  data?: {
+    response?: {
+      data?: {
+        symbolname?: string;
+        strikeprice?: string;
+        optiontype?: string;
+        expiry?: number;
+        tradingsymbol?: string;
+        symbol?: string;
+        ltt?: string; // Last traded time
+        taq?: string; // Total ask quantity
+        tbq?: string; // Total bid quantity
+        bidValues?: DepthValue[];
+        askValues?: DepthValue[];
+        // Additional market depth fields (if they exist)
+        open?: number;
+        high?: number;
+        low?: number;
+        close?: number;
+        volume?: number;
+        oi?: number; // Open Interest
+      } | null;
+      streaming_type?: string;
+    };
+  };
 }
 
 // Simplified market depth data for P&L calculation
