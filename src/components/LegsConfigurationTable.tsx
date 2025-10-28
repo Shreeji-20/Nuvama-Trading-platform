@@ -19,6 +19,7 @@ interface LegsConfigurationTableProps {
   isEditing?: boolean;
   onLegChange?: (index: number, field: string, value: any) => void;
   onDeleteLeg?: (index: number) => void;
+  onCopyLeg?: (index: number) => void;
   onAddLeg?: () => void;
   onPremiumStrikeModalOpen?: (index: number) => void;
   symbolOptions?: string[];
@@ -40,6 +41,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
   isEditing = false,
   onLegChange,
   onDeleteLeg,
+  onCopyLeg,
   onAddLeg,
   onPremiumStrikeModalOpen,
   symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"],
@@ -717,13 +719,27 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
 
               {/* Actions */}
               <td className="p-2 text-center">
-                {isEditing && onDeleteLeg && (
-                  <button
-                    onClick={() => onDeleteLeg(index)}
-                    className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] font-medium rounded transition-colors"
-                  >
-                    Remove
-                  </button>
+                {isEditing && (
+                  <div className="flex items-center justify-center gap-1">
+                    {onCopyLeg && (
+                      <button
+                        onClick={() => onCopyLeg(index)}
+                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded transition-colors"
+                        title="Copy this leg"
+                      >
+                        Copy
+                      </button>
+                    )}
+                    {onDeleteLeg && (
+                      <button
+                        onClick={() => onDeleteLeg(index)}
+                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.6rem] font-medium rounded transition-colors"
+                        title="Remove this leg"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 )}
               </td>
             </tr>
@@ -733,7 +749,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
 
       {/* Add Leg Button */}
       {isEditing && onAddLeg && (
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex justify-center">
           <button
             type="button"
             onClick={onAddLeg}

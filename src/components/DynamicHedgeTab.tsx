@@ -1,8 +1,9 @@
 import React from "react";
-import { DynamicHedgeSettings, HedgeType } from "../types/strategy.types";
+import { DynamicHedgeSettings, HedgeType, Leg } from "../types/strategy.types";
 
 interface DynamicHedgeTabProps {
   dynamicHedgeSettings: DynamicHedgeSettings;
+  legs?: Leg[]; // Optional legs array to get symbols
   isEditing?: boolean;
   onChange?: (field: string, value: any) => void;
   hedgeTypeOptions?: HedgeType[];
@@ -10,6 +11,7 @@ interface DynamicHedgeTabProps {
 
 const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
   dynamicHedgeSettings,
+  legs = [],
   isEditing = false,
   onChange,
   hedgeTypeOptions = ["premium Based", "fixed Distance"],
@@ -17,6 +19,47 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
   const handleChange = (field: string, value: any): void => {
     if (onChange) {
       onChange(field, value);
+    }
+  };
+
+  // Extract unique symbols from legs
+  const uniqueSymbols = React.useMemo(() => {
+    const symbols = legs.map((leg) => leg.symbol);
+    return Array.from(new Set(symbols));
+  }, [legs]);
+
+  // Default strike steps per symbol
+  const defaultStrikeSteps: Record<string, number> = {
+    NIFTY: 50,
+    SENSEX: 100,
+    BANKNIFTY: 100,
+  };
+
+  // Get strike steps value for a symbol
+  const getStrikeStepsForSymbol = (symbol: string): number | string => {
+    return (
+      dynamicHedgeSettings.strikeSteps?.[symbol] ??
+      defaultStrikeSteps[symbol] ??
+      50
+    );
+  };
+
+  // Update strike steps for a specific symbol
+  const handleSymbolStrikeStepsChange = (symbol: string, value: any): void => {
+    const currentStrikeSteps: Record<string, number> = {
+      ...(dynamicHedgeSettings.strikeSteps || {}),
+    };
+
+    // Update the specific symbol
+    currentStrikeSteps[symbol] = value;
+
+    handleChange("strikeSteps", currentStrikeSteps);
+  };
+
+  // Handle blur to set default if empty
+  const handleSymbolStrikeStepsBlur = (symbol: string, value: any): void => {
+    if (value === "" || value === "-") {
+      handleSymbolStrikeStepsChange(symbol, defaultStrikeSteps[symbol] ?? 50);
     }
   };
 
@@ -86,13 +129,22 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={dynamicHedgeSettings.minHedgeDistance || 0}
-                        onChange={(e) =>
+                        value={dynamicHedgeSettings.minHedgeDistance ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "minHedgeDistance",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseInt(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("minHedgeDistance", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                         placeholder="Min distance"
                       />
@@ -111,13 +163,22 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={dynamicHedgeSettings.maxHedgeDistance || 0}
-                        onChange={(e) =>
+                        value={dynamicHedgeSettings.maxHedgeDistance ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "maxHedgeDistance",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseInt(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("maxHedgeDistance", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                         placeholder="Max distance"
                       />
@@ -137,13 +198,22 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                       <input
                         type="number"
                         step="0.01"
-                        value={dynamicHedgeSettings.minPremium || 0.0}
-                        onChange={(e) =>
+                        value={dynamicHedgeSettings.minPremium ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "minPremium",
-                            parseFloat(e.target.value) || 0.0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0.0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("minPremium", 0.0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                         placeholder="Min premium"
                       />
@@ -163,13 +233,22 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                       <input
                         type="number"
                         step="0.01"
-                        value={dynamicHedgeSettings.maxPremium || 0.0}
-                        onChange={(e) =>
+                        value={dynamicHedgeSettings.maxPremium ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "maxPremium",
-                            parseFloat(e.target.value) || 0.0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0.0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("maxPremium", 0.0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 mx-auto"
                         placeholder="Max premium"
                       />
@@ -207,34 +286,48 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-100 dark:border-gray-600">
-                  <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
-                    Strike Steps
-                  </td>
-                  <td className="p-3">
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={dynamicHedgeSettings.strikeSteps || 100}
-                        onChange={(e) => {
-                          const value =
-                            e.target.value === ""
-                              ? 1
-                              : parseInt(e.target.value);
-                          handleChange("strikeSteps", value);
-                        }}
-                        className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
-                        step="1"
-                        min="1"
-                        placeholder="Any integer value"
-                      />
-                    ) : (
-                      <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white text-center">
-                        {dynamicHedgeSettings.strikeSteps ?? "N/A"}
-                      </div>
-                    )}
-                  </td>
-                </tr>
+                {/* Strike Steps - Per Symbol */}
+                {uniqueSymbols.map((symbol) => (
+                  <tr
+                    key={symbol}
+                    className="border-b border-gray-100 dark:border-gray-600"
+                  >
+                    <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
+                      Strike Steps ({symbol})
+                    </td>
+                    <td className="p-3">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={getStrikeStepsForSymbol(symbol)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleSymbolStrikeStepsChange(
+                              symbol,
+                              value === "" || value === "-"
+                                ? value
+                                : parseInt(value) ||
+                                    (defaultStrikeSteps[symbol] ?? 50)
+                            );
+                          }}
+                          onBlur={(e) => {
+                            handleSymbolStrikeStepsBlur(symbol, e.target.value);
+                          }}
+                          className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                          step="1"
+                          min="1"
+                          placeholder={`Default: ${
+                            defaultStrikeSteps[symbol] ?? 50
+                          }`}
+                        />
+                      ) : (
+                        <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white text-center">
+                          {getStrikeStepsForSymbol(symbol)}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
                 {dynamicHedgeSettings.hedgeType === "fixed Distance" && (
                   <tr className="border-b border-gray-100 dark:border-gray-600">
                     <td className="p-3 text-[0.6rem] text-center text-gray-700 dark:text-gray-300 font-medium">
@@ -244,13 +337,22 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                       {isEditing ? (
                         <input
                           type="number"
-                          value={dynamicHedgeSettings.strikeDistance || 1}
-                          onChange={(e) =>
+                          value={dynamicHedgeSettings.strikeDistance ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
                             handleChange(
                               "strikeDistance",
-                              parseInt(e.target.value) || 1
-                            )
-                          }
+                              value === "" || value === "-"
+                                ? value
+                                : parseInt(value) || 1
+                            );
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || value === "-") {
+                              handleChange("strikeDistance", 1);
+                            }
+                          }}
                           className="w-32 text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                           min="1"
                           placeholder="Strike distance"
@@ -297,7 +399,12 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
                 Current Strike Configuration
               </div>
               <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
-                Steps: {dynamicHedgeSettings.strikeSteps ?? 100}
+                Steps:{" "}
+                {dynamicHedgeSettings.strikeSteps
+                  ? Object.entries(dynamicHedgeSettings.strikeSteps)
+                      .map(([sym, val]) => `${sym}:${val}`)
+                      .join(", ")
+                  : "N/A"}
                 {dynamicHedgeSettings.hedgeType === "fixed Distance" && (
                   <> | Distance: {dynamicHedgeSettings.strikeDistance ?? 1}</>
                 )}
@@ -323,7 +430,12 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
             {dynamicHedgeSettings.maxPremium ?? 0.0}
           </div>
           <div className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
-            Strike Steps: {dynamicHedgeSettings.strikeSteps ?? 100}
+            Strike Steps:{" "}
+            {dynamicHedgeSettings.strikeSteps
+              ? Object.entries(dynamicHedgeSettings.strikeSteps)
+                  .map(([sym, val]) => `${sym}:${val}`)
+                  .join(", ")
+              : "N/A"}
             {dynamicHedgeSettings.hedgeType === "fixed Distance" && (
               <> | Distance: {dynamicHedgeSettings.strikeDistance ?? 1}</>
             )}

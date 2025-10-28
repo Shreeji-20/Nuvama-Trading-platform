@@ -90,13 +90,22 @@ const StoplossSettingsTab: React.FC<StoplossSettingsTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={stoplossSettings.stoplossValue || 0}
-                        onChange={(e) =>
+                        value={stoplossSettings.stoplossValue ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "stoplossValue",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("stoplossValue", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
                         step="0.01"
                         placeholder="Enter stoploss value"
@@ -116,13 +125,22 @@ const StoplossSettingsTab: React.FC<StoplossSettingsTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={stoplossSettings.stoplossWait || 0}
-                        onChange={(e) =>
+                        value={stoplossSettings.stoplossWait ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "stoplossWait",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("stoplossWait", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 mx-auto"
                         step="0.1"
                         placeholder="Wait time in seconds"

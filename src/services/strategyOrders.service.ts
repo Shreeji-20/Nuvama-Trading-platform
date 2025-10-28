@@ -19,7 +19,7 @@ import {
   MarketDepthData,
 } from "../types/deployedStrategies.types";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = config.API_BASE_URL;
 
 /**
  * Get all orders for a specific strategy with live details

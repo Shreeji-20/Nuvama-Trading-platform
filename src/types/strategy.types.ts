@@ -140,9 +140,21 @@ export interface DynamicHedgeSettings {
   maxHedgeDistance: number;
   minPremium: number;
   maxPremium: number;
-  strikeSteps: number;
+  strikeSteps: Record<string, number>; // Per-symbol strike steps dictionary
   strike500: boolean;
   strikeDistance: number;
+}
+
+// At Broker settings interface
+export interface AtBrokerSettings {
+  legSlAtBroker: boolean;
+  legTpAtBroker: boolean;
+  legReEntryAtBroker: boolean;
+  legWnTAtBroker: boolean;
+  slOrderTriggerAdjust: {
+    minPoint: number;
+    maxPercentage: number;
+  };
 }
 
 // Complete strategy configuration interface
@@ -154,6 +166,7 @@ export interface StrategyConfiguration {
   stoplossSettings: StoplossSettings;
   exitSettings: ExitSettings;
   dynamicHedgeSettings: DynamicHedgeSettings;
+  atBrokerSettings?: AtBrokerSettings;
   timestamp: string;
 }
 

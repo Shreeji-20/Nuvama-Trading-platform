@@ -92,13 +92,22 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                   {isEditing ? (
                     <input
                       type="number"
-                      value={targetSettings.targetValue || 0}
-                      onChange={(e) =>
+                      value={targetSettings.targetValue ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
                         handleChange(
                           "targetValue",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
+                          value === "" || value === "-"
+                            ? value
+                            : parseFloat(value) || 0
+                        );
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === "" || value === "-") {
+                          handleChange("targetValue", 0);
+                        }
+                      }}
                       className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
                       step="0.01"
                       placeholder="Enter target value"

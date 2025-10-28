@@ -107,13 +107,22 @@ const ExitSettingsTab: React.FC<ExitSettingsTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={exitSettings.holdBuyTime || 0}
-                        onChange={(e) =>
+                        value={exitSettings.holdBuyTime ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "holdBuyTime",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("holdBuyTime", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 mx-auto"
                         step="0.1"
                         placeholder="Hold time in seconds"
@@ -160,13 +169,22 @@ const ExitSettingsTab: React.FC<ExitSettingsTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={exitSettings.waitBtwnRetry || 0}
-                        onChange={(e) =>
+                        value={exitSettings.waitBtwnRetry ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "waitBtwnRetry",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("waitBtwnRetry", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
                         step="0.1"
                         placeholder="Wait time between retries"
@@ -186,13 +204,22 @@ const ExitSettingsTab: React.FC<ExitSettingsTabProps> = ({
                     {isEditing ? (
                       <input
                         type="number"
-                        value={exitSettings.maxWaitTime || 0}
-                        onChange={(e) =>
+                        value={exitSettings.maxWaitTime ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           handleChange(
                             "maxWaitTime",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                            value === "" || value === "-"
+                              ? value
+                              : parseFloat(value) || 0
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || value === "-") {
+                            handleChange("maxWaitTime", 0);
+                          }
+                        }}
                         className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 mx-auto"
                         step="0.1"
                         placeholder="Maximum wait time"

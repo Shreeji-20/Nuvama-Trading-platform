@@ -7,6 +7,7 @@ import TargetSettingsTab from "../components/TargetSettingsTab";
 import StoplossSettingsTab from "../components/StoplossSettingsTab";
 import ExitSettingsTab from "../components/ExitSettingsTab";
 import DynamicHedgeTab from "../components/DynamicHedgeTab";
+import AtBrokerTab from "../components/AtBrokerTab";
 import type {
   Underlying,
   ExecutionMode,
@@ -36,6 +37,7 @@ import type {
   StoplossSettings,
   ExitSettings,
   DynamicHedgeSettings,
+  AtBrokerSettings,
   StrategyConfiguration,
   StrategyTag,
   Tab,
@@ -126,6 +128,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
     { id: "stoploss", label: "Stoploss Settings" },
     { id: "exit", label: "Exit Settings" },
     { id: "hedge", label: "Dynamic Hedge" },
+    { id: "atbroker", label: "At Broker" },
     { id: "backtest", label: "Backtest" },
     { id: "deploy", label: "Deploy" },
   ];
@@ -233,10 +236,22 @@ const AdvancedOptionsBuilder: React.FC = () => {
       maxHedgeDistance: 0,
       minPremium: 0.0,
       maxPremium: 0.0,
-      strikeSteps: 100,
+      strikeSteps: {},
       strike500: false,
       strikeDistance: 1,
     });
+
+  // At Broker settings state
+  const [atBrokerSettings, setAtBrokerSettings] = useState<AtBrokerSettings>({
+    legSlAtBroker: false,
+    legTpAtBroker: false,
+    legReEntryAtBroker: false,
+    legWnTAtBroker: false,
+    slOrderTriggerAdjust: {
+      minPoint: 0,
+      maxPercentage: 0,
+    },
+  });
 
   // API integration states
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
@@ -355,6 +370,14 @@ const AdvancedOptionsBuilder: React.FC = () => {
     setDynamicHedgeSettings((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Handle At Broker settings changes
+  const handleAtBrokerSettingsChange = <K extends keyof AtBrokerSettings>(
+    field: K,
+    value: AtBrokerSettings[K]
+  ): void => {
+    setAtBrokerSettings((prev) => ({ ...prev, [field]: value }));
+  };
+
   // API deployment function
   const deployStrategy = async (): Promise<void> => {
     try {
@@ -444,6 +467,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
         stoplossSettings,
         exitSettings,
         dynamicHedgeSettings,
+        atBrokerSettings,
         timestamp: new Date().toISOString(),
       };
 
@@ -497,9 +521,26 @@ const AdvancedOptionsBuilder: React.FC = () => {
 
   // Add new leg
   const addLeg = (): void => {
+    // Find the next available leg ID
+    const existingLegNumbers = legs
+      .map((leg) => {
+        const match = leg.legId?.match(/LEG_(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .sort((a, b) => a - b);
+
+    let nextLegNumber = 1;
+    for (const num of existingLegNumbers) {
+      if (num === nextLegNumber) {
+        nextLegNumber++;
+      } else {
+        break;
+      }
+    }
+
     const newLeg: Leg = {
       id: Date.now(),
-      legId: `LEG_${legCounter.toString().padStart(3, "0")}`,
+      legId: `LEG_${nextLegNumber.toString().padStart(3, "0")}`,
       strategyId: baseConfig.strategyId,
       strategyName: baseConfig.strategyName,
       symbol: "NIFTY",
@@ -533,7 +574,36 @@ const AdvancedOptionsBuilder: React.FC = () => {
       },
     };
     setLegs((prev) => [...prev, newLeg]);
-    setLegCounter((prev) => prev + 1);
+  };
+
+  // Copy existing leg
+  const copyLeg = (index: number): void => {
+    const legToCopy = legs[index];
+    if (legToCopy) {
+      // Find the next available leg ID
+      const existingLegNumbers = legs
+        .map((leg) => {
+          const match = leg.legId?.match(/LEG_(\d+)/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .sort((a, b) => a - b);
+
+      let nextLegNumber = 1;
+      for (const num of existingLegNumbers) {
+        if (num === nextLegNumber) {
+          nextLegNumber++;
+        } else {
+          break;
+        }
+      }
+
+      const newLeg: Leg = {
+        ...legToCopy,
+        id: Date.now(),
+        legId: `LEG_${nextLegNumber.toString().padStart(3, "0")}`,
+      };
+      setLegs((prev) => [...prev, newLeg]);
+    }
   };
 
   // Update leg
@@ -661,12 +731,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 Base Configuration
               </h2>
             </div>
-            <button
-              onClick={addLeg}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
-            >
-              + Add Leg
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
@@ -767,11 +831,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 Legs Builder ({legs.length} legs)
               </h2>
             </div>
-            {legs.length > 0 && (
-              <div className="text-[0.6rem] text-gray-500 dark:text-gray-400">
-                Total legs: {legs.length}
-              </div>
-            )}
+            <button
+              onClick={addLeg}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
+            >
+              + Add Leg
+            </button>
           </div>
 
           {legs.length === 0 ? (
@@ -811,6 +876,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 if (leg) {
                   removeLeg(leg.id);
                 }
+              }}
+              onCopyLeg={(index: number) => {
+                copyLeg(index);
               }}
               onAddLeg={addLeg}
               onPremiumStrikeModalOpen={(index: number) => {
@@ -900,9 +968,18 @@ const AdvancedOptionsBuilder: React.FC = () => {
             {activeTab === "hedge" && (
               <DynamicHedgeTab
                 dynamicHedgeSettings={dynamicHedgeSettings}
+                legs={legs}
                 isEditing={true}
                 onChange={handleDynamicHedgeSettingsChange as any}
                 hedgeTypeOptions={hedgeTypeOptions as any}
+              />
+            )}
+
+            {activeTab === "atbroker" && (
+              <AtBrokerTab
+                atBrokerSettings={atBrokerSettings}
+                isEditing={true}
+                onChange={handleAtBrokerSettingsChange as any}
               />
             )}
 
@@ -1054,9 +1131,19 @@ const AdvancedOptionsBuilder: React.FC = () => {
                       maxHedgeDistance: 0,
                       minPremium: 0.0,
                       maxPremium: 0.0,
-                      strikeSteps: 100,
+                      strikeSteps: {},
                       strike500: false,
                       strikeDistance: 1,
+                    });
+                    setAtBrokerSettings({
+                      legSlAtBroker: false,
+                      legTpAtBroker: false,
+                      legReEntryAtBroker: false,
+                      legWnTAtBroker: false,
+                      slOrderTriggerAdjust: {
+                        minPoint: 0,
+                        maxPercentage: 0,
+                      },
                     });
                     setDeploymentStatus(null);
                     setDeploymentMessage("");

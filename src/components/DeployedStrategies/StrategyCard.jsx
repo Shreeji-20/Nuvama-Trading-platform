@@ -49,10 +49,12 @@ const StrategyCard = memo(
             </button>
             <div>
               <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                {strategy.strategyId}
+                {strategy.config?.baseConfig?.strategyName ||
+                  strategy.strategyId}
               </h3>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                Deployed: {new Date(strategy.timestamp).toLocaleString()}
+                ID: {strategy.strategyId} | Deployed:{" "}
+                {new Date(strategy.timestamp).toLocaleString()}
               </p>
             </div>
           </div>
