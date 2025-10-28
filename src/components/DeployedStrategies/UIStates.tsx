@@ -1,17 +1,31 @@
-import React, { memo } from "react";
+import React, { memo, ReactNode } from "react";
 
-const LoadingSpinner = memo(({ message = "Loading..." }) => {
-  return (
-    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{message}</p>
-    </div>
-  );
-});
+interface LoadingSpinnerProps {
+  message?: string;
+}
+
+const LoadingSpinner = memo<LoadingSpinnerProps>(
+  ({ message = "Loading..." }) => {
+    return (
+      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          {message}
+        </p>
+      </div>
+    );
+  }
+);
 
 LoadingSpinner.displayName = "LoadingSpinner";
 
-const EmptyState = memo(
+interface EmptyStateProps {
+  icon?: string | ReactNode;
+  message?: string;
+  description?: string;
+}
+
+const EmptyState = memo<EmptyStateProps>(
   ({ icon = "📋", message = "No data available", description }) => {
     return (
       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">

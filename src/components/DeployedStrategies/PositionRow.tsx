@@ -1,7 +1,16 @@
 import React, { memo } from "react";
 import squareOffIcon from "../../assets/squareofficon.png";
+import { Order, PositionPnLData } from "../../types/deployedStrategies.types";
 
-const PositionRow = memo(
+interface PositionRowProps {
+  order: Order;
+  liveDetails: Order;
+  pnlData?: PositionPnLData;
+  isExited: boolean;
+  onSquareOff: (order: Order) => void;
+}
+
+const PositionRow = memo<PositionRowProps>(
   ({ order, liveDetails, pnlData, isExited, onSquareOff }) => {
     // Use the same orderId logic as in calculateSinglePositionPnL
     const orderId =
@@ -57,18 +66,19 @@ const PositionRow = memo(
         <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
           <span
             className={`px-2 py-1 rounded-full ${
-              order.action === "BUY" || liveDetails?.transactionType === "BUY"
+              order.action === "BUY" ||
+              order?.response?.data?.transactionType === "BUY"
                 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                 : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
             }`}
           >
-            {order.action || liveDetails?.transactionType || "N/A"}
+            {order.action || order?.response?.data?.transactionType || "N/A"}
           </span>
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold text-center">
           {order?.response?.data?.fQty ||
-            liveDetails?.fillQuantity ||
-            liveDetails?.totalQuantity ||
+            order?.response?.data?.qty ||
+            order.quantity ||
             "N/A"}
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white font-semibold text-center">
@@ -76,8 +86,8 @@ const PositionRow = memo(
             ? `₹${pnlData.entryPrice}`
             : order.fPrc
             ? `₹${parseFloat(order.fPrc).toFixed(2)}`
-            : liveDetails?.averagePrice && liveDetails.averagePrice !== "0.00"
-            ? `₹${liveDetails.averagePrice}`
+            : order?.response?.data?.fPrc && order.response.data.fPrc !== "0.00"
+            ? `₹${order.response.data.fPrc}`
             : order.limitPrice
             ? `₹${order.limitPrice}`
             : "N/A"}
@@ -117,9 +127,9 @@ const PositionRow = memo(
         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white text-center">
           {order?.executionTime
             ? new Date(order.executionTime).toLocaleString()
-            : liveDetails?.executionTime
-            ? new Date(liveDetails.executionTime).toLocaleString()
-            : liveDetails?.orderTime || "N/A"}
+            : order?.response?.data?.orderTime ||
+              order?.response?.data?.executionTime ||
+              "N/A"}
         </td>
         <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
           <span

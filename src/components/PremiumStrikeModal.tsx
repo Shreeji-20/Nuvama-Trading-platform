@@ -11,12 +11,12 @@ type Condition = "Greaterthanequal" | "lessthanequal";
 
 interface PremiumBasedStrikeConfig {
   strikeType: StrikeType;
-  maxDepth: number;
+  maxDepth: number | string;
   searchSide: SearchSide;
-  value: number;
+  value: number | string;
   condition: Condition;
-  between: number;
-  and: number;
+  between: number | string;
+  and: number | string;
 }
 
 interface Leg {
@@ -102,11 +102,25 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
             <input
               type="number"
               value={config.maxDepth}
-              onChange={(e) =>
-                onConfigChange("maxDepth", parseInt(e.target.value) || 0)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                // Prevent negative sign but allow empty
+                if (value !== "-") {
+                  onConfigChange(
+                    "maxDepth",
+                    value === "" ? "" : parseInt(value) || 0
+                  );
+                }
+              }}
+              onBlur={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  onConfigChange("maxDepth", 0);
+                }
+              }}
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               min="0"
+              placeholder="Enter value"
             />
           </div>
 
@@ -138,10 +152,25 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
                   type="number"
                   step="0.01"
                   value={config.value}
-                  onChange={(e) =>
-                    onConfigChange("value", parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Prevent negative sign but allow empty
+                    if (value !== "-") {
+                      onConfigChange(
+                        "value",
+                        value === "" ? "" : parseFloat(value) || 0
+                      );
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      onConfigChange("value", 0);
+                    }
+                  }}
                   className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  placeholder="Enter value"
                 />
               </div>
 
@@ -173,10 +202,25 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
                   type="number"
                   step="0.01"
                   value={config.between}
-                  onChange={(e) =>
-                    onConfigChange("between", parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Prevent negative sign but allow empty
+                    if (value !== "-") {
+                      onConfigChange(
+                        "between",
+                        value === "" ? "" : parseFloat(value) || 0
+                      );
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      onConfigChange("between", 0);
+                    }
+                  }}
                   className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  placeholder="Enter value"
                 />
               </div>
 
@@ -189,10 +233,25 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
                   type="number"
                   step="0.01"
                   value={config.and}
-                  onChange={(e) =>
-                    onConfigChange("and", parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Prevent negative sign but allow empty
+                    if (value !== "-") {
+                      onConfigChange(
+                        "and",
+                        value === "" ? "" : parseFloat(value) || 0
+                      );
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      onConfigChange("and", 0);
+                    }
+                  }}
                   className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  placeholder="Enter value"
                 />
               </div>
             </>
