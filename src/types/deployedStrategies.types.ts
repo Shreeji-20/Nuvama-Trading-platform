@@ -260,7 +260,6 @@ export interface StrategyCardProps {
 export interface TabContentProps {
   strategy: DeployedStrategy;
   orders: Order[] | null;
-  loadingOrders: boolean;
   positionPnL: Record<string, PositionPnLData>;
   loadingPnL: Record<string, boolean>;
   isRefreshing: boolean;

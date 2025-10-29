@@ -4,6 +4,12 @@
  * Custom hook for calculating P&L for open and closed positions.
  * Handles both SIMULATIONMODE and LIVEMODE orders.
  *
+ * OPTIMIZATION:
+ * =============
+ * - Closed positions: Exit order fetched ONCE and cached (no repeated API calls)
+ * - Open positions: Market depth fetched every second for live updates
+ * - Uses useRef for cache to avoid stale closures in callbacks
+ *
  * P&L CALCULATION:
  * ================
  *
@@ -12,15 +18,19 @@
  * - Current price: Fetched from market depth (bid for BUY, ask for SELL)
  * - P&L = (Current - Entry) × Qty  [for BUY]
  * - P&L = (Entry - Current) × Qty  [for SELL]
+ * - Market depth refreshed every second with live data
  *
  * CLOSED POSITIONS (entered: true, exited: true):
  * - Entry price: response.data.fPrc
- * - Exit price: Fetched from exit order
+ * - Exit price: Fetched from exit order ONCE (cached after first fetch)
  * - P&L = (Exit - Entry) × Qty  [for BUY]
  * - P&L = (Entry - Exit) × Qty  [for SELL]
+ * - Exit order fetched only once when position is first detected as closed
+ * - Subsequent refreshes skip API call and use cached data
+ * - NO market depth fetching for closed positions (optimization)
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Order,
   PositionPnLData,
@@ -47,6 +57,10 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
     Record<string, PositionPnLData>
   >({});
   const [loadingPnL, setLoadingPnL] = useState<Record<string, boolean>>({});
+
+  // Track which exit orders have already been fetched to avoid refetching
+  // Using useRef so we can access current value in callbacks without dependency issues
+  const fetchedExitOrdersRef = useRef<Set<string>>(new Set());
 
   /**
    * Get order ID from order object (handles multiple formats)
@@ -97,6 +111,31 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
         return;
       }
 
+      const isExited = order.exited === true;
+
+      // OPTIMIZATION: Skip API call for already-fetched closed positions
+      if (isExited) {
+        const isCached = fetchedExitOrdersRef.current.has(orderId);
+        console.log(
+          `[P&L Calc] Order ${orderId}: exited=${isExited}, cached=${isCached}, cache size=${fetchedExitOrdersRef.current.size}`
+        );
+
+        if (isCached) {
+          console.log(
+            `✓✓✓ SKIPPING ALL API CALLS for closed position ${orderId} (using cached P&L) ✓✓✓`
+          );
+          setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
+          return; // <<< EARLY RETURN - NO API CALLS AFTER THIS
+        }
+      }
+
+      // If we reach here, it's either:
+      // 1. An OPEN position (needs market depth every second)
+      // 2. A CLOSED position being processed for the FIRST time (needs exit order once)
+      console.log(
+        `[P&L Calc] Proceeding with API calls for order ${orderId} (isExited=${isExited})`
+      );
+
       // Set loading state
       setLoadingPnL((prev) => ({ ...prev, [orderId]: true }));
 
@@ -132,6 +171,9 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
         if (isExited) {
           // CLOSED POSITION: Fetch exit order
           const orderDetailsKey = order.orderDetailsKey || orderId;
+
+          // Fetch exit order only once
+          console.log(`Fetching exit order for closed position ${orderId}`);
           const exitOrder = await strategyOrdersService.getExitOrder(
             orderDetailsKey
           );
@@ -159,11 +201,23 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
                 isExited: true,
               },
             }));
+
+            // Mark this exit order as fetched
+            fetchedExitOrdersRef.current.add(orderId);
+            console.log(
+              `✓ Cached exit order for ${orderId}. Cache now contains: [${Array.from(
+                fetchedExitOrdersRef.current
+              ).join(", ")}]`
+            );
           } else {
             console.error(`No exit price found for closed position ${orderId}`);
           }
         } else {
           // OPEN POSITION: Calculate unrealized P&L using market depth
+          console.log(
+            `[Market Depth] Fetching live data for open position ${orderId}`
+          );
+
           if (!order.symbol || !order.strike || !order.optionType) {
             console.warn(`Missing instrument details for order ${orderId}:`, {
               symbol: order.symbol,
@@ -175,18 +229,12 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
             return;
           }
 
-          console.log(
-            `Fetching market depth for ${order.symbol} ${order.strike} ${order.optionType} ${order.expiry}`
-          );
-
           const depthData = await getMarketDepth(
             order.symbol,
             order.strike,
             order.optionType,
             order.expiry || 0
           );
-
-          console.log(`Market depth data for ${orderId}:`, depthData);
 
           if (depthData) {
             // Get current price based on action
@@ -197,10 +245,6 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
               // For SELL positions, use ask price (price at which we need to buy back)
               currentPrice = depthData.ask;
             }
-
-            console.log(
-              `Calculated P&L for ${orderId}: action=${action}, currentPrice=${currentPrice}, entryPrice=${entryPrice}, qty=${quantity}`
-            );
 
             // Calculate unrealized P&L
             if (currentPrice && currentPrice > 0) {
@@ -245,15 +289,50 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
 
   /**
    * Calculate P&L for multiple positions
+   * Optimized: Skip if no open positions and all closed positions are cached
    */
   const calculatePnLForPositions = useCallback(
     async (orders: Order[]) => {
       // Filter for entered positions only
       const positions = orders.filter((order) => order.entered === true);
 
-      // Calculate P&L for each position in parallel
+      // Separate open vs closed positions
+      const openPositions = positions.filter((order) => order.exited !== true);
+      const closedPositions = positions.filter(
+        (order) => order.exited === true
+      );
+
+      // Filter out already-cached closed positions to avoid unnecessary function calls
+      const uncachedClosedPositions = closedPositions.filter((order) => {
+        const orderId = getOrderId(order);
+        return orderId && !fetchedExitOrdersRef.current.has(orderId);
+      });
+
+      const cachedClosedCount =
+        closedPositions.length - uncachedClosedPositions.length;
+
+      console.log(
+        `[P&L Batch] ${openPositions.length} open + ${uncachedClosedPositions.length} new closed (${cachedClosedCount} cached closed)`
+      );
+
+      // OPTIMIZATION: If no open positions and all closed are cached, skip entirely
+      if (openPositions.length === 0 && uncachedClosedPositions.length === 0) {
+        console.log(
+          `[P&L Batch] ✓ No open positions, all closed cached - SKIPPING P&L calculation`
+        );
+        return;
+      }
+
+      // Only process: open positions + uncached closed positions
+      const positionsToProcess = [...openPositions, ...uncachedClosedPositions];
+
+      console.log(
+        `[P&L Batch] Processing ${positionsToProcess.length} positions`
+      );
+
+      // Calculate P&L for positions that need processing
       await Promise.all(
-        positions.map((order) => calculatePnLForPosition(order))
+        positionsToProcess.map((order) => calculatePnLForPosition(order))
       );
     },
     [calculatePnLForPosition]
@@ -273,6 +352,8 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
       delete newLoading[orderId];
       return newLoading;
     });
+    // Also clear from fetched exit orders ref
+    fetchedExitOrdersRef.current.delete(orderId);
   }, []);
 
   return {

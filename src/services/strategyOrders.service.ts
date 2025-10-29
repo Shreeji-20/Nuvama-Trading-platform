@@ -204,7 +204,7 @@ export const getMarketDepth = async (
     }
 
     const data: MarketDepthResponse = await response.json();
-    console.log(data.data?.response);
+    
     if (!data.data || !data.data.response || !data.data.response.data) {
       return null;
     }
@@ -218,7 +218,7 @@ export const getMarketDepth = async (
     // LTP can be calculated as mid-price since it's not in the response
     const ltp = bid && ask ? (bid + ask) / 2 : 0;
 
-    console.log(bid, ask, ltp);
+    
     return { bid, ask, ltp };
   } catch (error) {
     console.error("Error fetching market depth:", error);

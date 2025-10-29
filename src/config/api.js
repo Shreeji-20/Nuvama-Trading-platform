@@ -64,7 +64,6 @@ const config = {
 
   // Helper function to build full URL
   buildUrl: (endpoint) => {
-    console.log(`API Base URL: ${config.API_BASE_URL}${endpoint}`);
     return `${config.API_BASE_URL}${endpoint}`;
   },
 

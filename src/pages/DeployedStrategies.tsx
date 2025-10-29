@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
 import config from "../config/api";
 import LegsConfigurationTable from "../components/LegsConfigurationTable";
+import PremiumStrikeModal from "../components/PremiumStrikeModal";
 import OpenPositionsTab from "../components/OpenPositionsTab";
 import OpenOrdersTab from "../components/OpenOrdersTab";
 import CompletedOrdersTab from "../components/CompletedOrdersTab";
@@ -118,9 +119,8 @@ const DeployedStrategies: React.FC = () => {
   const setStrategyTab = (strategyId: string, tabId: string) => {
     setActiveTab((prev) => ({ ...prev, [strategyId]: tabId }));
 
-    // Always fetch orders and start auto-refresh for order tabs
-    fetchOrders(strategyId);
-    startAutoRefresh(strategyId);
+    // Only start auto-refresh if not already running
+    // The hook handles starting/stopping internally
   };
 
   // Fetch all deployed strategies
@@ -427,7 +427,7 @@ const DeployedStrategies: React.FC = () => {
   };
 
   // Handle Square Off for a position
-  const handleSquareOff = async (order: Order) => {
+  const handleSquareOff = (order: Order) => {
     const orderId =
       order?.response?.data?.oID ||
       order?.orderId ||
@@ -439,43 +439,42 @@ const DeployedStrategies: React.FC = () => {
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to square off this position?\n\nOrder ID: ${orderId}\nUser: ${userId}`
-      )
-    ) {
-      return;
-    }
+    console.log("Initiating square off for order:", orderId, order);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/strategy-orders/squareofforder`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(order),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
+    // Fire and forget - send request immediately
+    fetch(`${API_BASE_URL}/strategy-orders/squareofforder`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(order),
+    })
+      .then((response) => {
+        console.log(
+          `Square off request sent for order: ${orderId}, status: ${response.status}`
         );
-      }
+        if (!response.ok) {
+          console.warn(
+            `Square off request failed with status: ${response.status}`
+          );
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Square off response:", data);
+      })
+      .catch((error) => {
+        console.error("Error sending square off request:", error);
+      });
 
-      const result = await response.json();
-      alert(`Square off initiated successfully!\n\nOrder ID: ${orderId}`);
+    // Immediately show success message
+    console.log(`Square off request initiated for Order ID: ${orderId}`);
 
-      // Refresh orders after square off
-      if (order.strategyId) {
-        fetchOrders(order.strategyId);
-      }
-    } catch (error: any) {
-      console.error("Error squaring off position:", error);
-      alert(`Failed to square off position: ${error.message}`);
+    // Refresh orders after a short delay
+    if (order.strategyId) {
+      setTimeout(() => {
+        fetchOrders(order.strategyId!);
+      }, 500);
     }
   };
 
@@ -609,11 +608,6 @@ const DeployedStrategies: React.FC = () => {
     fetchStrategyTags();
     fetchOptionData();
 
-    // Set up option data refresh interval (every 1 second)
-    optionDataIntervalRef.current = setInterval(() => {
-      fetchOptionData();
-    }, 1000);
-
     // Cleanup
     return () => {
       if (optionDataIntervalRef.current) {
@@ -622,7 +616,49 @@ const DeployedStrategies: React.FC = () => {
     };
   }, [fetchOptionData]);
 
+  // Conditionally refresh option data only if there are open positions
+  useEffect(() => {
+    // Check if any strategy has open positions
+    const hasAnyOpenPositions = Object.values(strategyOrders).some((orders) =>
+      orders?.some((order) => order.entered === true && order.exited !== true)
+    );
+
+    if (hasAnyOpenPositions) {
+      console.log(
+        "[DeployedStrategies] Open positions detected, starting option data refresh"
+      );
+
+      // Clear any existing interval
+      if (optionDataIntervalRef.current) {
+        clearInterval(optionDataIntervalRef.current);
+      }
+
+      // Set up option data refresh interval (every 1 second)
+      optionDataIntervalRef.current = setInterval(() => {
+        fetchOptionData();
+      }, 1000);
+    } else {
+      console.log(
+        "[DeployedStrategies] No open positions, stopping option data refresh"
+      );
+
+      // Clear interval if no open positions
+      if (optionDataIntervalRef.current) {
+        clearInterval(optionDataIntervalRef.current);
+        optionDataIntervalRef.current = null;
+      }
+    }
+
+    // Cleanup
+    return () => {
+      if (optionDataIntervalRef.current) {
+        clearInterval(optionDataIntervalRef.current);
+      }
+    };
+  }, [strategyOrders, fetchOptionData]);
+
   // Calculate P&L when orders change
+  // The hook internally skips if no open positions and all closed are cached
   useEffect(() => {
     Object.entries(strategyOrders).forEach(([strategyId, orders]) => {
       if (orders) {
@@ -630,14 +666,6 @@ const DeployedStrategies: React.FC = () => {
       }
     });
   }, [strategyOrders, calculatePnLForPositions]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-        <LoadingSpinner message="Loading deployed strategies..." />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -1015,6 +1043,17 @@ const DeployedStrategies: React.FC = () => {
                                   const newLegs = [...editValues.legs, newLeg];
                                   handleEditChange("legs", newLegs);
                                 }}
+                                onPremiumStrikeModalOpen={(
+                                  legIndex: number
+                                ) => {
+                                  setPremiumStrikeModalLeg({
+                                    index: legIndex,
+                                    leg: editValues.legs[legIndex],
+                                  });
+                                  setCurrentEditingStrategyId(
+                                    strategy.strategyId
+                                  );
+                                }}
                               />
                             </div>
                           )}
@@ -1043,7 +1082,6 @@ const DeployedStrategies: React.FC = () => {
                             <OpenPositionsTab
                               strategy={strategy}
                               orders={orders || null}
-                              loadingOrders={isLoadingOrders || false}
                               positionPnL={positionPnL}
                               loadingPnL={loadingPnL}
                               isRefreshing={isLoadingOrders || false}
@@ -1057,7 +1095,6 @@ const DeployedStrategies: React.FC = () => {
                             <OpenOrdersTab
                               strategy={strategy}
                               orders={orders || null}
-                              loadingOrders={isLoadingOrders || false}
                               positionPnL={positionPnL}
                               loadingPnL={loadingPnL}
                               isRefreshing={isLoadingOrders || false}
@@ -1071,7 +1108,6 @@ const DeployedStrategies: React.FC = () => {
                             <CompletedOrdersTab
                               strategy={strategy}
                               orders={orders || null}
-                              loadingOrders={isLoadingOrders || false}
                               positionPnL={positionPnL}
                               loadingPnL={loadingPnL}
                               isRefreshing={isLoadingOrders || false}
@@ -1259,6 +1295,27 @@ const DeployedStrategies: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Premium Strike Modal */}
+      {premiumStrikeModalLeg && currentEditingStrategyId && (
+        <PremiumStrikeModal
+          leg={premiumStrikeModalLeg.leg}
+          isOpen={true}
+          onClose={() => {
+            setPremiumStrikeModalLeg(null);
+            setCurrentEditingStrategyId(null);
+          }}
+          onConfigChange={(field: string, value: any) => {
+            const legIndex = premiumStrikeModalLeg.index;
+            const newLegs = [...editValues.legs];
+            newLegs[legIndex] = {
+              ...newLegs[legIndex],
+              [field]: value,
+            };
+            handleEditChange("legs", newLegs);
+          }}
+        />
+      )}
     </div>
   );
 };

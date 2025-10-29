@@ -58,6 +58,8 @@ export const useStrategyOrders = (
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError((prev) => ({ ...prev, [strategyId]: errorMessage }));
       console.error(`Error fetching orders for strategy ${strategyId}:`, err);
+
+      // Don't stop auto-refresh on error, just log it
     } finally {
       setLoading((prev) => ({ ...prev, [strategyId]: false }));
     }
@@ -70,22 +72,25 @@ export const useStrategyOrders = (
     (strategyId: string) => {
       // Clear any existing interval
       if (intervalRefs.current[strategyId]) {
+        console.log(`Clearing existing interval for strategy ${strategyId}`);
         clearInterval(intervalRefs.current[strategyId]);
       }
+
+      console.log(
+        `Starting auto-refresh for strategy ${strategyId} with interval ${refreshInterval}ms`
+      );
 
       // Fetch immediately
       fetchOrders(strategyId);
 
       // Set up new interval
       const intervalId = window.setInterval(() => {
+        console.log(`Auto-refresh tick for strategy ${strategyId}`);
         fetchOrders(strategyId);
       }, refreshInterval);
 
       intervalRefs.current[strategyId] = intervalId;
-
-      console.log(
-        `Started auto-refresh for strategy ${strategyId} (interval: ${refreshInterval}ms)`
-      );
+      console.log(`Active intervals:`, Object.keys(intervalRefs.current));
     },
     [fetchOrders, refreshInterval]
   );
@@ -95,9 +100,12 @@ export const useStrategyOrders = (
    */
   const stopAutoRefresh = useCallback((strategyId: string) => {
     if (intervalRefs.current[strategyId]) {
+      console.log(`Stopping auto-refresh for strategy ${strategyId}`);
       clearInterval(intervalRefs.current[strategyId]);
       delete intervalRefs.current[strategyId];
-      console.log(`Stopped auto-refresh for strategy ${strategyId}`);
+      console.log(`Active intervals:`, Object.keys(intervalRefs.current));
+    } else {
+      console.log(`No active interval found for strategy ${strategyId}`);
     }
   }, []);
 
