@@ -3,7 +3,7 @@ import { DynamicHedgeSettings, HedgeType, Leg } from "../types/strategy.types";
 
 interface DynamicHedgeTabProps {
   dynamicHedgeSettings: DynamicHedgeSettings;
-  legs?: Leg[]; // Optional legs array to get symbols
+  legs?: Record<string, Leg>; // Optional legs dict to get symbols
   isEditing?: boolean;
   onChange?: (field: string, value: any) => void;
   hedgeTypeOptions?: HedgeType[];
@@ -11,7 +11,7 @@ interface DynamicHedgeTabProps {
 
 const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
   dynamicHedgeSettings,
-  legs = [],
+  legs = {},
   isEditing = false,
   onChange,
   hedgeTypeOptions = ["premium Based", "fixed Distance"],
@@ -24,7 +24,7 @@ const DynamicHedgeTab: React.FC<DynamicHedgeTabProps> = ({
 
   // Extract unique symbols from legs
   const uniqueSymbols = React.useMemo(() => {
-    const symbols = legs.map((leg) => leg.symbol);
+    const symbols = Object.values(legs).map((leg) => leg.symbol);
     return Array.from(new Set(symbols));
   }, [legs]);
 

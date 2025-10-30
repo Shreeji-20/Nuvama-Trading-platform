@@ -15,13 +15,13 @@ interface ToggleButtonProps {
 }
 
 interface LegsConfigurationTableProps {
-  legs?: Leg[];
+  legs?: Record<string, Leg>;
   isEditing?: boolean;
-  onLegChange?: (index: number, field: string, value: any) => void;
-  onDeleteLeg?: (index: number) => void;
-  onCopyLeg?: (index: number) => void;
+  onLegChange?: (legId: string, field: string, value: any) => void;
+  onDeleteLeg?: (legId: string) => void;
+  onCopyLeg?: (legId: string) => void;
   onAddLeg?: () => void;
-  onPremiumStrikeModalOpen?: (index: number) => void;
+  onPremiumStrikeModalOpen?: (legId: string) => void;
   symbolOptions?: string[];
   expiryOptions?: number[];
   targetOptions?: TargetStoplossType[];
@@ -37,7 +37,7 @@ interface LegsConfigurationTableProps {
  * Used in both AdvancedOptionsBuilder and DeployedStrategies
  */
 const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
-  legs = [],
+  legs = {},
   isEditing = false,
   onLegChange,
   onDeleteLeg,
@@ -53,6 +53,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
   orderTypeOptions = ["LIMIT", "MARKET"],
   strategyId,
 }) => {
+  // Convert legs Record to array for easier rendering
+  const legsArray = Object.entries(legs).map(([legId, leg]) => ({
+    ...leg,
+    legId: legId,
+  }));
   // Helper function to get strike options based on symbol
   const getStrikeOptions = (symbol: string): string[] => {
     const stepSize = symbol === "NIFTY" || symbol === "FINNIFTY" ? 50 : 100;
@@ -200,9 +205,9 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {legs.map((leg, index) => (
+          {legsArray.map((leg, index) => (
             <tr
-              key={leg.id || index}
+              key={leg.legId || index}
               className={`border-b border-gray-100 dark:border-gray-700 ${
                 index % 2 === 0
                   ? "bg-gray-50 dark:bg-gray-800"
@@ -224,7 +229,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.symbol}
                     onChange={(e) =>
-                      onLegChange(index, "symbol", e.target.value)
+                      onLegChange(leg.legId, "symbol", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -247,7 +252,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.expiry}
                     onChange={(e) =>
-                      onLegChange(index, "expiry", e.target.value)
+                      onLegChange(leg.legId, "expiry", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -270,7 +275,9 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   {isEditing && onLegChange ? (
                     <ToggleButton
                       value={leg.action}
-                      onChange={(value) => onLegChange(index, "action", value)}
+                      onChange={(value) =>
+                        onLegChange(leg.legId, "action", value)
+                      }
                       options={["BUY", "SELL"]}
                       colorScheme="buysell"
                     />
@@ -295,7 +302,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     <ToggleButton
                       value={leg.optionType}
                       onChange={(value) =>
-                        onLegChange(index, "optionType", value)
+                        onLegChange(leg.legId, "optionType", value)
                       }
                       options={["CE", "PE"]}
                       colorScheme="callput"
@@ -321,7 +328,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     type="number"
                     value={leg.lots}
                     onChange={(e) =>
-                      onLegChange(index, "lots", parseInt(e.target.value) || 1)
+                      onLegChange(
+                        leg.legId,
+                        "lots",
+                        parseInt(e.target.value) || 1
+                      )
                     }
                     className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                     min="1"
@@ -343,7 +354,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       onChange={(e) =>
                         onLegChange &&
                         onLegChange(
-                          index,
+                          leg.legId,
                           "premiumBasedStrike",
                           e.target.checked
                         )
@@ -360,7 +371,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       <select
                         value={leg.strike}
                         onChange={(e) =>
-                          onLegChange(index, "strike", e.target.value)
+                          onLegChange(leg.legId, "strike", e.target.value)
                         }
                         className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         style={{ maxHeight: "200px", overflowY: "auto" }}
@@ -382,7 +393,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       type="button"
                       onClick={() =>
                         onPremiumStrikeModalOpen &&
-                        onPremiumStrikeModalOpen(index)
+                        onPremiumStrikeModalOpen(leg.legId)
                       }
                       className="px-2 py-1 text-[0.7rem] bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       disabled={!isEditing}
@@ -399,7 +410,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.target}
                     onChange={(e) =>
-                      onLegChange(index, "target", e.target.value)
+                      onLegChange(leg.legId, "target", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -426,7 +437,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       onChange={(e) => {
                         const value = e.target.value;
                         onLegChange(
-                          index,
+                          leg.legId,
                           "targetValue",
                           value === "" || value === "-"
                             ? value
@@ -436,7 +447,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       onBlur={(e) => {
                         const value = e.target.value;
                         if (value === "" || value === "-") {
-                          onLegChange(index, "targetValue", 0);
+                          onLegChange(leg.legId, "targetValue", 0);
                         }
                       }}
                       className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -457,7 +468,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.stoploss}
                     onChange={(e) =>
-                      onLegChange(index, "stoploss", e.target.value)
+                      onLegChange(leg.legId, "stoploss", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -484,7 +495,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       onChange={(e) => {
                         const value = e.target.value;
                         onLegChange(
-                          index,
+                          leg.legId,
                           "stoplossValue",
                           value === "" || value === "-"
                             ? value
@@ -494,7 +505,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       onBlur={(e) => {
                         const value = e.target.value;
                         if (value === "" || value === "-") {
-                          onLegChange(index, "stoplossValue", 0);
+                          onLegChange(leg.legId, "stoplossValue", 0);
                         }
                       }}
                       className="w-14 text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -515,7 +526,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.priceType}
                     onChange={(e) =>
-                      onLegChange(index, "priceType", e.target.value)
+                      onLegChange(leg.legId, "priceType", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -538,7 +549,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.depthIndex}
                     onChange={(e) =>
-                      onLegChange(index, "depthIndex", parseInt(e.target.value))
+                      onLegChange(
+                        leg.legId,
+                        "depthIndex",
+                        parseInt(e.target.value)
+                      )
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -561,7 +576,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.orderType || "LIMIT"}
                     onChange={(e) =>
-                      onLegChange(index, "orderType", e.target.value)
+                      onLegChange(leg.legId, "orderType", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -585,7 +600,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     type="time"
                     value={leg.startTime}
                     onChange={(e) =>
-                      onLegChange(index, "startTime", e.target.value)
+                      onLegChange(leg.legId, "startTime", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   />
@@ -602,7 +617,11 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.waitAndTradeLogic}
                     onChange={(e) =>
-                      onLegChange(index, "waitAndTradeLogic", e.target.value)
+                      onLegChange(
+                        leg.legId,
+                        "waitAndTradeLogic",
+                        e.target.value
+                      )
                     }
                     className="w-auto text-[0.7rem] text-center p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -627,7 +646,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onChange={(e) => {
                       const value = e.target.value;
                       onLegChange(
-                        index,
+                        leg.legId,
                         "waitAndTrade",
                         value === "" || value === "-"
                           ? value
@@ -637,7 +656,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     onBlur={(e) => {
                       const value = e.target.value;
                       if (value === "" || value === "-") {
-                        onLegChange(index, "waitAndTrade", 0);
+                        onLegChange(leg.legId, "waitAndTrade", 0);
                       }
                     }}
                     step="0.01"
@@ -659,7 +678,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       type="checkbox"
                       checked={leg.dynamicHedge || false}
                       onChange={(e) =>
-                        onLegChange(index, "dynamicHedge", e.target.checked)
+                        onLegChange(leg.legId, "dynamicHedge", e.target.checked)
                       }
                       className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                     />
@@ -677,7 +696,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.onTargetAction || "NONE"}
                     onChange={(e) =>
-                      onLegChange(index, "onTargetAction", e.target.value)
+                      onLegChange(leg.legId, "onTargetAction", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -700,7 +719,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <select
                     value={leg.onStoplossAction || "NONE"}
                     onChange={(e) =>
-                      onLegChange(index, "onStoplossAction", e.target.value)
+                      onLegChange(leg.legId, "onStoplossAction", e.target.value)
                     }
                     className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
                   >
@@ -723,7 +742,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                   <div className="flex items-center justify-center gap-1">
                     {onCopyLeg && (
                       <button
-                        onClick={() => onCopyLeg(index)}
+                        onClick={() => onCopyLeg(leg.legId)}
                         className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.7rem] font-medium rounded transition-colors"
                         title="Copy this leg"
                       >
@@ -732,7 +751,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                     )}
                     {onDeleteLeg && (
                       <button
-                        onClick={() => onDeleteLeg(index)}
+                        onClick={() => onDeleteLeg(leg.legId)}
                         className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[0.7rem] font-medium rounded transition-colors"
                         title="Remove this leg"
                       >

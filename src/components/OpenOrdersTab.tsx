@@ -20,6 +20,7 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
     legId: "",
     symbol: "",
     strike: "",
+    optionType: "",
     action: "",
     quantity: "",
     limitPrice: "",
@@ -45,6 +46,7 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
       legId: "",
       symbol: "",
       strike: "",
+      optionType: "",
       action: "",
       quantity: "",
       limitPrice: "",
@@ -70,6 +72,7 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
       const legId = order.legId || "";
       const symbol = order.symbol || "";
       const strike = order.strike || "";
+      const optionType = order.optionType || "";
       const action =
         order.action || order?.response?.data?.transactionType || "";
       const quantity = order?.response?.data?.qty || order.quantity || "";
@@ -91,6 +94,10 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
           .toString()
           .toLowerCase()
           .includes(filters.strike.toLowerCase()) &&
+        optionType
+          .toString()
+          .toLowerCase()
+          .includes(filters.optionType.toLowerCase()) &&
         action
           .toString()
           .toLowerCase()
@@ -256,6 +263,18 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
                   />
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                  Option Type
+                  <input
+                    type="text"
+                    placeholder="Filter..."
+                    value={filters.optionType}
+                    onChange={(e) =>
+                      handleFilterChange("optionType", e.target.value)
+                    }
+                    className="mt-1 block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   Action
                   <input
                     type="text"
@@ -369,6 +388,19 @@ const OpenOrdersTab: React.FC<TabContentProps> = ({
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-white">
                       {order.strike || "N/A"}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-xs">
+                      <span
+                        className={`px-2 py-1 rounded-full ${
+                          order.optionType === "CE"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : order.optionType === "PE"
+                            ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                        }`}
+                      >
+                        {order.optionType || "N/A"}
+                      </span>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs">
                       <span

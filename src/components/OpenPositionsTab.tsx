@@ -18,6 +18,7 @@ const OpenPositionsTab: React.FC<TabContentProps> = ({
     legId: "",
     symbol: "",
     strike: "",
+    optionType: "",
     action: "",
     quantity: "",
     entryPrice: "",
@@ -45,6 +46,7 @@ const OpenPositionsTab: React.FC<TabContentProps> = ({
       legId: "",
       symbol: "",
       strike: "",
+      optionType: "",
       action: "",
       quantity: "",
       entryPrice: "",
@@ -81,6 +83,7 @@ const OpenPositionsTab: React.FC<TabContentProps> = ({
       const legId = order?.legId || "";
       const symbol = order?.symbol || "";
       const strike = order?.strike || "";
+      const optionType = order?.optionType || "";
       const action =
         order?.action || order?.response?.data?.transactionType || "";
       const quantity = order?.quantity || order?.response?.data?.qty || "";
@@ -104,6 +107,10 @@ const OpenPositionsTab: React.FC<TabContentProps> = ({
           .toString()
           .toLowerCase()
           .includes(filters.strike.toLowerCase()) &&
+        optionType
+          .toString()
+          .toLowerCase()
+          .includes(filters.optionType.toLowerCase()) &&
         action
           .toString()
           .toLowerCase()
@@ -314,6 +321,18 @@ const OpenPositionsTab: React.FC<TabContentProps> = ({
                     value={filters.strike}
                     onChange={(e) =>
                       handleFilterChange("strike", e.target.value)
+                    }
+                    className="mt-1 block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                  Option Type
+                  <input
+                    type="text"
+                    placeholder="Filter..."
+                    value={filters.optionType}
+                    onChange={(e) =>
+                      handleFilterChange("optionType", e.target.value)
                     }
                     className="mt-1 block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />

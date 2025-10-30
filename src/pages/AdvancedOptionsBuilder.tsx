@@ -60,12 +60,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
     executionMode: "Live Mode",
   });
 
-  // Legs state
-  const [legs, setLegs] = useState<Leg[]>([]);
+  // Legs state - Changed from array to dictionary
+  const [legs, setLegs] = useState<Record<string, Leg>>({});
   const [activeTab, setActiveTab] = useState<string>("strategy");
   const [legCounter, setLegCounter] = useState<number>(1);
   const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState<
-    number | null
+    string | null
   >(null);
 
   // Options for dropdowns
@@ -270,12 +270,13 @@ const AdvancedOptionsBuilder: React.FC = () => {
     setBaseConfig((prev) => ({ ...prev, [field]: value }));
 
     if (field === "strategyId" || field === "strategyName") {
-      setLegs((prev) =>
-        prev.map((leg) => ({
-          ...leg,
-          [field]: value,
-        }))
-      );
+      setLegs((prev) => {
+        const updated: Record<string, Leg> = {};
+        Object.entries(prev).forEach(([legId, leg]) => {
+          updated[legId] = { ...leg, [field]: value };
+        });
+        return updated;
+      });
     }
   };
 
@@ -287,12 +288,13 @@ const AdvancedOptionsBuilder: React.FC = () => {
       strategyId: newStrategyId,
     }));
 
-    setLegs((prev) =>
-      prev.map((leg) => ({
-        ...leg,
-        strategyId: newStrategyId,
-      }))
-    );
+    setLegs((prev) => {
+      const updated: Record<string, Leg> = {};
+      Object.entries(prev).forEach(([legId, leg]) => {
+        updated[legId] = { ...leg, strategyId: newStrategyId };
+      });
+      return updated;
+    });
   };
 
   // Fetch available strategy tags
@@ -391,11 +393,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
         );
       }
 
-      if (legs.length === 0) {
+      const legsArray = Object.values(legs);
+      if (legsArray.length === 0) {
         throw new Error("At least one leg is required to deploy the strategy");
       }
 
-      for (const leg of legs) {
+      for (const leg of legsArray) {
         if (!leg.symbol) {
           throw new Error(`Symbol is required for Leg ${leg.legId}`);
         }
@@ -413,7 +416,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
         }
       }
 
-      const transformedLegs = legs.map((leg) => {
+      // Transform legs array to dict format with legId as key
+      const transformedLegsDict: Record<string, any> = {};
+      legsArray.forEach((leg) => {
         const transformed: any = { ...leg };
 
         console.log("Original leg:", leg);
@@ -456,12 +461,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
             : false;
 
         console.log("Transformed leg:", transformed);
-        return transformed;
+        transformedLegsDict[leg.legId] = transformed;
       });
 
       const strategyData: StrategyConfiguration = {
         baseConfig,
-        legs: transformedLegs,
+        legs: transformedLegsDict,
         executionParams,
         targetSettings,
         stoplossSettings,
@@ -522,7 +527,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
   // Add new leg
   const addLeg = (): void => {
     // Find the next available leg ID
-    const existingLegNumbers = legs
+    const existingLegNumbers = Object.values(legs)
       .map((leg) => {
         const match = leg.legId?.match(/LEG_(\d+)/);
         return match ? parseInt(match[1], 10) : 0;
@@ -538,9 +543,10 @@ const AdvancedOptionsBuilder: React.FC = () => {
       }
     }
 
+    const legId = `LEG_${nextLegNumber.toString().padStart(3, "0")}`;
     const newLeg: Leg = {
       id: Date.now(),
-      legId: `LEG_${nextLegNumber.toString().padStart(3, "0")}`,
+      legId: legId,
       strategyId: baseConfig.strategyId,
       strategyName: baseConfig.strategyName,
       symbol: "NIFTY",
@@ -573,15 +579,15 @@ const AdvancedOptionsBuilder: React.FC = () => {
         and: 0,
       },
     };
-    setLegs((prev) => [...prev, newLeg]);
+    setLegs((prev) => ({ ...prev, [legId]: newLeg }));
   };
 
   // Copy existing leg
-  const copyLeg = (index: number): void => {
-    const legToCopy = legs[index];
+  const copyLeg = (legIdToCopy: string): void => {
+    const legToCopy = legs[legIdToCopy];
     if (legToCopy) {
       // Find the next available leg ID
-      const existingLegNumbers = legs
+      const existingLegNumbers = Object.values(legs)
         .map((leg) => {
           const match = leg.legId?.match(/LEG_(\d+)/);
           return match ? parseInt(match[1], 10) : 0;
@@ -597,50 +603,59 @@ const AdvancedOptionsBuilder: React.FC = () => {
         }
       }
 
+      const newLegId = `LEG_${nextLegNumber.toString().padStart(3, "0")}`;
       const newLeg: Leg = {
         ...legToCopy,
         id: Date.now(),
-        legId: `LEG_${nextLegNumber.toString().padStart(3, "0")}`,
+        legId: newLegId,
       };
-      setLegs((prev) => [...prev, newLeg]);
+      setLegs((prev) => ({ ...prev, [newLegId]: newLeg }));
     }
   };
 
   // Update leg
   const updateLeg = <K extends keyof Leg>(
-    legId: number,
+    legId: string,
     field: K,
     value: Leg[K]
   ): void => {
-    setLegs((prev) =>
-      prev.map((leg) => (leg.id === legId ? { ...leg, [field]: value } : leg))
-    );
+    setLegs((prev) => {
+      if (!prev[legId]) return prev;
+      return {
+        ...prev,
+        [legId]: { ...prev[legId], [field]: value },
+      };
+    });
   };
 
   // Update premium based strike config for a specific leg
   const updatePremiumStrikeConfig = <K extends keyof PremiumBasedStrikeConfig>(
-    legId: number,
+    legId: string,
     field: K,
     value: PremiumBasedStrikeConfig[K]
   ): void => {
-    setLegs((prev) =>
-      prev.map((leg) =>
-        leg.id === legId
-          ? {
-              ...leg,
-              premiumBasedStrikeConfig: {
-                ...leg.premiumBasedStrikeConfig,
-                [field]: value,
-              },
-            }
-          : leg
-      )
-    );
+    setLegs((prev) => {
+      if (!prev[legId]) return prev;
+      return {
+        ...prev,
+        [legId]: {
+          ...prev[legId],
+          premiumBasedStrikeConfig: {
+            ...prev[legId].premiumBasedStrikeConfig,
+            [field]: value,
+          },
+        },
+      };
+    });
   };
 
   // Remove leg
-  const removeLeg = (legId: number): void => {
-    setLegs((prev) => prev.filter((leg) => leg.id !== legId));
+  const removeLeg = (legId: string): void => {
+    setLegs((prev) => {
+      const updated = { ...prev };
+      delete updated[legId];
+      return updated;
+    });
   };
 
   // Toggle button component with color coding
@@ -828,7 +843,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <h2 className="text-md font-semibold text-gray-900 dark:text-white">
-                Legs Builder ({legs.length} legs)
+                Legs Builder ({Object.keys(legs).length} legs)
               </h2>
             </div>
             <button
@@ -839,7 +854,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
             </button>
           </div>
 
-          {legs.length === 0 ? (
+          {Object.keys(legs).length === 0 ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                 <svg
@@ -863,29 +878,20 @@ const AdvancedOptionsBuilder: React.FC = () => {
             </div>
           ) : (
             <LegsConfigurationTable
-              legs={legs as any}
+              legs={legs}
               isEditing={true}
-              onLegChange={(index: number, field: string, value: any) => {
-                const leg = legs[index];
-                if (leg) {
-                  updateLeg(leg.id, field as keyof Leg, value);
-                }
+              onLegChange={(legId: string, field: string, value: any) => {
+                updateLeg(legId, field as keyof Leg, value);
               }}
-              onDeleteLeg={(index: number) => {
-                const leg = legs[index];
-                if (leg) {
-                  removeLeg(leg.id);
-                }
+              onDeleteLeg={(legId: string) => {
+                removeLeg(legId);
               }}
-              onCopyLeg={(index: number) => {
-                copyLeg(index);
+              onCopyLeg={(legId: string) => {
+                copyLeg(legId);
               }}
               onAddLeg={addLeg}
-              onPremiumStrikeModalOpen={(index: number) => {
-                const leg = legs[index];
-                if (leg) {
-                  setPremiumStrikeModalLeg(leg.id);
-                }
+              onPremiumStrikeModalOpen={(legId: string) => {
+                setPremiumStrikeModalLeg(legId);
               }}
               symbolOptions={symbolOptions}
               expiryOptions={expiryOptions}
@@ -1020,7 +1026,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   Total Legs
                 </div>
                 <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
-                  {legs.length}
+                  {Object.keys(legs).length}
                 </div>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
@@ -1094,7 +1100,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                       buyTradesFirst: false,
                       executionMode: "Live Mode",
                     });
-                    setLegs([]);
+                    setLegs({});
                     setLegCounter(1);
                     setExecutionParams({
                       product: "NRML",
@@ -1212,7 +1218,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
 
         {/* Premium Based Strike Configuration Modal */}
         <PremiumStrikeModal
-          leg={legs.find((l) => l.id === premiumStrikeModalLeg) || null}
+          leg={premiumStrikeModalLeg ? legs[premiumStrikeModalLeg] : null}
           isOpen={premiumStrikeModalLeg !== null}
           onClose={() => setPremiumStrikeModalLeg(null)}
           onConfigChange={(field: string, value: any) => {

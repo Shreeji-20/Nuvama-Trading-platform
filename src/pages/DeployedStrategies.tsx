@@ -276,12 +276,35 @@ const DeployedStrategies: React.FC = () => {
     }
 
     // Update leg IDs and strategy references
-    if (newConfig.legs && Array.isArray(newConfig.legs)) {
-      newConfig.legs = newConfig.legs.map((leg: any) => ({
-        ...leg,
-        strategyId: newStrategyId,
-        strategyName: newStrategyName,
-      }));
+    if (newConfig.legs) {
+      // Handle both array and dict format
+      if (Array.isArray(newConfig.legs)) {
+        // Convert array to dict format
+        const legsDict: Record<string, any> = {};
+        newConfig.legs.forEach((leg: any) => {
+          const legId = leg.legId || `LEG_${Date.now()}`;
+          legsDict[legId] = {
+            ...leg,
+            legId: legId,
+            strategyId: newStrategyId,
+            strategyName: newStrategyName,
+          };
+        });
+        newConfig.legs = legsDict;
+      } else {
+        // Already dict format, just update references
+        const updatedLegs: Record<string, any> = {};
+        Object.entries(newConfig.legs).forEach(
+          ([legId, leg]: [string, any]) => {
+            updatedLegs[legId] = {
+              ...leg,
+              strategyId: newStrategyId,
+              strategyName: newStrategyName,
+            };
+          }
+        );
+        newConfig.legs = updatedLegs;
+      }
     }
 
     if (
@@ -327,7 +350,19 @@ const DeployedStrategies: React.FC = () => {
 
     // Initialize editValues and ensure all symbols have strikeSteps
     const config = { ...strategy.config };
-    const legs = config.legs || [];
+    let legs = config.legs || {};
+
+    // Convert array to dict if needed (backward compatibility)
+    if (Array.isArray(legs)) {
+      const legsDict: Record<string, any> = {};
+      legs.forEach((leg: any) => {
+        const legId = leg.legId || `LEG_${Date.now()}_${Math.random()}`;
+        legsDict[legId] = { ...leg, legId };
+      });
+      legs = legsDict;
+      config.legs = legs;
+    }
+
     const currentStrikeSteps = config.dynamicHedgeSettings?.strikeSteps || {};
     const newStrikeSteps = { ...currentStrikeSteps };
 
@@ -340,7 +375,7 @@ const DeployedStrategies: React.FC = () => {
     };
 
     // Ensure all symbols in legs have entries in strikeSteps
-    legs.forEach((leg: any) => {
+    Object.values(legs).forEach((leg: any) => {
       if (leg.symbol && !(leg.symbol in newStrikeSteps)) {
         newStrikeSteps[leg.symbol] = defaultStrikeSteps[leg.symbol] ?? 50;
       }
@@ -362,14 +397,37 @@ const DeployedStrategies: React.FC = () => {
 
   // Save edited strategy
   const saveEdit = (strategyId: string) => {
-    const sanitizedConfig = {
-      ...editValues,
-      legs:
-        editValues.legs?.map((leg: any) => ({
+    let sanitizedLegs = editValues.legs || {};
+
+    // Convert array to dict if needed (backward compatibility)
+    if (Array.isArray(editValues.legs)) {
+      const legsDict: Record<string, any> = {};
+      editValues.legs.forEach((leg: any) => {
+        const legId = leg.legId || `LEG_${Date.now()}_${Math.random()}`;
+        legsDict[legId] = {
+          ...leg,
+          legId: legId,
+          strategyId: editValues.baseConfig?.strategyId || strategyId,
+          strategyName: editValues.baseConfig?.strategyName || "",
+        };
+      });
+      sanitizedLegs = legsDict;
+    } else {
+      // Already dict, just update references
+      const updatedLegs: Record<string, any> = {};
+      Object.entries(sanitizedLegs).forEach(([legId, leg]: [string, any]) => {
+        updatedLegs[legId] = {
           ...leg,
           strategyId: editValues.baseConfig?.strategyId || strategyId,
           strategyName: editValues.baseConfig?.strategyName || "",
-        })) || [],
+        };
+      });
+      sanitizedLegs = updatedLegs;
+    }
+
+    const sanitizedConfig = {
+      ...editValues,
+      legs: sanitizedLegs,
     };
 
     updateStrategy(strategyId, sanitizedConfig);
@@ -503,7 +561,7 @@ const DeployedStrategies: React.FC = () => {
     try {
       setTradingLoading(true);
       // TODO: Implement start trading API call
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
       setIsTrading(true);
       alert("Trading started successfully!");
     } catch (error: any) {
@@ -523,7 +581,7 @@ const DeployedStrategies: React.FC = () => {
     try {
       setTradingLoading(true);
       // TODO: Implement stop trading API call
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
       setIsTrading(false);
       alert("Trading stopped successfully!");
     } catch (error: any) {
@@ -636,7 +694,7 @@ const DeployedStrategies: React.FC = () => {
       // Set up option data refresh interval (every 1 second)
       optionDataIntervalRef.current = setInterval(() => {
         fetchOptionData();
-      }, 1000);
+      }, 500);
     } else {
       console.log(
         "[DeployedStrategies] No open positions, stopping option data refresh"
@@ -855,15 +913,23 @@ const DeployedStrategies: React.FC = () => {
 
                         {/* Legs Configuration */}
                         {(strategy.config as any)?.legs &&
-                          (strategy.config as any).legs.length > 0 && (
+                          (Array.isArray((strategy.config as any).legs)
+                            ? (strategy.config as any).legs.length > 0
+                            : Object.keys((strategy.config as any).legs)
+                                .length > 0) && (
                             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                               <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 Legs Configuration (
-                                {(isEditing
-                                  ? editValues.legs?.length
-                                  : (strategy.config as any).legs.length) ||
-                                  0}{" "}
+                                {isEditing
+                                  ? Array.isArray(editValues.legs)
+                                    ? editValues.legs?.length
+                                    : Object.keys(editValues.legs || {}).length
+                                  : Array.isArray((strategy.config as any).legs)
+                                  ? (strategy.config as any).legs.length
+                                  : Object.keys(
+                                      (strategy.config as any).legs || {}
+                                    ).length}{" "}
                                 legs)
                               </h4>
                               <LegsConfigurationTable
@@ -874,15 +940,15 @@ const DeployedStrategies: React.FC = () => {
                                 }
                                 isEditing={isEditing}
                                 onLegChange={(
-                                  legIndex: number,
+                                  legId: string,
                                   field: string,
                                   value: any
                                 ) => {
-                                  const newLegs = [...editValues.legs];
-                                  const oldSymbol = newLegs[legIndex]?.symbol;
+                                  const newLegs = { ...editValues.legs };
+                                  const oldSymbol = newLegs[legId]?.symbol;
 
-                                  newLegs[legIndex] = {
-                                    ...newLegs[legIndex],
+                                  newLegs[legId] = {
+                                    ...newLegs[legId],
                                     [field]: value,
                                   };
                                   handleEditChange("legs", newLegs);
@@ -916,9 +982,9 @@ const DeployedStrategies: React.FC = () => {
                                     // Remove old symbol if no other legs use it
                                     if (oldSymbol && oldSymbol !== value) {
                                       const otherLegsUseOldSymbol =
-                                        newLegs.some(
-                                          (leg: any, idx: number) =>
-                                            idx !== legIndex &&
+                                        Object.values(newLegs).some(
+                                          (leg: any) =>
+                                            leg.legId !== legId &&
                                             leg.symbol === oldSymbol
                                         );
                                       if (
@@ -935,17 +1001,18 @@ const DeployedStrategies: React.FC = () => {
                                     );
                                   }
                                 }}
-                                onDeleteLeg={(legIndex: number) => {
-                                  const newLegs = editValues.legs.filter(
-                                    (_: any, idx: number) => idx !== legIndex
-                                  );
+                                onDeleteLeg={(legId: string) => {
+                                  const newLegs = { ...editValues.legs };
+                                  delete newLegs[legId];
                                   handleEditChange("legs", newLegs);
                                 }}
-                                onCopyLeg={(legIndex: number) => {
-                                  const legToCopy = editValues.legs[legIndex];
+                                onCopyLeg={(legId: string) => {
+                                  const legToCopy = editValues.legs[legId];
                                   if (legToCopy) {
                                     // Find the next available leg ID
-                                    const existingLegNumbers = editValues.legs
+                                    const existingLegNumbers = Object.values(
+                                      editValues.legs
+                                    )
                                       .map((leg: any) => {
                                         const match =
                                           leg.legId?.match(/LEG_(\d+)/);
@@ -964,17 +1031,18 @@ const DeployedStrategies: React.FC = () => {
                                       }
                                     }
 
+                                    const newLegId = `LEG_${String(
+                                      nextLegNumber
+                                    ).padStart(3, "0")}`;
                                     const newLeg = {
                                       ...legToCopy,
                                       id: Date.now(),
-                                      legId: `LEG_${String(
-                                        nextLegNumber
-                                      ).padStart(3, "0")}`,
+                                      legId: newLegId,
                                     };
-                                    const newLegs = [
+                                    const newLegs = {
                                       ...editValues.legs,
-                                      newLeg,
-                                    ];
+                                      [newLegId]: newLeg,
+                                    };
                                     handleEditChange("legs", newLegs);
                                   }
                                 }}
@@ -983,7 +1051,9 @@ const DeployedStrategies: React.FC = () => {
                                     ?.baseConfig;
 
                                   // Find the next available leg ID
-                                  const existingLegNumbers = editValues.legs
+                                  const existingLegNumbers = Object.values(
+                                    editValues.legs
+                                  )
                                     .map((leg: any) => {
                                       const match =
                                         leg.legId?.match(/LEG_(\d+)/);
@@ -1000,11 +1070,12 @@ const DeployedStrategies: React.FC = () => {
                                     }
                                   }
 
+                                  const newLegId = `LEG_${String(
+                                    nextLegNumber
+                                  ).padStart(3, "0")}`;
                                   const newLeg = {
                                     id: Date.now(),
-                                    legId: `LEG_${String(
-                                      nextLegNumber
-                                    ).padStart(3, "0")}`,
+                                    legId: newLegId,
                                     strategyId:
                                       baseConfig?.strategyId ||
                                       strategy.strategyId,
@@ -1040,15 +1111,16 @@ const DeployedStrategies: React.FC = () => {
                                       and: 0,
                                     },
                                   };
-                                  const newLegs = [...editValues.legs, newLeg];
+                                  const newLegs = {
+                                    ...editValues.legs,
+                                    [newLegId]: newLeg,
+                                  };
                                   handleEditChange("legs", newLegs);
                                 }}
-                                onPremiumStrikeModalOpen={(
-                                  legIndex: number
-                                ) => {
+                                onPremiumStrikeModalOpen={(legId: string) => {
                                   setPremiumStrikeModalLeg({
-                                    index: legIndex,
-                                    leg: editValues.legs[legIndex],
+                                    index: legId,
+                                    leg: editValues.legs[legId],
                                   });
                                   setCurrentEditingStrategyId(
                                     strategy.strategyId
@@ -1297,25 +1369,54 @@ const DeployedStrategies: React.FC = () => {
       </div>
 
       {/* Premium Strike Modal */}
-      {premiumStrikeModalLeg && currentEditingStrategyId && (
-        <PremiumStrikeModal
-          leg={premiumStrikeModalLeg.leg}
-          isOpen={true}
-          onClose={() => {
-            setPremiumStrikeModalLeg(null);
-            setCurrentEditingStrategyId(null);
-          }}
-          onConfigChange={(field: string, value: any) => {
-            const legIndex = premiumStrikeModalLeg.index;
-            const newLegs = [...editValues.legs];
-            newLegs[legIndex] = {
-              ...newLegs[legIndex],
-              [field]: value,
-            };
-            handleEditChange("legs", newLegs);
-          }}
-        />
-      )}
+      {premiumStrikeModalLeg &&
+        currentEditingStrategyId &&
+        editValues.legs &&
+        editValues.legs[premiumStrikeModalLeg.index] && (
+          <PremiumStrikeModal
+            key={`${currentEditingStrategyId}-${
+              premiumStrikeModalLeg.index
+            }-${JSON.stringify(
+              editValues.legs[premiumStrikeModalLeg.index]
+                .premiumBasedStrikeConfig
+            )}`}
+            leg={editValues.legs[premiumStrikeModalLeg.index]}
+            isOpen={true}
+            onClose={() => {
+              setPremiumStrikeModalLeg(null);
+              setCurrentEditingStrategyId(null);
+            }}
+            onConfigChange={(field: string, value: any) => {
+              const legId = premiumStrikeModalLeg.index;
+              const newLegs = { ...editValues.legs };
+
+              // Ensure premiumBasedStrikeConfig exists
+              if (!newLegs[legId].premiumBasedStrikeConfig) {
+                newLegs[legId] = {
+                  ...newLegs[legId],
+                  premiumBasedStrikeConfig: {
+                    strikeType: "NearestPremium",
+                    maxDepth: 5,
+                    searchSide: "BOTH",
+                    value: 0,
+                    condition: "Greaterthanequal",
+                    between: 0,
+                    and: 0,
+                  },
+                };
+              }
+
+              newLegs[legId] = {
+                ...newLegs[legId],
+                premiumBasedStrikeConfig: {
+                  ...newLegs[legId].premiumBasedStrikeConfig,
+                  [field]: value,
+                },
+              };
+              handleEditChange("legs", newLegs);
+            }}
+          />
+        )}
     </div>
   );
 };

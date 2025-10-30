@@ -160,7 +160,7 @@ export interface AtBrokerSettings {
 // Complete strategy configuration interface
 export interface StrategyConfiguration {
   baseConfig: BaseConfig;
-  legs: Leg[];
+  legs: Record<string, Leg>; // Changed from Leg[] to Record<string, Leg>
   executionParams: ExecutionParams;
   targetSettings: TargetSettings;
   stoplossSettings: StoplossSettings;
