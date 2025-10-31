@@ -19,6 +19,7 @@ import ExecutionDetails from "./pages/ExecutionDetails";
 // import ObservationMonitor from "./pages/ObservationMonitor";
 import ObservationDashboard from "./pages/ObservationDashboard";
 import ObservationTables from "./pages/ObservationTables";
+import AnimatedCounter from "./pages/AnimatedCounter";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -107,6 +108,7 @@ function App() {
                 path="/observation-tables"
                 element={<ObservationTables />}
               />
+              <Route path="/animated-counter" element={<AnimatedCounter />} />
             </Routes>
           </main>
         </div>
