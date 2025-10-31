@@ -22,6 +22,10 @@ interface LegsConfigurationTableProps {
   onCopyLeg?: (legId: string) => void;
   onAddLeg?: () => void;
   onPremiumStrikeModalOpen?: (legId: string) => void;
+  onActionConfigModalOpen?: (
+    legId: string,
+    actionType: "target" | "stoploss" | "squareoff"
+  ) => void;
   symbolOptions?: string[];
   expiryOptions?: number[];
   targetOptions?: TargetStoplossType[];
@@ -44,6 +48,7 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
   onCopyLeg,
   onAddLeg,
   onPremiumStrikeModalOpen,
+  onActionConfigModalOpen,
   symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"],
   expiryOptions = [0, 1, 2, 3, 4, 5],
   targetOptions = ["NONE", "ABSOLUTE", "PERCENTAGE", "POINTS"],
@@ -198,6 +203,9 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
             </th>
             <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               On Stoploss Action
+            </th>
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              On SquareOff Action
             </th>
             <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Actions
@@ -692,46 +700,67 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
 
               {/* On Target Action */}
               <td className="p-1 text-center">
-                {isEditing && onLegChange ? (
-                  <select
-                    value={leg.onTargetAction || "NONE"}
-                    onChange={(e) =>
-                      onLegChange(leg.legId, "onTargetAction", e.target.value)
-                    }
-                    className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                {isEditing && onActionConfigModalOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => onActionConfigModalOpen(leg.legId, "target")}
+                    className="px-2 py-1 text-[0.7rem] bg-green-500 hover:bg-green-600 text-white rounded transition-colors"
                   >
-                    {actionOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    {leg.onTargetActionConfig?.actionType ||
+                      leg.onTargetAction ||
+                      "NONE"}
+                  </button>
                 ) : (
                   <span className="text-gray-900 dark:text-white text-[0.7rem]">
-                    {leg.onTargetAction || "NONE"}
+                    {leg.onTargetActionConfig?.actionType ||
+                      leg.onTargetAction ||
+                      "NONE"}
                   </span>
                 )}
               </td>
 
               {/* On Stoploss Action */}
               <td className="p-1 text-center">
-                {isEditing && onLegChange ? (
-                  <select
-                    value={leg.onStoplossAction || "NONE"}
-                    onChange={(e) =>
-                      onLegChange(leg.legId, "onStoplossAction", e.target.value)
+                {isEditing && onActionConfigModalOpen ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onActionConfigModalOpen(leg.legId, "stoploss")
                     }
-                    className="w-auto text-[0.7rem] text-center p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-auto"
+                    className="px-2 py-1 text-[0.7rem] bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                   >
-                    {actionOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    {leg.onStoplossActionConfig?.actionType ||
+                      leg.onStoplossAction ||
+                      "NONE"}
+                  </button>
                 ) : (
                   <span className="text-gray-900 dark:text-white text-[0.7rem]">
-                    {leg.onStoplossAction || "NONE"}
+                    {leg.onStoplossActionConfig?.actionType ||
+                      leg.onStoplossAction ||
+                      "NONE"}
+                  </span>
+                )}
+              </td>
+
+              {/* On SquareOff Action */}
+              <td className="p-1 text-center">
+                {isEditing && onActionConfigModalOpen ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onActionConfigModalOpen(leg.legId, "squareoff")
+                    }
+                    className="px-2 py-1 text-[0.7rem] bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors"
+                  >
+                    {leg.onSquareOffActionConfig?.actionType ||
+                      leg.onSquareOffAction ||
+                      "NONE"}
+                  </button>
+                ) : (
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
+                    {leg.onSquareOffActionConfig?.actionType ||
+                      leg.onSquareOffAction ||
+                      "NONE"}
                   </span>
                 )}
               </td>

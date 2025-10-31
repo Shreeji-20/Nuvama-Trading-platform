@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import config from "../config/api";
 import LegsConfigurationTable from "../components/LegsConfigurationTable";
 import PremiumStrikeModal from "../components/PremiumStrikeModal";
+import ActionConfigModal from "../components/ActionConfigModal";
 import OpenPositionsTab from "../components/OpenPositionsTab";
 import OpenOrdersTab from "../components/OpenOrdersTab";
 import CompletedOrdersTab from "../components/CompletedOrdersTab";
@@ -47,6 +48,10 @@ const DeployedStrategies: React.FC = () => {
   const [loadingTags, setLoadingTags] = useState(false);
   const [activeTab, setActiveTab] = useState<Record<string, string>>({});
   const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState<any>(null);
+  const [actionConfigModalState, setActionConfigModalState] = useState<{
+    legId: string | null;
+    actionType: "target" | "stoploss" | "squareoff" | null;
+  }>({ legId: null, actionType: null });
   const [currentEditingStrategyId, setCurrentEditingStrategyId] = useState<
     string | null
   >(null);
@@ -160,9 +165,75 @@ const DeployedStrategies: React.FC = () => {
     }
   };
 
+  // Sanitize action config by converting string values to proper types
+  const sanitizeActionConfig = (config: any) => {
+    if (!config) return config;
+
+    const sanitized = { ...config };
+
+    // Convert actionCount to integer
+    if (sanitized.actionCount !== undefined && sanitized.actionCount !== null) {
+      sanitized.actionCount =
+        typeof sanitized.actionCount === "string"
+          ? parseInt(sanitized.actionCount, 10)
+          : sanitized.actionCount;
+    }
+
+    // Convert slOrderAdjust values to float
+    if (sanitized.slOrderAdjust) {
+      if (
+        sanitized.slOrderAdjust.minPoints !== undefined &&
+        sanitized.slOrderAdjust.minPoints !== null
+      ) {
+        sanitized.slOrderAdjust.minPoints =
+          typeof sanitized.slOrderAdjust.minPoints === "string"
+            ? parseFloat(sanitized.slOrderAdjust.minPoints)
+            : sanitized.slOrderAdjust.minPoints;
+      }
+      if (
+        sanitized.slOrderAdjust.maxPercentage !== undefined &&
+        sanitized.slOrderAdjust.maxPercentage !== null
+      ) {
+        sanitized.slOrderAdjust.maxPercentage =
+          typeof sanitized.slOrderAdjust.maxPercentage === "string"
+            ? parseFloat(sanitized.slOrderAdjust.maxPercentage)
+            : sanitized.slOrderAdjust.maxPercentage;
+      }
+    }
+
+    return sanitized;
+  };
+
   // Update strategy
   const updateStrategy = async (strategyId: string, updatedConfig: any) => {
     try {
+      // Debug: Log the config being sent
+      console.log("🔍 DEBUG UPDATE Frontend: Sending config to backend:");
+      if (updatedConfig.legs) {
+        Object.entries(updatedConfig.legs).forEach(
+          ([legId, leg]: [string, any]) => {
+            if (leg.onTargetActionConfig) {
+              console.log(
+                `  Leg ${legId} onTargetActionConfig:`,
+                leg.onTargetActionConfig
+              );
+            }
+            if (leg.onStoplossActionConfig) {
+              console.log(
+                `  Leg ${legId} onStoplossActionConfig:`,
+                leg.onStoplossActionConfig
+              );
+            }
+            if (leg.onSquareOffActionConfig) {
+              console.log(
+                `  Leg ${legId} onSquareOffActionConfig:`,
+                leg.onSquareOffActionConfig
+              );
+            }
+          }
+        );
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/strategy/update/${strategyId}`,
         {
@@ -409,17 +480,33 @@ const DeployedStrategies: React.FC = () => {
           legId: legId,
           strategyId: editValues.baseConfig?.strategyId || strategyId,
           strategyName: editValues.baseConfig?.strategyName || "",
+          // Sanitize action configs
+          onTargetActionConfig: sanitizeActionConfig(leg.onTargetActionConfig),
+          onStoplossActionConfig: sanitizeActionConfig(
+            leg.onStoplossActionConfig
+          ),
+          onSquareOffActionConfig: sanitizeActionConfig(
+            leg.onSquareOffActionConfig
+          ),
         };
       });
       sanitizedLegs = legsDict;
     } else {
-      // Already dict, just update references
+      // Already dict, just update references and sanitize action configs
       const updatedLegs: Record<string, any> = {};
       Object.entries(sanitizedLegs).forEach(([legId, leg]: [string, any]) => {
         updatedLegs[legId] = {
           ...leg,
           strategyId: editValues.baseConfig?.strategyId || strategyId,
           strategyName: editValues.baseConfig?.strategyName || "",
+          // Sanitize action configs
+          onTargetActionConfig: sanitizeActionConfig(leg.onTargetActionConfig),
+          onStoplossActionConfig: sanitizeActionConfig(
+            leg.onStoplossActionConfig
+          ),
+          onSquareOffActionConfig: sanitizeActionConfig(
+            leg.onSquareOffActionConfig
+          ),
         };
       });
       sanitizedLegs = updatedLegs;
@@ -529,11 +616,11 @@ const DeployedStrategies: React.FC = () => {
     console.log(`Square off request initiated for Order ID: ${orderId}`);
 
     // Refresh orders after a short delay
-    if (order.strategyId) {
-      setTimeout(() => {
-        fetchOrders(order.strategyId!);
-      }, 500);
-    }
+    // if (order.strategyId) {
+    //   setTimeout(() => {
+    //     fetchOrders(order.strategyId!);
+    //   }, 1000);
+    // }
   };
 
   // Fetch all option data once
@@ -662,17 +749,26 @@ const DeployedStrategies: React.FC = () => {
 
   // Initialize
   useEffect(() => {
-    fetchStrategies();
-    fetchStrategyTags();
-    fetchOptionData();
+    // Function to fetch data
+    const fetchData = () => {
+      fetchStrategies();
+      fetchStrategyTags();
+    };
 
-    // Cleanup
+    // Run immediately on mount
+    fetchData();
+
+    // Set interval to run every 1000 seconds (1000 * 1000 ms)
+    const interval = setInterval(fetchData, 1000 * 1000);
+
+    // Cleanup on unmount
     return () => {
+      clearInterval(interval);
       if (optionDataIntervalRef.current) {
         clearInterval(optionDataIntervalRef.current);
       }
     };
-  }, [fetchOptionData]);
+  }, []);
 
   // Conditionally refresh option data only if there are open positions
   useEffect(() => {
@@ -692,9 +788,9 @@ const DeployedStrategies: React.FC = () => {
       }
 
       // Set up option data refresh interval (every 1 second)
-      optionDataIntervalRef.current = setInterval(() => {
-        fetchOptionData();
-      }, 500);
+      // optionDataIntervalRef.current = setInterval(() => {
+      //   fetchOptionData();
+      // }, 500);
     } else {
       console.log(
         "[DeployedStrategies] No open positions, stopping option data refresh"
@@ -1100,6 +1196,34 @@ const DeployedStrategies: React.FC = () => {
                                     dynamicHedge: false,
                                     onTargetAction: "NONE",
                                     onStoplossAction: "NONE",
+                                    onSquareOffAction: "NONE",
+                                    onTargetActionConfig: {
+                                      actionType: "NONE",
+                                      actionCount: 1,
+                                      orderAtBroker: false,
+                                      slOrderAdjust: {
+                                        minPoints: 0,
+                                        maxPercentage: 0,
+                                      },
+                                    },
+                                    onStoplossActionConfig: {
+                                      actionType: "NONE",
+                                      actionCount: 1,
+                                      orderAtBroker: false,
+                                      slOrderAdjust: {
+                                        minPoints: 0,
+                                        maxPercentage: 0,
+                                      },
+                                    },
+                                    onSquareOffActionConfig: {
+                                      actionType: "NONE",
+                                      actionCount: 1,
+                                      orderAtBroker: false,
+                                      slOrderAdjust: {
+                                        minPoints: 0,
+                                        maxPercentage: 0,
+                                      },
+                                    },
                                     premiumBasedStrike: false,
                                     premiumBasedStrikeConfig: {
                                       strikeType: "NearestPremium",
@@ -1121,6 +1245,21 @@ const DeployedStrategies: React.FC = () => {
                                   setPremiumStrikeModalLeg({
                                     index: legId,
                                     leg: editValues.legs[legId],
+                                  });
+                                  setCurrentEditingStrategyId(
+                                    strategy.strategyId
+                                  );
+                                }}
+                                onActionConfigModalOpen={(
+                                  legId: string,
+                                  actionType:
+                                    | "target"
+                                    | "stoploss"
+                                    | "squareoff"
+                                ) => {
+                                  setActionConfigModalState({
+                                    legId,
+                                    actionType,
                                   });
                                   setCurrentEditingStrategyId(
                                     strategy.strategyId
@@ -1413,6 +1552,73 @@ const DeployedStrategies: React.FC = () => {
                   [field]: value,
                 },
               };
+              handleEditChange("legs", newLegs);
+            }}
+          />
+        )}
+
+      {/* Action Config Modal */}
+      {actionConfigModalState.legId &&
+        actionConfigModalState.actionType &&
+        currentEditingStrategyId &&
+        editValues.legs &&
+        editValues.legs[actionConfigModalState.legId] && (
+          <ActionConfigModal
+            leg={editValues.legs[actionConfigModalState.legId]}
+            isOpen={true}
+            onClose={() => {
+              setActionConfigModalState({ legId: null, actionType: null });
+              setCurrentEditingStrategyId(null);
+            }}
+            actionType={actionConfigModalState.actionType}
+            onConfigChange={(field: string, value: any) => {
+              const legId = actionConfigModalState.legId!;
+              const actionType = actionConfigModalState.actionType!;
+              const newLegs = { ...editValues.legs };
+
+              // Determine which config to update
+              const configKey =
+                actionType === "target"
+                  ? "onTargetActionConfig"
+                  : actionType === "stoploss"
+                  ? "onStoplossActionConfig"
+                  : "onSquareOffActionConfig";
+
+              // Ensure action config exists
+              if (!newLegs[legId][configKey]) {
+                newLegs[legId] = {
+                  ...newLegs[legId],
+                  [configKey]: {
+                    actionType: "NONE",
+                    actionCount: 1,
+                    orderAtBroker: false,
+                    slOrderAdjust: {
+                      minPoints: 0,
+                      maxPercentage: 0,
+                    },
+                  },
+                };
+              }
+
+              newLegs[legId] = {
+                ...newLegs[legId],
+                [configKey]: {
+                  ...newLegs[legId][configKey],
+                  [field]: value,
+                },
+              };
+
+              // Also update the legacy field for backward compatibility
+              if (field === "actionType") {
+                if (actionType === "target") {
+                  newLegs[legId].onTargetAction = value;
+                } else if (actionType === "stoploss") {
+                  newLegs[legId].onStoplossAction = value;
+                } else if (actionType === "squareoff") {
+                  newLegs[legId].onSquareOffAction = value;
+                }
+              }
+
               handleEditChange("legs", newLegs);
             }}
           />

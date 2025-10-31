@@ -64,6 +64,17 @@ export interface PremiumBasedStrikeConfig {
   and: number;
 }
 
+// Action configuration interface for leg actions
+export interface ActionConfig {
+  actionType: "NONE" | "REENTRY" | "REEXECUTE";
+  actionCount: number | string; // Allow string for empty input state
+  orderAtBroker: boolean;
+  slOrderAdjust: {
+    minPoints: number | string;
+    maxPercentage: number | string;
+  };
+}
+
 // Leg interface
 export interface Leg {
   id: number; // Internal unique identifier for React
@@ -89,6 +100,10 @@ export interface Leg {
   dynamicHedge: boolean;
   onTargetAction: ActionType;
   onStoplossAction: ActionType;
+  onTargetActionConfig?: ActionConfig; // New: detailed config for target action
+  onStoplossActionConfig?: ActionConfig; // New: detailed config for stoploss action
+  onSquareOffAction?: ActionType; // New: action on square off
+  onSquareOffActionConfig?: ActionConfig; // New: detailed config for squareoff action
   premiumBasedStrike: boolean;
   premiumBasedStrikeConfig: PremiumBasedStrikeConfig;
   hedgeSelectedStrike?: number | null;

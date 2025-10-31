@@ -1,6 +1,7 @@
 import React, { useState, useEffect, ChangeEvent } from "react";
 import LegsConfigurationTable from "../components/LegsConfigurationTable";
 import PremiumStrikeModal from "../components/PremiumStrikeModal";
+import ActionConfigModal from "../components/ActionConfigModal";
 import StatusBadge from "../components/StatusBadge";
 import ExecutionParametersTab from "../components/ExecutionParametersTab";
 import TargetSettingsTab from "../components/TargetSettingsTab";
@@ -67,6 +68,10 @@ const AdvancedOptionsBuilder: React.FC = () => {
   const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState<
     string | null
   >(null);
+  const [actionConfigModalState, setActionConfigModalState] = useState<{
+    legId: string | null;
+    actionType: "target" | "stoploss" | "squareoff" | null;
+  }>({ legId: null, actionType: null });
 
   // Options for dropdowns
   const symbolOptions: string[] = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
@@ -460,6 +465,92 @@ const AdvancedOptionsBuilder: React.FC = () => {
             ? transformed.premiumBasedStrike
             : false;
 
+        // Sanitize action configs - ensure numbers are numbers, not strings
+        const sanitizeActionConfig = (config: any) => {
+          if (!config) return config;
+          return {
+            ...config,
+            actionCount:
+              typeof config.actionCount === "string"
+                ? parseInt(config.actionCount) || 1
+                : config.actionCount,
+            slOrderAdjust: config.slOrderAdjust
+              ? {
+                  minPoints:
+                    typeof config.slOrderAdjust.minPoints === "string"
+                      ? parseFloat(config.slOrderAdjust.minPoints) || 0
+                      : config.slOrderAdjust.minPoints,
+                  maxPercentage:
+                    typeof config.slOrderAdjust.maxPercentage === "string"
+                      ? parseFloat(config.slOrderAdjust.maxPercentage) || 0
+                      : config.slOrderAdjust.maxPercentage,
+                }
+              : { minPoints: 0, maxPercentage: 0 },
+          };
+        };
+
+        // Debug: Log action configs before sanitization
+        console.log(
+          `🔍 DEBUG CREATE Frontend - Leg ${leg.legId} BEFORE sanitization:`
+        );
+        if (transformed.onTargetActionConfig) {
+          console.log(
+            `  onTargetActionConfig:`,
+            transformed.onTargetActionConfig
+          );
+        }
+        if (transformed.onStoplossActionConfig) {
+          console.log(
+            `  onStoplossActionConfig:`,
+            transformed.onStoplossActionConfig
+          );
+        }
+        if (transformed.onSquareOffActionConfig) {
+          console.log(
+            `  onSquareOffActionConfig:`,
+            transformed.onSquareOffActionConfig
+          );
+        }
+
+        if (transformed.onTargetActionConfig) {
+          transformed.onTargetActionConfig = sanitizeActionConfig(
+            transformed.onTargetActionConfig
+          );
+        }
+        if (transformed.onStoplossActionConfig) {
+          transformed.onStoplossActionConfig = sanitizeActionConfig(
+            transformed.onStoplossActionConfig
+          );
+        }
+        if (transformed.onSquareOffActionConfig) {
+          transformed.onSquareOffActionConfig = sanitizeActionConfig(
+            transformed.onSquareOffActionConfig
+          );
+        }
+
+        // Debug: Log action configs after sanitization
+        console.log(
+          `✅ DEBUG CREATE Frontend - Leg ${leg.legId} AFTER sanitization:`
+        );
+        if (transformed.onTargetActionConfig) {
+          console.log(
+            `  onTargetActionConfig:`,
+            transformed.onTargetActionConfig
+          );
+        }
+        if (transformed.onStoplossActionConfig) {
+          console.log(
+            `  onStoplossActionConfig:`,
+            transformed.onStoplossActionConfig
+          );
+        }
+        if (transformed.onSquareOffActionConfig) {
+          console.log(
+            `  onSquareOffActionConfig:`,
+            transformed.onSquareOffActionConfig
+          );
+        }
+
         console.log("Transformed leg:", transformed);
         transformedLegsDict[leg.legId] = transformed;
       });
@@ -477,6 +568,10 @@ const AdvancedOptionsBuilder: React.FC = () => {
       };
 
       console.log("Deploying Strategy Data:", strategyData);
+      console.log(
+        "Legs with action configs:",
+        JSON.stringify(strategyData.legs, null, 2)
+      );
 
       const response = await fetch(`${API_BASE_URL}/strategy/create`, {
         method: "POST",
@@ -568,6 +663,34 @@ const AdvancedOptionsBuilder: React.FC = () => {
       dynamicHedge: false,
       onTargetAction: "NONE",
       onStoplossAction: "NONE",
+      onSquareOffAction: "NONE",
+      onTargetActionConfig: {
+        actionType: "NONE",
+        actionCount: 1,
+        orderAtBroker: false,
+        slOrderAdjust: {
+          minPoints: 0,
+          maxPercentage: 0,
+        },
+      },
+      onStoplossActionConfig: {
+        actionType: "NONE",
+        actionCount: 1,
+        orderAtBroker: false,
+        slOrderAdjust: {
+          minPoints: 0,
+          maxPercentage: 0,
+        },
+      },
+      onSquareOffActionConfig: {
+        actionType: "NONE",
+        actionCount: 1,
+        orderAtBroker: false,
+        slOrderAdjust: {
+          minPoints: 0,
+          maxPercentage: 0,
+        },
+      },
       premiumBasedStrike: false,
       premiumBasedStrikeConfig: {
         strikeType: "NearestPremium",
@@ -892,6 +1015,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
               onAddLeg={addLeg}
               onPremiumStrikeModalOpen={(legId: string) => {
                 setPremiumStrikeModalLeg(legId);
+              }}
+              onActionConfigModalOpen={(
+                legId: string,
+                actionType: "target" | "stoploss" | "squareoff"
+              ) => {
+                setActionConfigModalState({ legId, actionType });
               }}
               symbolOptions={symbolOptions}
               expiryOptions={expiryOptions}
@@ -1228,6 +1357,79 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 field as keyof PremiumBasedStrikeConfig,
                 value
               );
+            }
+          }}
+        />
+
+        {/* Action Config Modal */}
+        <ActionConfigModal
+          leg={
+            actionConfigModalState.legId
+              ? legs[actionConfigModalState.legId]
+              : null
+          }
+          isOpen={
+            actionConfigModalState.legId !== null &&
+            actionConfigModalState.actionType !== null
+          }
+          onClose={() =>
+            setActionConfigModalState({ legId: null, actionType: null })
+          }
+          actionType={actionConfigModalState.actionType || "target"}
+          onConfigChange={(field: string, value: any) => {
+            if (actionConfigModalState.legId !== null) {
+              const legId = actionConfigModalState.legId;
+              const actionType = actionConfigModalState.actionType!;
+
+              setLegs((prev) => {
+                if (!prev[legId]) return prev;
+
+                // Determine which config to update
+                const configKey =
+                  actionType === "target"
+                    ? "onTargetActionConfig"
+                    : actionType === "stoploss"
+                    ? "onStoplossActionConfig"
+                    : "onSquareOffActionConfig";
+
+                // Ensure action config exists
+                let updatedLeg = { ...prev[legId] };
+                if (!updatedLeg[configKey]) {
+                  updatedLeg[configKey] = {
+                    actionType: "NONE",
+                    actionCount: 1,
+                    orderAtBroker: false,
+                    slOrderAdjust: {
+                      minPoints: 0,
+                      maxPercentage: 0,
+                    },
+                  };
+                }
+
+                updatedLeg = {
+                  ...updatedLeg,
+                  [configKey]: {
+                    ...updatedLeg[configKey],
+                    [field]: value,
+                  },
+                };
+
+                // Also update the legacy field for backward compatibility
+                if (field === "actionType") {
+                  if (actionType === "target") {
+                    updatedLeg.onTargetAction = value;
+                  } else if (actionType === "stoploss") {
+                    updatedLeg.onStoplossAction = value;
+                  } else if (actionType === "squareoff") {
+                    updatedLeg.onSquareOffAction = value;
+                  }
+                }
+
+                return {
+                  ...prev,
+                  [legId]: updatedLeg,
+                };
+              });
             }
           }}
         />
