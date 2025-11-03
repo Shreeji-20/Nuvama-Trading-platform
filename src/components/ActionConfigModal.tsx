@@ -142,16 +142,24 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               value={config.actionCount}
               onChange={(e) => {
                 const value = e.target.value;
+                const parsedValue = parseInt(value);
+
                 // Allow empty string or parse to number
-                onConfigChange(
-                  "actionCount",
-                  value === "" ? "" : parseInt(value) || 1
-                );
+                // If parsed value is 0 or less, set to 1
+                if (value === "") {
+                  onConfigChange("actionCount", "");
+                } else if (parsedValue <= 0) {
+                  onConfigChange("actionCount", 1);
+                } else {
+                  onConfigChange("actionCount", parsedValue || 1);
+                }
               }}
               onBlur={(e) => {
                 const value = e.target.value;
-                // Default to 1 if empty on blur
-                if (value === "") {
+                const parsedValue = parseInt(value);
+
+                // Default to 1 if empty, 0, or less than 0 on blur
+                if (value === "" || parsedValue <= 0) {
                   onConfigChange("actionCount", 1);
                 }
               }}
@@ -160,7 +168,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               placeholder="Enter action count (default: 1)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Leave empty or enter a number. Defaults to 1.
+              Minimum value is 1. Defaults to 1 if empty or invalid.
             </p>
           </div>
 
