@@ -396,7 +396,7 @@ const IndexCards: React.FC<IndexCardsProps> = ({
 
     const interval = setInterval(() => {
       fetchIndexData();
-    }, 1000);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [indices, fetchIndexData]);

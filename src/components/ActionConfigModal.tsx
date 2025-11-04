@@ -86,6 +86,21 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     }
   };
 
+  // Handle close with validation
+  const handleClose = () => {
+    // Ensure actionCount is at least 1 before closing
+    const currentCount =
+      typeof config.actionCount === "string"
+        ? parseInt(config.actionCount)
+        : config.actionCount;
+
+    if (!currentCount || currentCount <= 0) {
+      onConfigChange("actionCount", 1);
+    }
+
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -94,7 +109,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
             {getTitle()} - {leg.legId}
           </h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           >
             <svg
@@ -268,7 +283,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
         <div className="mt-6 flex justify-end gap-2">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
           >
             Close
