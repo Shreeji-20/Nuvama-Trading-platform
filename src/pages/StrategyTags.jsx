@@ -47,7 +47,9 @@ const StrategyTags = () => {
       const response = await fetch(config.buildUrl(config.ENDPOINTS.USERS));
       if (response.ok) {
         const usersData = await response.json();
-        const usersArray = Array.isArray(usersData) ? usersData : [];
+        const usersArray = Array.isArray(usersData.flat())
+          ? usersData.flat()
+          : [];
         setUsers(usersArray);
 
         // Build userId -> username map

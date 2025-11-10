@@ -32,7 +32,8 @@ export default function Users() {
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setUsers(data);
+          const flattenedUsers = data.flat();
+          setUsers(flattenedUsers);
         } else {
           console.error("Invalid user data from API");
         }

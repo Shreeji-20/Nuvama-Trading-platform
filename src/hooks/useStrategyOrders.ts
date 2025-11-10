@@ -85,7 +85,6 @@ export const useStrategyOrders = (
 
       // Set up new interval
       const intervalId = window.setInterval(() => {
-        console.log(`Auto-refresh tick for strategy ${strategyId}`);
         fetchOrders(strategyId);
       }, refreshInterval);
 

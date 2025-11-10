@@ -34,6 +34,29 @@ import {
   isOrderCompletedOrFinished,
 } from "../constants/deployedStrategies.constants";
 
+// Import functions from separate files
+import {
+  fetchStrategies as fetchStrategiesAPI,
+  fetchStrategyTags as fetchStrategyTagsAPI,
+  fetchOptionData as fetchOptionDataAPI,
+  updateStrategy as updateStrategyAPI,
+  deleteStrategy as deleteStrategyAPI,
+  copyStrategy as copyStrategyAPI,
+  startEditing as startEditingFn,
+  cancelEditing as cancelEditingFn,
+  handleEditChange as handleEditChangeFn,
+  getEditValue as getEditValueFn,
+  handleSquareOff as handleSquareOffFn,
+  handleStartTrading as handleStartTradingFn,
+  handleStopTrading as handleStopTradingFn,
+  exportToExcel as exportToExcelFn,
+  toggleStrategy as toggleStrategyFn,
+  getActiveSettingsTab as getActiveSettingsTabFn,
+  setStrategySettingsTab as setStrategySettingsTabFn,
+  getActiveTab as getActiveTabFn,
+  setStrategyTab as setStrategyTabFn,
+} from "../functions/DeployedStrategies";
+
 const DeployedStrategies: React.FC = () => {
   // Symbol options for dropdown
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
@@ -44,6 +67,7 @@ const DeployedStrategies: React.FC = () => {
   const [expandedStrategy, setExpandedStrategy] = useState<string | null>(null);
   const [editingStrategy, setEditingStrategy] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [changedFields, setChangedFields] = useState<Record<string, any>>({});
   const [availableTags, setAvailableTags] = useState<StrategyTag[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const [activeTab, setActiveTab] = useState<Record<string, string>>({});
@@ -105,646 +129,126 @@ const DeployedStrategies: React.FC = () => {
     Record<string, string>
   >({});
 
-  // Get active settings tab for a strategy
+  // Wrapper functions using imported utilities
   const getActiveSettingsTab = (strategyId: string): string => {
-    return activeSettingsTab[strategyId] || "execution";
+    return getActiveSettingsTabFn(strategyId, activeSettingsTab);
   };
 
-  // Set active settings tab for a strategy
   const setStrategySettingsTab = (strategyId: string, tabId: string) => {
-    setActiveSettingsTab((prev) => ({ ...prev, [strategyId]: tabId }));
+    setStrategySettingsTabFn(strategyId, tabId, setActiveSettingsTab);
   };
 
-  // Get active tab for a strategy (default to "positions")
   const getActiveTab = (strategyId: string): string => {
-    return activeTab[strategyId] || "positions";
+    return getActiveTabFn(strategyId, activeTab);
   };
 
-  // Set active tab for a strategy
   const setStrategyTab = (strategyId: string, tabId: string) => {
-    setActiveTab((prev) => ({ ...prev, [strategyId]: tabId }));
-
-    // Only start auto-refresh if not already running
-    // The hook handles starting/stopping internally
+    setStrategyTabFn(strategyId, tabId, setActiveTab);
   };
 
   // Fetch all deployed strategies
   const fetchStrategies = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`${API_BASE_URL}/strategy/list`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setStrategies(data.strategies || []);
-    } catch (err: any) {
-      console.error("Error fetching strategies:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    await fetchStrategiesAPI(setStrategies, setLoading, setError);
   };
 
   // Fetch available strategy tags
   const fetchStrategyTags = async () => {
-    try {
-      setLoadingTags(true);
-      const response = await fetch(`${API_BASE_URL}/strategy-tags/list`);
-      if (response.ok) {
-        const tags = await response.json();
-        setAvailableTags(tags);
-      } else {
-        console.error("Failed to fetch strategy tags");
-      }
-    } catch (error) {
-      console.error("Error fetching strategy tags:", error);
-    } finally {
-      setLoadingTags(false);
-    }
+    await fetchStrategyTagsAPI(setAvailableTags, setLoadingTags);
   };
 
-  // Sanitize action config by converting string values to proper types
-  const sanitizeActionConfig = (config: any) => {
-    if (!config) return config;
+  // Fetch option data
+  const fetchOptionData = useCallback(async () => {
+    await fetchOptionDataAPI(setOptionDataCache, setLastOptionDataFetch);
+  }, []);
 
-    const sanitized = { ...config };
-
-    // Convert actionCount to integer
-    if (sanitized.actionCount !== undefined && sanitized.actionCount !== null) {
-      sanitized.actionCount =
-        typeof sanitized.actionCount === "string"
-          ? parseInt(sanitized.actionCount, 10)
-          : sanitized.actionCount;
-    }
-
-    // Convert slOrderAdjust values to float
-    if (sanitized.slOrderAdjust) {
-      if (
-        sanitized.slOrderAdjust.minPoints !== undefined &&
-        sanitized.slOrderAdjust.minPoints !== null
-      ) {
-        sanitized.slOrderAdjust.minPoints =
-          typeof sanitized.slOrderAdjust.minPoints === "string"
-            ? parseFloat(sanitized.slOrderAdjust.minPoints)
-            : sanitized.slOrderAdjust.minPoints;
-      }
-      if (
-        sanitized.slOrderAdjust.maxPercentage !== undefined &&
-        sanitized.slOrderAdjust.maxPercentage !== null
-      ) {
-        sanitized.slOrderAdjust.maxPercentage =
-          typeof sanitized.slOrderAdjust.maxPercentage === "string"
-            ? parseFloat(sanitized.slOrderAdjust.maxPercentage)
-            : sanitized.slOrderAdjust.maxPercentage;
-      }
-    }
-
-    return sanitized;
-  };
-
-  // Update strategy
+  // Update strategy - sends only changed fields
   const updateStrategy = async (strategyId: string, updatedConfig: any) => {
-    try {
-      // Debug: Log the config being sent
-      console.log("🔍 DEBUG UPDATE Frontend: Sending config to backend:");
-      if (updatedConfig.legs) {
-        Object.entries(updatedConfig.legs).forEach(
-          ([legId, leg]: [string, any]) => {
-            if (leg.onTargetActionConfig) {
-              console.log(
-                `  Leg ${legId} onTargetActionConfig:`,
-                leg.onTargetActionConfig
-              );
-            }
-            if (leg.onStoplossActionConfig) {
-              console.log(
-                `  Leg ${legId} onStoplossActionConfig:`,
-                leg.onStoplossActionConfig
-              );
-            }
-            if (leg.onSquareOffActionConfig) {
-              console.log(
-                `  Leg ${legId} onSquareOffActionConfig:`,
-                leg.onSquareOffActionConfig
-              );
-            }
-          }
-        );
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/strategy/update/${strategyId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedConfig),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: "Unknown error" }));
-        console.error("Update error response:", errorData);
-
-        if (response.status === 422 && errorData.detail?.errors) {
-          const errorMessages = errorData.detail.errors
-            .map((err: any) => `${err.loc.join(".")}: ${err.msg}`)
-            .join("\n");
-          throw new Error(`Validation errors:\n${errorMessages}`);
-        }
-
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
-        );
-      }
-      await response.json();
-      fetchStrategies();
-      setEditingStrategy(null);
-      setEditValues({});
-
-      alert("Strategy updated successfully!");
-    } catch (err: any) {
-      console.error("Error updating strategy:", err);
-      alert(`Failed to update strategy: ${err.message}`);
-    }
+    await updateStrategyAPI(
+      strategyId,
+      updatedConfig,
+      changedFields,
+      fetchStrategies,
+      setEditingStrategy,
+      setEditValues,
+      setChangedFields
+    );
   };
 
   // Delete strategy
   const deleteStrategy = async (strategyId: string) => {
-    if (!confirm(`Are you sure you want to delete strategy ${strategyId}?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/strategy/delete/${strategyId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      alert("Strategy deleted successfully!");
-      fetchStrategies();
-    } catch (err: any) {
-      console.error("Error deleting strategy:", err);
-      alert(`Failed to delete strategy: ${err.message}`);
-    }
+    await deleteStrategyAPI(strategyId, fetchStrategies);
   };
 
   // Copy strategy
   const copyStrategy = async (strategy: Strategy) => {
-    const originalName =
-      (strategy.config as any)?.baseConfig?.strategyName || strategy.strategyId;
-
-    // Find existing copies to determine the next copy number
-    const existingCopyNumbers = strategies
-      .map((s) => {
-        const name = (s.config as any)?.baseConfig?.strategyName || "";
-        // Match pattern: originalName_copy_1, originalName_copy_2, etc.
-        const copyMatch = name.match(
-          new RegExp(
-            `^${originalName.replace(
-              /[.*+?^${}()|[\]\\]/g,
-              "\\$&"
-            )}_copy_(\\d+)$`
-          )
-        );
-        return copyMatch ? parseInt(copyMatch[1], 10) : 0;
-      })
-      .filter((num) => num > 0)
-      .sort((a, b) => a - b);
-
-    // Find the next available copy number
-    let nextCopyNumber = 1;
-    for (const num of existingCopyNumbers) {
-      if (num === nextCopyNumber) {
-        nextCopyNumber++;
-      } else {
-        break;
-      }
-    }
-
-    // Generate a new unique strategy ID (8 character hex like backend does)
-    const randomHex = Math.random().toString(16).substring(2, 10).toUpperCase();
-    const newStrategyId = `STRATEGY_${randomHex}`;
-    const newStrategyName = `${originalName}_copy_${nextCopyNumber}`;
-
-    // Deep clone the configuration
-    const newConfig = JSON.parse(JSON.stringify(strategy.config));
-
-    if (newConfig.baseConfig) {
-      newConfig.baseConfig.strategyId = newStrategyId;
-      newConfig.baseConfig.strategyName = newStrategyName;
-    }
-
-    // Update leg IDs and strategy references
-    if (newConfig.legs) {
-      // Handle both array and dict format
-      if (Array.isArray(newConfig.legs)) {
-        // Convert array to dict format
-        const legsDict: Record<string, any> = {};
-        newConfig.legs.forEach((leg: any) => {
-          const legId = leg.legId || `LEG_${Date.now()}`;
-          legsDict[legId] = {
-            ...leg,
-            legId: legId,
-            strategyId: newStrategyId,
-            strategyName: newStrategyName,
-          };
-        });
-        newConfig.legs = legsDict;
-      } else {
-        // Already dict format, just update references
-        const updatedLegs: Record<string, any> = {};
-        Object.entries(newConfig.legs).forEach(
-          ([legId, leg]: [string, any]) => {
-            updatedLegs[legId] = {
-              ...leg,
-              strategyId: newStrategyId,
-              strategyName: newStrategyName,
-            };
-          }
-        );
-        newConfig.legs = updatedLegs;
-      }
-    }
-
-    if (
-      !confirm(
-        `Create a copy of strategy "${originalName}"?\n\nNew Strategy Name: ${newStrategyName}`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      // Use the correct backend endpoint
-      const response = await fetch(`${API_BASE_URL}/strategy/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newConfig),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Backend error:", errorData);
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      alert(
-        `Strategy copied successfully!\n\nNew Strategy ID: ${result.strategyId}\nNew Strategy Name: ${newStrategyName}`
-      );
-      fetchStrategies();
-    } catch (err: any) {
-      console.error("Error copying strategy:", err);
-      alert(`Failed to copy strategy: ${err.message}`);
-    }
+    await copyStrategyAPI(strategy, strategies, fetchStrategies);
   };
 
   // Start editing strategy
   const startEditing = (strategy: Strategy) => {
-    setEditingStrategy(strategy.strategyId);
-
-    // Initialize editValues and ensure all symbols have strikeSteps
-    const config = { ...strategy.config };
-    let legs = config.legs || {};
-
-    // Convert array to dict if needed (backward compatibility)
-    if (Array.isArray(legs)) {
-      const legsDict: Record<string, any> = {};
-      legs.forEach((leg: any) => {
-        const legId = leg.legId || `LEG_${Date.now()}_${Math.random()}`;
-        legsDict[legId] = { ...leg, legId };
-      });
-      legs = legsDict;
-      config.legs = legs;
-    }
-
-    const currentStrikeSteps = config.dynamicHedgeSettings?.strikeSteps || {};
-    const newStrikeSteps = { ...currentStrikeSteps };
-
-    // Default strike steps per symbol
-    const defaultStrikeSteps: Record<string, number> = {
-      NIFTY: 50,
-      SENSEX: 100,
-      BANKNIFTY: 100,
-      FINNIFTY: 50,
-    };
-
-    // Ensure all symbols in legs have entries in strikeSteps
-    Object.values(legs).forEach((leg: any) => {
-      if (leg.symbol && !(leg.symbol in newStrikeSteps)) {
-        newStrikeSteps[leg.symbol] = defaultStrikeSteps[leg.symbol] ?? 50;
-      }
-    });
-
-    // Update config with complete strikeSteps
-    if (config.dynamicHedgeSettings) {
-      config.dynamicHedgeSettings.strikeSteps = newStrikeSteps;
-    }
-
-    setEditValues(config);
+    startEditingFn(
+      strategy,
+      setEditingStrategy,
+      setChangedFields,
+      setEditValues
+    );
   };
 
   // Cancel editing
   const cancelEditing = () => {
-    setEditingStrategy(null);
-    setEditValues({});
+    cancelEditingFn(setEditingStrategy, setEditValues, setChangedFields);
   };
 
-  // Save edited strategy
+  // Save edited strategy - directly calls updateStrategy which sends only changed fields
   const saveEdit = (strategyId: string) => {
-    let sanitizedLegs = editValues.legs || {};
-
-    // Convert array to dict if needed (backward compatibility)
-    if (Array.isArray(editValues.legs)) {
-      const legsDict: Record<string, any> = {};
-      editValues.legs.forEach((leg: any) => {
-        const legId = leg.legId || `LEG_${Date.now()}_${Math.random()}`;
-        legsDict[legId] = {
-          ...leg,
-          legId: legId,
-          strategyId: editValues.baseConfig?.strategyId || strategyId,
-          strategyName: editValues.baseConfig?.strategyName || "",
-          // Sanitize action configs
-          onTargetActionConfig: sanitizeActionConfig(leg.onTargetActionConfig),
-          onStoplossActionConfig: sanitizeActionConfig(
-            leg.onStoplossActionConfig
-          ),
-          onSquareOffActionConfig: sanitizeActionConfig(
-            leg.onSquareOffActionConfig
-          ),
-        };
-      });
-      sanitizedLegs = legsDict;
-    } else {
-      // Already dict, just update references and sanitize action configs
-      const updatedLegs: Record<string, any> = {};
-      Object.entries(sanitizedLegs).forEach(([legId, leg]: [string, any]) => {
-        updatedLegs[legId] = {
-          ...leg,
-          strategyId: editValues.baseConfig?.strategyId || strategyId,
-          strategyName: editValues.baseConfig?.strategyName || "",
-          // Sanitize action configs
-          onTargetActionConfig: sanitizeActionConfig(leg.onTargetActionConfig),
-          onStoplossActionConfig: sanitizeActionConfig(
-            leg.onStoplossActionConfig
-          ),
-          onSquareOffActionConfig: sanitizeActionConfig(
-            leg.onSquareOffActionConfig
-          ),
-        };
-      });
-      sanitizedLegs = updatedLegs;
+    if (Object.keys(changedFields).length === 0) {
+      alert("No changes to save!");
+      return;
     }
-
-    const sanitizedConfig = {
-      ...editValues,
-      legs: sanitizedLegs,
-    };
-
-    updateStrategy(strategyId, sanitizedConfig);
+    console.log("💾 Saving changes:", changedFields);
+    updateStrategy(strategyId, editValues);
   };
 
-  // Handle edit changes
+  // Handle edit changes - now tracks changed fields
   const handleEditChange = (path: string, value: any) => {
-    setEditValues((prev: any) => {
-      const keys = path.split(".");
-      const newValues = { ...prev };
-      let current = newValues;
-
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!current[keys[i]]) {
-          current[keys[i]] = {};
-        }
-        current = current[keys[i]];
-      }
-
-      current[keys[keys.length - 1]] = value;
-      return newValues;
-    });
+    handleEditChangeFn(path, value, setEditValues, setChangedFields);
   };
 
   // Get edit value
   const getEditValue = (strategy: Strategy, path: string): any => {
-    const keys = path.split(".");
-    let value =
-      editingStrategy === strategy.strategyId ? editValues : strategy.config;
-
-    for (const key of keys) {
-      if (value && typeof value === "object" && key in value) {
-        value = value[key];
-      } else {
-        return undefined;
-      }
-    }
-
-    return value;
+    return getEditValueFn(strategy, path, editingStrategy, editValues);
   };
 
   // Toggle strategy expansion
   const toggleStrategy = (strategyId: string) => {
-    const willBeExpanded = expandedStrategy !== strategyId;
-    setExpandedStrategy((prev) => (prev === strategyId ? null : strategyId));
-
-    // If expanding, fetch orders and start auto-refresh
-    if (willBeExpanded) {
-      fetchOrders(strategyId);
-      startAutoRefresh(strategyId);
-    } else {
-      // If collapsing, stop auto-refresh
-      stopAutoRefresh(strategyId);
-    }
+    toggleStrategyFn(
+      strategyId,
+      expandedStrategy,
+      setExpandedStrategy,
+      fetchOrders,
+      startAutoRefresh,
+      stopAutoRefresh
+    );
   };
 
   // Handle Square Off for a position
   const handleSquareOff = (order: Order) => {
-    const orderId =
-      order?.response?.data?.oID ||
-      order?.orderId ||
-      order?.exchangeOrderNumber;
-    const userId = order?.userId;
-
-    if (!orderId || !userId) {
-      alert("Cannot square off: Missing order ID or user ID");
-      return;
-    }
-
-    console.log("Initiating square off for order:", orderId, order);
-
-    // Fire and forget - send request immediately
-    fetch(`${API_BASE_URL}/strategy-orders/squareofforder`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(order),
-    })
-      .then((response) => {
-        console.log(
-          `Square off request sent for order: ${orderId}, status: ${response.status}`
-        );
-        if (!response.ok) {
-          console.warn(
-            `Square off request failed with status: ${response.status}`
-          );
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Square off response:", data);
-      })
-      .catch((error) => {
-        console.error("Error sending square off request:", error);
-      });
-
-    // Immediately show success message
-    console.log(`Square off request initiated for Order ID: ${orderId}`);
-
-    // Refresh orders after a short delay
-    // if (order.strategyId) {
-    //   setTimeout(() => {
-    //     fetchOrders(order.strategyId!);
-    //   }, 1000);
-    // }
+    handleSquareOffFn(order);
   };
-
-  // Fetch all option data once
-  const fetchOptionData = useCallback(async () => {
-    try {
-      const response = await fetch(
-        config.buildUrl(config.ENDPOINTS.OPTIONDATA)
-      );
-
-      if (!response.ok) {
-        console.warn("Failed to fetch option data");
-        return;
-      }
-
-      const data = await response.json();
-      setOptionDataCache(data || []);
-      setLastOptionDataFetch(new Date());
-    } catch (err) {
-      console.error("Error fetching option data:", err);
-    }
-  }, []);
 
   // Handle Start Trading
   const handleStartTrading = async () => {
-    try {
-      setTradingLoading(true);
-      // TODO: Implement start trading API call
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-      setIsTrading(true);
-      alert("Trading started successfully!");
-    } catch (error: any) {
-      console.error("Error starting trading:", error);
-      alert(`Failed to start trading: ${error.message}`);
-    } finally {
-      setTradingLoading(false);
-    }
+    await handleStartTradingFn(setTradingLoading, setIsTrading);
   };
 
   // Handle Stop Trading
   const handleStopTrading = async () => {
-    if (!confirm("Are you sure you want to stop trading?")) {
-      return;
-    }
-
-    try {
-      setTradingLoading(true);
-      // TODO: Implement stop trading API call
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-      setIsTrading(false);
-      alert("Trading stopped successfully!");
-    } catch (error: any) {
-      console.error("Error stopping trading:", error);
-      alert(`Failed to stop trading: ${error.message}`);
-    } finally {
-      setTradingLoading(false);
-    }
+    await handleStopTradingFn(setTradingLoading, setIsTrading);
   };
 
   // Export strategy to Excel
   const exportToExcel = (strategy: Strategy) => {
-    try {
-      const config = strategy.config as any;
-      const baseConfig = config?.baseConfig || {};
-      const legs = config?.legs || [];
-
-      // Create base config sheet data
-      const baseConfigData = [
-        ["Strategy Configuration"],
-        ["Strategy ID", baseConfig.strategyId || "N/A"],
-        ["Strategy Name", baseConfig.strategyName || "N/A"],
-        ["User ID", baseConfig.userId || "N/A"],
-        ["Strategy Type", baseConfig.strategyType || "N/A"],
-        ["Symbol", baseConfig.symbol || "N/A"],
-        ["Entry Time", baseConfig.entryTime || "N/A"],
-        ["Square Off Time", baseConfig.squareOffTime || "N/A"],
-        ["Execution Mode", baseConfig.executionMode || "N/A"],
-        ["Quantity Multiplier", baseConfig.quantityMultiplier || "N/A"],
-      ];
-
-      // Create legs sheet data
-      const legsData = [
-        [
-          "Leg ID",
-          "Symbol",
-          "Option Type",
-          "Strike Distance",
-          "Expiry",
-          "Action",
-          "Quantity",
-          "Order Type",
-          "Limit Price",
-          "Is Hedge",
-        ],
-        ...legs.map((leg: any) => [
-          leg.legId || "",
-          leg.symbol || "",
-          leg.optionType || "",
-          leg.strikeDistance || "",
-          leg.expiry || "",
-          leg.action || "",
-          leg.quantity || "",
-          leg.orderType || "",
-          leg.limitPrice || "",
-          leg.isHedge ? "Yes" : "No",
-        ]),
-      ];
-
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      const wsBase = XLSX.utils.aoa_to_sheet(baseConfigData);
-      const wsLegs = XLSX.utils.aoa_to_sheet(legsData);
-
-      XLSX.utils.book_append_sheet(wb, wsBase, "Configuration");
-      XLSX.utils.book_append_sheet(wb, wsLegs, "Legs");
-
-      // Save file
-      const fileName = `${strategy.strategyId}_${
-        new Date().toISOString().split("T")[0]
-      }.xlsx`;
-      XLSX.writeFile(wb, fileName);
-    } catch (err) {
-      console.error("Error exporting to Excel:", err);
-      alert("Failed to export strategy to Excel");
-    }
+    exportToExcelFn(strategy);
   };
 
   // Initialize
@@ -792,9 +296,9 @@ const DeployedStrategies: React.FC = () => {
       //   fetchOptionData();
       // }, 500);
     } else {
-      console.log(
-        "[DeployedStrategies] No open positions, stopping option data refresh"
-      );
+      // console.log(
+      //   "[DeployedStrategies] No open positions, stopping option data refresh"
+      // );
 
       // Clear interval if no open positions
       if (optionDataIntervalRef.current) {
@@ -1047,7 +551,18 @@ const DeployedStrategies: React.FC = () => {
                                     ...newLegs[legId],
                                     [field]: value,
                                   };
-                                  handleEditChange("legs", newLegs);
+
+                                  // Update editValues for UI display
+                                  setEditValues((prev: any) => ({
+                                    ...prev,
+                                    legs: newLegs,
+                                  }));
+
+                                  // Track only the specific field that changed
+                                  handleEditChange(
+                                    `legs.${legId}.${field}`,
+                                    value
+                                  );
 
                                   // If symbol changed, update strikeSteps dictionary
                                   if (field === "symbol") {
@@ -1100,6 +615,11 @@ const DeployedStrategies: React.FC = () => {
                                 onDeleteLeg={(legId: string) => {
                                   const newLegs = { ...editValues.legs };
                                   delete newLegs[legId];
+                                  setEditValues((prev: any) => ({
+                                    ...prev,
+                                    legs: newLegs,
+                                  }));
+                                  // For delete, we need to track the entire legs object
                                   handleEditChange("legs", newLegs);
                                 }}
                                 onCopyLeg={(legId: string) => {
@@ -1139,6 +659,11 @@ const DeployedStrategies: React.FC = () => {
                                       ...editValues.legs,
                                       [newLegId]: newLeg,
                                     };
+                                    setEditValues((prev: any) => ({
+                                      ...prev,
+                                      legs: newLegs,
+                                    }));
+                                    // For copy, we need to track the entire legs object
                                     handleEditChange("legs", newLegs);
                                   }
                                 }}
@@ -1239,6 +764,11 @@ const DeployedStrategies: React.FC = () => {
                                     ...editValues.legs,
                                     [newLegId]: newLeg,
                                   };
+                                  setEditValues((prev: any) => ({
+                                    ...prev,
+                                    legs: newLegs,
+                                  }));
+                                  // For add, we need to track the entire legs object
                                   handleEditChange("legs", newLegs);
                                 }}
                                 onPremiumStrikeModalOpen={(legId: string) => {

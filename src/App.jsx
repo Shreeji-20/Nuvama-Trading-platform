@@ -20,6 +20,7 @@ import ExecutionDetails from "./pages/ExecutionDetails";
 import ObservationDashboard from "./pages/ObservationDashboard";
 import ObservationTables from "./pages/ObservationTables";
 import AnimatedCounter from "./pages/AnimatedCounter";
+import MultiSubscription from "./pages/websocketTest";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -82,7 +83,7 @@ function App() {
                 /> */}
               <Route
                 path="/advanced-options-table"
-                element={<AdvancedOptionsTable />}
+                element={<MultiSubscription />}
               />
               <Route
                 path="/advanced-options-builder"
