@@ -1,34 +1,3 @@
-/**
- * usePnLCalculation Hook
- *
- * Custom hook for calculating P&L for open and closed positions.
- * Handles both SIMULATIONMODE and LIVEMODE orders.
- *
- * OPTIMIZATION:
- * =============
- * - Closed positions: Exit order fetched ONCE and cached (no repeated API calls)
- * - Open positions: Market depth fetched every second for live updates
- * - Uses useRef for cache to avoid stale closures in callbacks
- *
- * P&L CALCULATION:
- * ================
- *
- * OPEN POSITIONS (entered: true, exited: false):
- * - Entry price: response.data.fPrc
- * - Current price: Fetched from market depth (bid for BUY, ask for SELL)
- * - P&L = (Current - Entry) × Qty  [for BUY]
- * - P&L = (Entry - Current) × Qty  [for SELL]
- * - Market depth refreshed every second with live data
- *
- * CLOSED POSITIONS (entered: true, exited: true):
- * - Entry price: response.data.fPrc
- * - Exit price: Fetched from exit order ONCE (cached after first fetch)
- * - P&L = (Exit - Entry) × Qty  [for BUY]
- * - P&L = (Entry - Exit) × Qty  [for SELL]
- * - Exit order fetched only once when position is first detected as closed
- * - Subsequent refreshes skip API call and use cached data
- * - NO market depth fetching for closed positions (optimization)
- */
 
 import { useState, useCallback, useRef } from "react";
 import {
@@ -116,14 +85,8 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
       // OPTIMIZATION: Skip API call for already-fetched closed positions
       if (isExited) {
         const isCached = fetchedExitOrdersRef.current.has(orderId);
-        console.log(
-          `[P&L Calc] Order ${orderId}: exited=${isExited}, cached=${isCached}, cache size=${fetchedExitOrdersRef.current.size}`
-        );
 
         if (isCached) {
-          console.log(
-            `✓✓✓ SKIPPING ALL API CALLS for closed position ${orderId} (using cached P&L) ✓✓✓`
-          );
           setLoadingPnL((prev) => ({ ...prev, [orderId]: false }));
           return; // <<< EARLY RETURN - NO API CALLS AFTER THIS
         }
@@ -132,9 +95,6 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
       // If we reach here, it's either:
       // 1. An OPEN position (needs market depth every second)
       // 2. A CLOSED position being processed for the FIRST time (needs exit order once)
-      console.log(
-        `[P&L Calc] Proceeding with API calls for order ${orderId} (isExited=${isExited})`
-      );
 
       // Set loading state
       setLoadingPnL((prev) => ({ ...prev, [orderId]: true }));
@@ -173,7 +133,7 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
           const orderDetailsKey = order.orderDetailsKey || orderId;
 
           // Fetch exit order only once
-          console.log(`Fetching exit order for closed position ${orderId}`);
+
           const exitOrder = await strategyOrdersService.getExitOrder(
             orderDetailsKey
           );
@@ -204,19 +164,11 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
 
             // Mark this exit order as fetched
             fetchedExitOrdersRef.current.add(orderId);
-            console.log(
-              `✓ Cached exit order for ${orderId}. Cache now contains: [${Array.from(
-                fetchedExitOrdersRef.current
-              ).join(", ")}]`
-            );
           } else {
             console.error(`No exit price found for closed position ${orderId}`);
           }
         } else {
           // OPEN POSITION: Calculate unrealized P&L using market depth
-          console.log(
-            `[Market Depth] Fetching live data for open position ${orderId}`
-          );
 
           if (!order.symbol || !order.strike || !order.optionType) {
             console.warn(`Missing instrument details for order ${orderId}:`, {
@@ -311,24 +263,13 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
       const cachedClosedCount =
         closedPositions.length - uncachedClosedPositions.length;
 
-      console.log(
-        `[P&L Batch] ${openPositions.length} open + ${uncachedClosedPositions.length} new closed (${cachedClosedCount} cached closed)`
-      );
-
       // OPTIMIZATION: If no open positions and all closed are cached, skip entirely
       if (openPositions.length === 0 && uncachedClosedPositions.length === 0) {
-        console.log(
-          `[P&L Batch] ✓ No open positions, all closed cached - SKIPPING P&L calculation`
-        );
         return;
       }
 
       // Only process: open positions + uncached closed positions
       const positionsToProcess = [...openPositions, ...uncachedClosedPositions];
-
-      console.log(
-        `[P&L Batch] Processing ${positionsToProcess.length} positions`
-      );
 
       // Calculate P&L for positions that need processing
       await Promise.all(

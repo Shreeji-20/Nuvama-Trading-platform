@@ -114,12 +114,9 @@ export default function Navbar({
                 <NavLink to="/optionchain" icon="⛓️">
                   Option Chain
                 </NavLink>
-                {/* <NavLink to="/optionchaincustom" icon="🎯">
-                  Custom Option Chain
-                </NavLink> */}
-                <NavLink to="/multilegspread" icon="📈">
+                {/* <NavLink to="/multilegspread" icon="📈">
                   Multi-Leg Spread
-                </NavLink>
+                </NavLink> */}
                 {/* <NavLink to="/advanced-options" icon="🚀">
                   Advanced Options
                 </NavLink> */}
@@ -147,9 +144,9 @@ export default function Navbar({
                 {/* <NavLink to="/observation-dashboard" icon="🎯">
                   Observation Dashboard
                 </NavLink> */}
-                <NavLink to="/observation-tables" icon="📊">
+                {/* <NavLink to="/observation-tables" icon="📊">
                   Observation Tables
-                </NavLink>
+                </NavLink> */}
               </div>
             </div>
 

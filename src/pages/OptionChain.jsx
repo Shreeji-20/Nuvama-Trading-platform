@@ -7,140 +7,122 @@ import React, {
 } from "react";
 import IndexCards from "../components/IndexCards";
 import config from "../config/api";
+import { useSocket } from "../services/websocket/SocketContext";
 
 /** ---------- Config ---------- */
 const SYMBOLS = ["NIFTY", "SENSEX"];
 const EXPIRIES = ["0", "1", "2", "3"];
 
-// Fetch LTP for a symbol (same logic as IndexCards)
-async function fetchLTP(symbol) {
-  try {
-    const response = await fetch(config.buildUrl(config.ENDPOINTS.INDEX));
-    if (!response.ok) throw new Error(`Failed to fetch ${symbol} LTP`);
-    var data = await response.json();
-    data = data.filter((item) => item?.response?.data?.symbol === symbol);
-    return (
-      data[0]?.response?.data?.ltp ||
-      data[0]?.ltp ||
-      data[0]?.current_price ||
-      0
-    );
-  } catch (err) {
-    console.error(`Error fetching LTP for ${symbol}:`, err);
-    return 0;
-  }
-}
-
 // Calculate ATM strike based on LTP
 function calculateATMStrike(ltp, symbol) {
   if (!ltp || ltp === 0) return null;
-
-  const step = symbol === "NIFTY" ? 50 : 100; // NIFTY: 50 points, SENSEX: 100 points
+  const step = symbol === "NIFTY" ? 50 : 100;
   return Math.round(ltp / step) * step;
 }
 
-async function fetchOptionChain(symbol, expiry) {
-  // fetch(config.buildUrl(config.ENDPOINTS.OPTION_DATA));
+// Initial fetch of option chain data
+async function fetchInitialOptionChain(symbol, expiry) {
   const res = await fetch(config.buildUrl(config.ENDPOINTS.OPTIONDATA));
   if (!res.ok) throw new Error(`Failed to fetch ${symbol} option chain`);
-  const data = await res.json();
+  return await res.json();
+}
 
-  const rows = Object.values(
-    (data || [])
-      .filter(
-        (item) =>
-          // console.log(first)
-          item?.response?.data?.symbolname?.includes(symbol) &&
-          String(item?.response?.data?.expiry) === String(expiry)
-      )
-      .reduce((acc, r) => {
-        const d = r.response.data;
-        const strike = Number(d?.strikeprice);
+// Parse backend list or WebSocket object format to row format
+function parseWebSocketData(wsData, symbol, expiry) {
+  const rowsMap = {};
 
-        if (!acc[strike]) {
-          acc[strike] = {
-            strike,
-            ceBid: null,
-            ceAsk: null,
-            peBid: null,
-            peAsk: null,
-          };
-        }
+  // Handle array format from initial backend fetch
+  if (Array.isArray(wsData)) {
+    wsData.forEach((item) => {
+      const d = item?.response?.data;
+      if (!d) return;
 
-        if (d.optiontype === "CE") {
-          acc[strike].ceBid = d.bidValues?.[0]?.price ?? null;
-          acc[strike].ceAsk = d.askValues?.[0]?.price ?? null;
-        } else if (d.optiontype === "PE") {
-          acc[strike].peBid = d.bidValues?.[0]?.price ?? null;
-          acc[strike].peAsk = d.askValues?.[0]?.price ?? null;
-        }
+      // Filter by symbol and expiry
+      if (d.symbolname !== symbol || String(d.expiry) !== String(expiry))
+        return;
 
-        return acc;
-      }, {})
-  );
+      const strike = Number(d.strikeprice);
+      if (!strike) return;
 
-  // Fetch LTP for ATM calculation
-  const ltp = await fetchLTP(symbol);
+      if (!rowsMap[strike]) {
+        rowsMap[strike] = {
+          strike,
+          ceBid: null,
+          ceAsk: null,
+          ceLtp: null,
+          peBid: null,
+          peAsk: null,
+          peLtp: null,
+        };
+      }
 
-  return {
-    underlying: Number(data.underlying ?? 0),
-    ltp,
-    rows,
-  };
+      if (d.optiontype === "CE") {
+        rowsMap[strike].ceBid = d.bPr ? parseFloat(d.bPr) : null;
+        rowsMap[strike].ceAsk = d.aPr ? parseFloat(d.aPr) : null;
+        rowsMap[strike].ceLtp = d.ltp ? parseFloat(d.ltp) : null;
+      } else if (d.optiontype === "PE") {
+        rowsMap[strike].peBid = d.bPr ? parseFloat(d.bPr) : null;
+        rowsMap[strike].peAsk = d.aPr ? parseFloat(d.aPr) : null;
+        rowsMap[strike].peLtp = d.ltp ? parseFloat(d.ltp) : null;
+      }
+    });
+  }
+  // Handle object format from WebSocket
+  else if (typeof wsData === "object" && wsData !== null) {
+    Object.entries(wsData).forEach(([key, value]) => {
+      const d = value?.response?.data;
+      if (!d) return;
+
+      // Filter by symbol and expiry
+      if (d.symbolname !== symbol || String(d.expiry) !== String(expiry))
+        return;
+
+      const strike = Number(d.strikeprice);
+      if (!strike) return;
+
+      if (!rowsMap[strike]) {
+        rowsMap[strike] = {
+          strike,
+          ceBid: null,
+          ceAsk: null,
+          ceLtp: null,
+          peBid: null,
+          peAsk: null,
+          peLtp: null,
+        };
+      }
+
+      if (d.optiontype === "CE") {
+        rowsMap[strike].ceBid = d.bPr ? parseFloat(d.bPr) : null;
+        rowsMap[strike].ceAsk = d.aPr ? parseFloat(d.aPr) : null;
+        rowsMap[strike].ceLtp = d.ltp ? parseFloat(d.ltp) : null;
+      } else if (d.optiontype === "PE") {
+        rowsMap[strike].peBid = d.bPr ? parseFloat(d.bPr) : null;
+        rowsMap[strike].peAsk = d.aPr ? parseFloat(d.aPr) : null;
+        rowsMap[strike].peLtp = d.ltp ? parseFloat(d.ltp) : null;
+      }
+    });
+  }
+
+  return Object.values(rowsMap).sort((a, b) => a.strike - b.strike);
 }
 
 /** ---------- Table Component ---------- */
 function OptionChainTable({ defaultSymbol = "NIFTY" }) {
+  const socket = useSocket();
   const [mobileView, setMobileView] = useState(false);
-  const allFields = [
-    { key: "ceAsk", label: "CE Ask" },
-    { key: "ceBid", label: "CE Bid" },
-    { key: "strike", label: "Strike" },
-    { key: "peBid", label: "PE Bid" },
-    { key: "peAsk", label: "PE Ask" },
-    { key: "BidSpread", label: "Bid Spread" },
-    { key: "AskSpread", label: "Ask Spread" },
-  ];
-  const [mobileFields, setMobileFields] = useState([
-    "ceAsk",
-    "ceBid",
-    "strike",
-    "peBid",
-  ]);
-
-  // mobile spread mode: 'Bid' => show ceBid/peBid/BidSpread, 'Ask' => ceAsk/peAsk/AskSpread
   const [spreadMode, setSpreadMode] = useState("Bid");
-
-  // detect small screens (simple)
-  useEffect(() => {
-    // treat phones and tablets (<=1024px) as compact/mobile view
-    const m = window.matchMedia("(max-width: 1024px)");
-    const update = () => setMobileView(m.matches);
-    update();
-    m.addEventListener("change", update);
-    return () => m.removeEventListener("change", update);
-  }, []);
-  const onHeaderClick = useCallback((key) => {
-    setSort((prev) => {
-      if (prev.key !== key) return { key, dir: "asc" };
-      return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
-    });
-  }, []);
   const [symbol, setSymbol] = useState(defaultSymbol);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [underlying, setUnderlying] = useState(0);
-  const [ltp, setLtp] = useState(0);
-  const [rows, setRows] = useState([]);
   const [expiry, setExpiry] = useState("0");
-  const prevRowsRef = React.useRef(new Map());
-  const atmRowRef = useRef(null);
-
-  // Sorting
-  const [sort, setSort] = useState({ key: "strike", dir: "asc" }); // dir: 'asc' | 'desc'
-
-  // Filters (per-column numeric min/max)
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [ltp, setLtp] = useState(0);
+  const [underlying, setUnderlying] = useState(0);
+  const [rows, setRows] = useState([]);
+  const [sort, setSort] = useState({ key: "strike", dir: "asc" });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [filters, setFilters] = useState({
     strikeMin: "",
     strikeMax: "",
@@ -158,100 +140,236 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
     AskSpreadMax: "",
   });
 
-  const load = useCallback(
-    async (sym = symbol, exp = expiry, showLoading = false) => {
+  const atmRowRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const pendingUpdatesRef = useRef(new Map());
+  const lastUpdateTimeRef = useRef(Date.now());
+
+  // Detect mobile view
+  useEffect(() => {
+    const m = window.matchMedia("(max-width: 1024px)");
+    const update = () => setMobileView(m.matches);
+    update();
+    m.addEventListener("change", update);
+    return () => m.removeEventListener("change", update);
+  }, []);
+
+  // Initial data load on symbol/expiry change
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialData = async () => {
       try {
-        if (showLoading) setLoading(true);
+        setLoading(true);
         setError("");
-        const {
-          underlying,
-          ltp,
-          rows: fetchedRows,
-        } = await fetchOptionChain(sym, exp);
+        console.log(
+          `📊 Loading initial option chain for ${symbol} expiry ${expiry}`
+        );
 
-        // Use functional updates to prevent unnecessary re-renders
-        setUnderlying((prev) => {
-          const newValue = underlying || 0;
-          return prev === newValue ? prev : newValue;
+        const data = await fetchInitialOptionChain(symbol, expiry);
+        if (!isMounted) return;
+
+        console.log("📦 Initial data received:", data);
+        console.log(
+          "📦 Data type:",
+          Array.isArray(data) ? "Array" : typeof data
+        );
+        console.log(
+          "📦 Data length/keys:",
+          Array.isArray(data) ? data.length : Object.keys(data || {}).length
+        );
+
+        const parsedRows = parseWebSocketData(data, symbol, expiry);
+        console.log("📊 Parsed rows:", parsedRows.length);
+        setRows(parsedRows);
+
+        // Calculate LTP from the data (works for both array and object format)
+        let spotPrice = null;
+        if (Array.isArray(data)) {
+          const spotData = data.find(
+            (item) =>
+              item?.response?.data?.symbolname === symbol &&
+              item?.response?.data?.spotPrc
+          );
+          if (spotData?.response?.data?.spotPrc) {
+            spotPrice = parseFloat(spotData.response.data.spotPrc);
+          }
+        } else if (typeof data === "object") {
+          const spotData = Object.values(data).find(
+            (item) =>
+              item?.response?.data?.symbolname === symbol &&
+              item?.response?.data?.spotPrc
+          );
+          if (spotData?.response?.data?.spotPrc) {
+            spotPrice = parseFloat(spotData.response.data.spotPrc);
+          }
+        }
+
+        if (spotPrice) {
+          setLtp(spotPrice);
+          setUnderlying(spotPrice);
+        }
+
+        console.log(`✅ Loaded ${parsedRows.length} option strikes`);
+      } catch (err) {
+        console.error("Error loading initial data:", err);
+        if (isMounted) {
+          setError(err.message || "Failed to load option chain");
+          setRows([]);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadInitialData();
+    return () => {
+      isMounted = false;
+    };
+  }, [symbol, expiry]);
+
+  // WebSocket subscription for live updates
+  useEffect(() => {
+    console.log(`🔔 Subscribing to option chain WebSocket for ${symbol}`);
+    setWsConnected(true);
+
+    const handleWebSocketUpdate = (wsData) => {
+      console.log("📥 WebSocket data received:", wsData);
+
+      if (!wsData) {
+        console.warn("⚠️ WebSocket data is empty");
+        return;
+      }
+
+      setLastUpdateTime(new Date());
+
+      // Store updates in a pending map for batch processing
+      let processedCount = 0;
+      Object.entries(wsData).forEach(([key, value]) => {
+        const d = value?.response?.data;
+        if (!d) {
+          console.log(`⚠️ No data in key: ${key}`, value);
+          return;
+        }
+
+        console.log(`📊 Processing: ${key}`, {
+          symbolname: d.symbolname,
+          expiry: d.expiry,
+          strikeprice: d.strikeprice,
+          optiontype: d.optiontype,
+          filtering: { symbol, expiry },
         });
 
-        setLtp((prev) => {
-          const newValue = ltp || 0;
-          return prev === newValue ? prev : newValue;
-        });
+        if (
+          !d ||
+          d.symbolname !== symbol ||
+          String(d.expiry) !== String(expiry)
+        ) {
+          console.log(
+            `❌ Filtered out: ${key} (symbolname: ${d.symbolname}, expiry: ${d.expiry})`
+          );
+          return;
+        }
 
-        // Merge incoming rows with previous rows to preserve object identity
+        processedCount++;
+        const strike = Number(d.strikeprice);
+        if (!strike) {
+          console.warn(`⚠️ Invalid strike: ${d.strikeprice}`);
+          return;
+        }
+
+        if (!pendingUpdatesRef.current.has(strike)) {
+          pendingUpdatesRef.current.set(strike, {});
+        }
+
+        const pending = pendingUpdatesRef.current.get(strike);
+
+        if (d.optiontype === "CE") {
+          pending.ceBid = d.bPr ? parseFloat(d.bPr) : null;
+          pending.ceAsk = d.aPr ? parseFloat(d.aPr) : null;
+          pending.ceLtp = d.ltp ? parseFloat(d.ltp) : null;
+        } else if (d.optiontype === "PE") {
+          pending.peBid = d.bPr ? parseFloat(d.bPr) : null;
+          pending.peAsk = d.aPr ? parseFloat(d.aPr) : null;
+          pending.peLtp = d.ltp ? parseFloat(d.ltp) : null;
+        }
+
+        // Update LTP and underlying if spot price is available
+        if (d.spotPrc) {
+          const spotPrice = parseFloat(d.spotPrc);
+          setLtp(spotPrice);
+          setUnderlying(spotPrice);
+        }
+      });
+
+      console.log(
+        `✅ Processed ${processedCount} items, pending updates: ${pendingUpdatesRef.current.size} strikes`
+      );
+
+      // Schedule RAF update if not already scheduled
+      if (!animationFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(applyPendingUpdates);
+      }
+    };
+
+    const applyPendingUpdates = () => {
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+
+      // Throttle updates to ~60fps max
+      if (timeSinceLastUpdate < 16) {
+        animationFrameRef.current = requestAnimationFrame(applyPendingUpdates);
+        return;
+      }
+
+      if (pendingUpdatesRef.current.size > 0) {
         setRows((prevRows) => {
-          const prevMap = prevRowsRef.current || new Map();
-          const merged = (fetchedRows || []).map((r) => {
-            const key = r.strike;
-            const prev = prevMap.get(key);
-            if (
-              prev &&
-              prev.ceBid === r.ceBid &&
-              prev.ceAsk === r.ceAsk &&
-              prev.peBid === r.peBid &&
-              prev.peAsk === r.peAsk
-            ) {
-              return prev; // reuse previous object if values unchanged
+          const rowsMap = new Map(prevRows.map((r) => [r.strike, { ...r }]));
+
+          pendingUpdatesRef.current.forEach((updates, strike) => {
+            if (rowsMap.has(strike)) {
+              Object.assign(rowsMap.get(strike), updates);
+            } else {
+              rowsMap.set(strike, {
+                strike,
+                ceBid: null,
+                ceAsk: null,
+                ceLtp: null,
+                peBid: null,
+                peAsk: null,
+                peLtp: null,
+                ...updates,
+              });
             }
-            return r;
           });
 
-          // Only update if there are actual changes
-          const hasChanges =
-            merged.length !== prevRows.length ||
-            merged.some((row, index) => {
-              const prevRow = prevRows[index];
-              return (
-                !prevRow ||
-                prevRow.strike !== row.strike ||
-                prevRow.ceBid !== row.ceBid ||
-                prevRow.ceAsk !== row.ceAsk ||
-                prevRow.peBid !== row.peBid ||
-                prevRow.peAsk !== row.peAsk
-              );
-            });
+          pendingUpdatesRef.current.clear();
+          lastUpdateTimeRef.current = now;
 
-          if (!hasChanges) {
-            return prevRows; // Return same reference if no changes
-          }
-
-          // update ref map
-          prevRowsRef.current = new Map(merged.map((r) => [r.strike, r]));
-          return merged;
+          return Array.from(rowsMap.values()).sort(
+            (a, b) => a.strike - b.strike
+          );
         });
-      } catch (e) {
-        console.error(e);
-        setError(e.message || "Failed to load data");
-        setRows([]);
-        setUnderlying(0);
-        setLtp(0);
-      } finally {
-        if (showLoading) setLoading(false);
       }
-    },
-    [] // Remove dependencies to prevent unnecessary recreations
-  );
 
-  useEffect(() => {
-    // Clear previous data when symbol/expiry changes
-    prevRowsRef.current = new Map();
+      animationFrameRef.current = null;
+    };
 
-    // initial load (show loading UI)
-    load(symbol, expiry, true);
+    socket.subscribe("reduced_quotes", handleWebSocketUpdate);
 
-    // Set up polling interval
-    const id = setInterval(() => {
-      load(symbol, expiry, false);
-    }, 1000);
+    return () => {
+      console.log("🔕 Unsubscribing from option chain WebSocket");
+      setWsConnected(false);
+      socket.unsubscribe("reduced_quotes", handleWebSocketUpdate);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      pendingUpdatesRef.current.clear();
+    };
+  }, [symbol, expiry]); // Remove socket from dependencies
 
-    return () => clearInterval(id);
-  }, [symbol, expiry]); // Only depend on symbol and expiry
-
-  // Keep rows identity stable; compute spreads on-demand where needed
-  const withComputed = useMemo(() => rows, [rows]);
-
+  // Compute spread on-demand
   const computeSpread = useCallback((r, type) => {
     if (!r) return null;
     if (type === "BidSpread") {
@@ -267,17 +385,13 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
     return r[type];
   }, []);
 
+  // Calculate ATM strike
   const atmStrike = useMemo(() => {
-    if (!ltp || ltp === 0 || !withComputed.length) return null;
-
-    // Calculate ATM strike based on LTP and symbol
+    if (!ltp || ltp === 0 || !rows.length) return null;
     const calculatedATM = calculateATMStrike(ltp, symbol);
 
-    // Find the closest available strike to the calculated ATM
     if (calculatedATM) {
-      const availableStrikes = withComputed
-        .map((r) => r.strike)
-        .sort((a, b) => a - b);
+      const availableStrikes = rows.map((r) => r.strike).sort((a, b) => a - b);
       let closest = availableStrikes[0];
       let minDiff = Math.abs(availableStrikes[0] - calculatedATM);
 
@@ -291,56 +405,44 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
       return closest;
     }
 
-    // Fallback to nearest strike to LTP
-    let best = withComputed[0]?.strike ?? null;
-    let bestDiff = best != null ? Math.abs(best - ltp) : Infinity;
-    for (const r of withComputed) {
-      const d = Math.abs(r.strike - ltp);
-      if (d < bestDiff) {
-        bestDiff = d;
-        best = r.strike;
-      }
-    }
-    return best;
-  }, [ltp, symbol, withComputed]);
+    return rows[0]?.strike ?? null;
+  }, [ltp, symbol, rows]);
 
-  const filterFn = useCallback(
-    (list) => {
-      const f = filters;
-      const num = (v) =>
-        v === "" || v === null || v === undefined ? null : Number(v);
-      const fks = {
-        strike: [num(f.strikeMin), num(f.strikeMax)],
-        ceBid: [num(f.ceBidMin), num(f.ceBidMax)],
-        ceAsk: [num(f.ceAskMin), num(f.ceAskMax)],
-        peBid: [num(f.peBidMin), num(f.peBidMax)],
-        peAsk: [num(f.peAskMin), num(f.peAskMax)],
-        BidSpread: [num(f.BidSpreadMin), num(f.BidSpreadMax)],
-        AskSpread: [num(f.AskSpreadMin), num(f.AskSpreadMax)],
-      };
-      return list.filter((r) => {
-        const checks = Object.entries(fks).map(([key, [min, max]]) => {
-          const val =
-            key === "BidSpread" || key === "AskSpread"
-              ? computeSpread(r, key)
-              : r[key];
-          if (val == null) return true; // treat missing as pass
-          if (min != null && val < min) return false;
-          if (max != null && val > max) return false;
-          return true;
-        });
-        return checks.every(Boolean);
+  // Filter rows
+  const filtered = useMemo(() => {
+    const f = filters;
+    const num = (v) =>
+      v === "" || v === null || v === undefined ? null : Number(v);
+    const fks = {
+      strike: [num(f.strikeMin), num(f.strikeMax)],
+      ceBid: [num(f.ceBidMin), num(f.ceBidMax)],
+      ceAsk: [num(f.ceAskMin), num(f.ceAskMax)],
+      peBid: [num(f.peBidMin), num(f.peBidMax)],
+      peAsk: [num(f.peAskMin), num(f.peAskMax)],
+      BidSpread: [num(f.BidSpreadMin), num(f.BidSpreadMax)],
+      AskSpread: [num(f.AskSpreadMin), num(f.AskSpreadMax)],
+    };
+
+    return rows.filter((r) => {
+      const checks = Object.entries(fks).map(([key, [min, max]]) => {
+        const val =
+          key === "BidSpread" || key === "AskSpread"
+            ? computeSpread(r, key)
+            : r[key];
+        if (val == null) return true;
+        if (min != null && val < min) return false;
+        if (max != null && val > max) return false;
+        return true;
       });
-    },
-    [filters]
-  );
-  const filtered = useMemo(
-    () => filterFn(withComputed),
-    [withComputed, filterFn]
-  );
+      return checks.every(Boolean);
+    });
+  }, [rows, filters, computeSpread]);
+
+  // Sort rows
   const sorted = useMemo(() => {
     const arr = [...filtered];
     const { key, dir } = sort;
+
     const getVal = (obj, key) => {
       const v =
         key === "BidSpread" || key === "AskSpread"
@@ -348,18 +450,16 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
           : obj[key];
       return v == null ? -Infinity : v;
     };
+
     arr.sort((a, b) => {
       const av = getVal(a, key);
       const bv = getVal(b, key);
       if (av === bv) return 0;
       return dir === "asc" ? (av < bv ? -1 : 1) : av > bv ? -1 : 1;
     });
-    // ensure stable ordering by strike when sort key is strike or unspecified
-    if (!key || key === "strike") {
-      arr.sort((a, b) => (a.strike || 0) - (b.strike || 0));
-    }
+
     return arr;
-  }, [filtered, sort]);
+  }, [filtered, sort, computeSpread]);
 
   // Auto-scroll to ATM row when atmStrike changes (debounced)
   useEffect(() => {
@@ -378,7 +478,27 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
       return () => clearTimeout(timer);
     }
   }, [atmStrike]); // Remove sorted.length dependency to prevent frequent triggers
-  const memoOnHeaderClick = useCallback(onHeaderClick, []);
+
+  // Header click handler for sorting
+  const onHeaderClick = useCallback((key) => {
+    setSort((prev) => ({
+      key,
+      dir: prev.key === key && prev.dir === "asc" ? "desc" : "asc",
+    }));
+  }, []);
+
+  const memoOnHeaderClick = useCallback(onHeaderClick, [onHeaderClick]);
+
+  // Field definitions for table headers
+  const allFields = [
+    { key: "ceAsk", label: "CE Ask" },
+    { key: "ceBid", label: "CE Bid" },
+    { key: "strike", label: "Strike" },
+    { key: "peBid", label: "PE Bid" },
+    { key: "peAsk", label: "PE Ask" },
+    { key: "BidSpread", label: "Bid Spread" },
+    { key: "AskSpread", label: "Ask Spread" },
+  ];
 
   const th = (label, key) => {
     const active = sort.key === key;
@@ -657,7 +777,7 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
                   : `${expiry} Week${expiry !== "1" ? "s" : ""} Expiry`}{" "}
                 • Real-time Option Data
               </p>
-              <div className="flex items-center gap-2 text-light-text-secondary dark:text-dark-text-secondary mt-2">
+              <div className="flex items-center gap-2 text-light-text-secondary dark:text-dark-text-secondary mt-2 flex-wrap">
                 <span className="text-xs">LTP:</span>
                 <span className="text-xs font-semibold bg-light-accent/10 dark:bg-dark-accent/20 px-2 py-1 rounded-md text-light-accent dark:text-dark-accent">
                   {ltp ? `₹${ltp.toLocaleString()}` : "-"}
@@ -666,13 +786,29 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
                 <span className="text-xs font-semibold bg-light-accent/10 dark:bg-dark-accent/20 px-2 py-1 rounded-md text-light-accent dark:text-dark-accent">
                   {underlying ? `₹${underlying.toLocaleString()}` : "-"}
                 </span>
-                {loading && (
+                <span className="text-xs">|</span>
+                {wsConnected ? (
                   <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 dark:bg-dark-success rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600 dark:text-dark-success">
-                      Live
+                    <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Live WebSocket
                     </span>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Disconnected
+                    </span>
+                  </div>
+                )}
+                {lastUpdateTime && (
+                  <>
+                    <span className="text-xs">| Last:</span>
+                    <span className="text-xs font-medium">
+                      {lastUpdateTime.toLocaleTimeString()}
+                    </span>
+                  </>
                 )}
               </div>
             </div>
@@ -724,7 +860,9 @@ function OptionChainTable({ defaultSymbol = "NIFTY" }) {
 
             <div className="flex gap-2">
               <button
-                onClick={useCallback(() => load(symbol), [load, symbol])}
+                onClick={useCallback(() => {
+                  fetchInitialOptionChain(symbol, expiry);
+                }, [symbol, expiry])}
                 disabled={loading}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-dark-accent dark:hover:bg-blue-500 border border-blue-600 dark:border-dark-accent text-white font-medium text-xs transition-all duration-200 disabled:opacity-50"
               >
@@ -1430,7 +1568,7 @@ export default function OptionChains() {
 
         {/* Index Cards */}
         <div className="max-w-7xl mx-auto mb-8">
-          <IndexCards indices={["NIFTY", "SENSEX"]} className="" />
+          <IndexCards indices={["NIFTY"]} className="" />
         </div>
 
         {/* Option Chain Tables */}

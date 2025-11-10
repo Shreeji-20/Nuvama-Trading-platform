@@ -72,13 +72,8 @@ export const useStrategyOrders = (
     (strategyId: string) => {
       // Clear any existing interval
       if (intervalRefs.current[strategyId]) {
-        console.log(`Clearing existing interval for strategy ${strategyId}`);
         clearInterval(intervalRefs.current[strategyId]);
       }
-
-      console.log(
-        `Starting auto-refresh for strategy ${strategyId} with interval ${refreshInterval}ms`
-      );
 
       // Fetch immediately
       fetchOrders(strategyId);
@@ -89,7 +84,6 @@ export const useStrategyOrders = (
       }, refreshInterval);
 
       intervalRefs.current[strategyId] = intervalId;
-      console.log(`Active intervals:`, Object.keys(intervalRefs.current));
     },
     [fetchOrders, refreshInterval]
   );
@@ -99,18 +93,12 @@ export const useStrategyOrders = (
    */
   const stopAutoRefresh = useCallback((strategyId: string) => {
     if (intervalRefs.current[strategyId]) {
-      console.log(`Stopping auto-refresh for strategy ${strategyId}`);
       clearInterval(intervalRefs.current[strategyId]);
       delete intervalRefs.current[strategyId];
-      console.log(`Active intervals:`, Object.keys(intervalRefs.current));
     } else {
-      console.log(`No active interval found for strategy ${strategyId}`);
     }
   }, []);
 
-  /**
-   * Clear orders for a specific strategy
-   */
   const clearOrders = useCallback((strategyId: string) => {
     setOrders((prev) => {
       const newOrders = { ...prev };
