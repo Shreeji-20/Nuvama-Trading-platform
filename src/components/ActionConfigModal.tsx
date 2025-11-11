@@ -88,13 +88,13 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   // Handle close with validation
   const handleClose = () => {
-    // Ensure actionCount is at least 1 before closing
+    // Silently set actionCount to 1 if it's 0 or invalid
     const currentCount =
       typeof config.actionCount === "string"
         ? parseInt(config.actionCount)
         : config.actionCount;
 
-    if (!currentCount || currentCount <= 0) {
+    if (!currentCount || currentCount <= 0 || isNaN(currentCount)) {
       onConfigChange("actionCount", 1);
     }
 
@@ -182,9 +182,6 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               min="1"
               placeholder="Enter action count (default: 1)"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Minimum value is 1. Defaults to 1 if empty or invalid.
-            </p>
           </div>
 
           {/* Order At Broker */}
