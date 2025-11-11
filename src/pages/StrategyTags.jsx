@@ -39,7 +39,7 @@ const StrategyTags = () => {
   // Helper to get user info for display
   const [userInfoMap, setUserInfoMap] = useState({}); // userId -> username mapping
 
-  const API_BASE_URL = "http://localhost:8000";
+  const API_BASE_URL = config.API_BASE_URL;
 
   // Fetch all users for selection
   const fetchUsers = async () => {

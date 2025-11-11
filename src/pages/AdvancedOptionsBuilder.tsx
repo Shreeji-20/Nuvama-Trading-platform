@@ -9,6 +9,7 @@ import StoplossSettingsTab from "../components/StoplossSettingsTab";
 import ExitSettingsTab from "../components/ExitSettingsTab";
 import DynamicHedgeTab from "../components/DynamicHedgeTab";
 import AtBrokerTab from "../components/AtBrokerTab";
+import config from "../config/api";
 import type {
   Underlying,
   ExecutionMode,
@@ -152,7 +153,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
   });
 
   // API Base URL
-  const API_BASE_URL = "http://localhost:8000";
+  const API_BASE_URL = config.API_BASE_URL;
 
   // Options for execution parameters
   const productOptions: Product[] = ["NRML", "MIS", "CNC"];
