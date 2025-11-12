@@ -15,6 +15,7 @@ import AtBrokerTab from "../components/AtBrokerTab";
 import ExecutionParametersTab from "../components/ExecutionParametersTab";
 import StartTradingButton from "../components/StartTradingButton";
 import StopTradingButton from "../components/StopTradingButton";
+import PauseTradingButton from "../components/PauseTradingButton";
 import { useStrategyOrders } from "../hooks/useStrategyOrders";
 import { usePnLCalculation } from "../hooks/usePnLCalculation";
 import {
@@ -33,6 +34,13 @@ import {
   isOrderPending,
   isOrderCompletedOrFinished,
 } from "../constants/deployedStrategies.constants";
+import {
+  handleStartTrading as startGlobalTrading,
+  handleStopTrading as stopGlobalTrading,
+  handlePauseTrading as pauseGlobalTrading,
+  handleStrategyStatusChange as changeStrategyStatus,
+  type StrategyStatus,
+} from "./DeployedStrategiesFunctions/tradingControls";
 
 const DeployedStrategies: React.FC = () => {
   // Symbol options for dropdown
@@ -56,7 +64,13 @@ const DeployedStrategies: React.FC = () => {
     string | null
   >(null);
   const [isTrading, setIsTrading] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [tradingLoading, setTradingLoading] = useState(false);
+
+  // Individual strategy trading status: 'stopped' | 'running' | 'paused'
+  const [strategyStatus, setStrategyStatus] = useState<
+    Record<string, StrategyStatus>
+  >({});
 
   // Use custom hooks for orders and P&L
   const {
@@ -643,40 +657,41 @@ const DeployedStrategies: React.FC = () => {
     }
   }, []);
 
-  // Handle Start Trading
+  // Handle Start Trading - wrapper for global trading control
   const handleStartTrading = async () => {
-    try {
-      setTradingLoading(true);
-      // TODO: Implement start trading API call
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-      setIsTrading(true);
-      alert("Trading started successfully!");
-    } catch (error: any) {
-      console.error("Error starting trading:", error);
-      alert(`Failed to start trading: ${error.message}`);
-    } finally {
-      setTradingLoading(false);
-    }
+    await startGlobalTrading({
+      setIsTrading,
+      setIsPaused,
+      setTradingLoading,
+    });
   };
 
-  // Handle Stop Trading
+  // Handle Stop Trading - wrapper for global trading control
   const handleStopTrading = async () => {
-    if (!confirm("Are you sure you want to stop trading?")) {
-      return;
-    }
+    await stopGlobalTrading({
+      setIsTrading,
+      setIsPaused,
+      setTradingLoading,
+    });
+  };
 
-    try {
-      setTradingLoading(true);
-      // TODO: Implement stop trading API call
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-      setIsTrading(false);
-      alert("Trading stopped successfully!");
-    } catch (error: any) {
-      console.error("Error stopping trading:", error);
-      alert(`Failed to stop trading: ${error.message}`);
-    } finally {
-      setTradingLoading(false);
-    }
+  // Handle Pause Trading - wrapper for global trading control
+  const handlePauseTrading = async () => {
+    await pauseGlobalTrading(isPaused, {
+      setIsTrading,
+      setIsPaused,
+      setTradingLoading,
+    });
+  };
+
+  // Handle individual strategy status change - wrapper for strategy-wise control
+  const handleStrategyStatusChange = async (
+    strategyId: string,
+    newStatus: StrategyStatus
+  ) => {
+    await changeStrategyStatus(strategyId, newStatus, strategyStatus, {
+      setStrategyStatus,
+    });
   };
 
   // Export strategy to Excel
@@ -851,6 +866,11 @@ const DeployedStrategies: React.FC = () => {
                 disabled={isTrading || tradingLoading}
                 loading={tradingLoading && !isTrading}
               />
+              <PauseTradingButton
+                onClick={handlePauseTrading}
+                disabled={!isTrading || tradingLoading}
+                loading={tradingLoading}
+              />
               <StopTradingButton
                 onClick={handleStopTrading}
                 disabled={!isTrading || tradingLoading}
@@ -894,6 +914,9 @@ const DeployedStrategies: React.FC = () => {
                       onSave: () => saveEdit(strategy.strategyId),
                       onCancelEdit: cancelEditing,
                       ordersSummary: null,
+                      strategyStatus:
+                        strategyStatus[strategy.strategyId] || "stopped",
+                      onStrategyStatusChange: handleStrategyStatusChange,
                     } as any)}
                   />
 

@@ -7,6 +7,9 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Play,
+  Pause,
+  Square,
 } from "lucide-react";
 
 const StrategyCard = memo(
@@ -22,6 +25,8 @@ const StrategyCard = memo(
     ordersSummary,
     onExportToExcel,
     onCopyStrategy,
+    strategyStatus = "stopped",
+    onStrategyStatusChange,
   }) => {
     return (
       <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -122,6 +127,53 @@ const StrategyCard = memo(
                 </>
               )}
             </div>
+
+            {/* Trading Status Radio Buttons */}
+            <div className="flex items-center gap-1 mr-3 bg-white dark:bg-gray-700 rounded-lg p-1.5 border border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() =>
+                  onStrategyStatusChange?.(strategy.strategyId, "running")
+                }
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+                  strategyStatus === "running"
+                    ? "bg-green-500 text-white shadow-md"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
+                }`}
+                title="Start Trading"
+              >
+                <Play className="w-3 h-3" />
+                <span className="hidden sm:inline">Start</span>
+              </button>
+              <button
+                onClick={() =>
+                  onStrategyStatusChange?.(strategy.strategyId, "paused")
+                }
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+                  strategyStatus === "paused"
+                    ? "bg-yellow-500 text-white shadow-md"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
+                }`}
+                title="Pause Trading"
+              >
+                <Pause className="w-3 h-3" />
+                <span className="hidden sm:inline">Pause</span>
+              </button>
+              <button
+                onClick={() =>
+                  onStrategyStatusChange?.(strategy.strategyId, "stopped")
+                }
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+                  strategyStatus === "stopped"
+                    ? "bg-red-500 text-white shadow-md"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
+                }`}
+                title="Stop Trading"
+              >
+                <Square className="w-3 h-3" />
+                <span className="hidden sm:inline">Stop</span>
+              </button>
+            </div>
+
             {isEditing ? (
               <>
                 <button

@@ -177,7 +177,7 @@ export const usePnLCalculation = (): UsePnLCalculationReturn => {
           const exitOrder = await strategyOrdersService.getExitOrder(
             orderDetailsKey
           );
-
+          console.log(`Exit order for ${orderId}:`, exitOrder);
           if (exitOrder?.response?.data?.fPrc) {
             exitPrice = parseFloat(exitOrder.response.data.fPrc);
 
