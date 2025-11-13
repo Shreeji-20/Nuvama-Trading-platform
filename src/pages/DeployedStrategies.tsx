@@ -22,7 +22,9 @@ import {
   TabNavigation,
   EmptyState,
   LoadingSpinner,
+  StrategiesFilter,
 } from "../components/DeployedStrategies";
+import type { FilterOptions } from "../components/DeployedStrategies/StrategiesFilter";
 import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Strategy, Order } from "../types/deployedStrategies.types";
 import { StrategyTag } from "../types/strategy.types";
@@ -85,6 +87,16 @@ const DeployedStrategies: React.FC = () => {
   const [strategyStatus, setStrategyStatus] = useState<
     Record<string, StrategyStatus>
   >({});
+
+  // Filter states - now using FilterOptions type
+  const [filters, setFilters] = useState<FilterOptions>({
+    symbol: "",
+    tag: "",
+    status: "",
+    showSelectedOnly: false,
+    executionMode: "",
+    searchText: "",
+  });
 
   // Use custom hooks for tabs, orders and P&L
   const {
@@ -253,6 +265,70 @@ const DeployedStrategies: React.FC = () => {
     });
   };
 
+  // Toggle isSelectedForTrading
+  const toggleSelectedForTrading = (strategyId: string) => {
+    setStrategies((prevStrategies) =>
+      prevStrategies.map((strategy) =>
+        strategy.strategyId === strategyId
+          ? {
+              ...strategy,
+              isSelectedForTrading: !strategy.isSelectedForTrading,
+            }
+          : strategy
+      )
+    );
+  };
+
+  // Apply filters to strategies
+  const filteredStrategies = strategies.filter((strategy) => {
+    // Filter by search text
+    if (filters.searchText) {
+      const searchLower = filters.searchText.toLowerCase();
+      const strategyId = strategy.strategyId?.toLowerCase() || "";
+      const strategyName =
+        (strategy.config as any)?.baseConfig?.strategyName?.toLowerCase() || "";
+      if (
+        !strategyId.includes(searchLower) &&
+        !strategyName.includes(searchLower)
+      ) {
+        return false;
+      }
+    }
+
+    // Filter by symbol
+    if (filters.symbol && strategy.symbols) {
+      const hasSymbol = strategy.symbols.some(
+        (symbol) => symbol.toLowerCase() === filters.symbol.toLowerCase()
+      );
+      if (!hasSymbol) return false;
+    }
+
+    // Filter by tag
+    if (filters.tag) {
+      const strategyTag = strategy.config?.executionParams?.strategyTag || "";
+      if (strategyTag.toLowerCase() !== filters.tag.toLowerCase()) return false;
+    }
+
+    // Filter by status
+    if (filters.status) {
+      const status = strategyStatus[strategy.strategyId] || "stopped";
+      if (status !== filters.status) return false;
+    }
+
+    // Filter by execution mode
+    if (filters.executionMode) {
+      const mode = (strategy.config as any)?.baseConfig?.executionMode || "";
+      if (mode !== filters.executionMode) return false;
+    }
+
+    // Filter by selected only
+    if (filters.showSelectedOnly && !strategy.isSelectedForTrading) {
+      return false;
+    }
+
+    return true;
+  });
+
   // Initialize
   useEffect(() => {
     // Function to fetch data
@@ -378,6 +454,16 @@ const DeployedStrategies: React.FC = () => {
           </div>
         </div>
 
+        {/* Filters Card */}
+        <StrategiesFilter
+          filters={filters}
+          onFiltersChange={setFilters}
+          strategies={strategies}
+          filteredStrategies={filteredStrategies}
+          availableTags={availableTags}
+          symbolOptions={symbolOptions}
+        />
+
         {/* Strategies List */}
         {strategies.length === 0 ? (
           <EmptyState
@@ -385,9 +471,15 @@ const DeployedStrategies: React.FC = () => {
             message="No strategies deployed yet"
             description="Deploy a strategy to see it here"
           />
+        ) : filteredStrategies.length === 0 ? (
+          <EmptyState
+            icon="🔍"
+            message="No strategies match the filters"
+            description="Try adjusting your filter criteria"
+          />
         ) : (
           <div className="space-y-4">
-            {strategies.map((strategy) => {
+            {filteredStrategies.map((strategy) => {
               const isExpanded = expandedStrategy === strategy.strategyId;
               const isEditing = editingStrategy === strategy.strategyId;
               const orders = strategyOrders[strategy.strategyId];
@@ -415,6 +507,10 @@ const DeployedStrategies: React.FC = () => {
                       strategyStatus:
                         strategyStatus[strategy.strategyId] || "stopped",
                       onStrategyStatusChange: handleStrategyStatusChange,
+                      isSelectedForTrading:
+                        strategy.isSelectedForTrading || false,
+                      onToggleSelected: () =>
+                        toggleSelectedForTrading(strategy.strategyId),
                     } as any)}
                   />
 

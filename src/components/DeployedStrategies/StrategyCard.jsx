@@ -27,6 +27,8 @@ const StrategyCard = memo(
     onCopyStrategy,
     strategyStatus = "stopped",
     onStrategyStatusChange,
+    isSelectedForTrading = false,
+    onToggleSelected,
   }) => {
     return (
       <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -126,6 +128,21 @@ const StrategyCard = memo(
                   )}
                 </>
               )}
+            </div>
+
+            {/* Selected for Trading Checkbox */}
+            <div className="mr-3">
+              <label className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-650 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isSelectedForTrading}
+                  onChange={onToggleSelected}
+                  className="w-3.5 h-3.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-600 dark:border-gray-500"
+                />
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Selected
+                </span>
+              </label>
             </div>
 
             {/* Trading Status Radio Buttons */}

@@ -5,3 +5,4 @@ export { default as OrderRow } from "./OrderRow";
 export { default as LiveIndicator } from "./LiveIndicator";
 export { default as TabNavigation } from "./TabNavigation";
 export { LoadingSpinner, EmptyState } from "./UIStates";
+export { default as StrategiesFilter } from "./StrategiesFilter";

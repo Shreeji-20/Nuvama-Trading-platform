@@ -218,6 +218,7 @@ export interface DeployedStrategy {
   symbols?: string[];
   timestamp: string;
   config: StrategyConfiguration;
+  isSelectedForTrading?: boolean;
 }
 
 // Strategy summary data
