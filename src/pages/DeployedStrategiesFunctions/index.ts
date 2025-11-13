@@ -11,12 +11,14 @@ export {
   handleStartTrading,
   handleStopTrading,
   handlePauseTrading,
+  fetchGlobalTradingState,
 
   // Strategy-Wise Trading Control Functions
   handleStrategyStatusChange,
   startStrategy,
   pauseStrategy,
   stopStrategy,
+  fetchStrategyTradingState,
 
   // Utility Functions
   getStrategyStatus,

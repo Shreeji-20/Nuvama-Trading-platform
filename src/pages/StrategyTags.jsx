@@ -23,7 +23,7 @@ const StrategyTags = () => {
       modifyOptions: {
         priceType: "LTP",
         depthIndex: 0,
-        betterPriceLogicType: "Absolute",
+        betterPriceLogicType: "None",
         betterPriceLogicValue: 0,
       },
     },
@@ -160,6 +160,20 @@ const StrategyTags = () => {
 
       const method = editingTagId ? "PUT" : "POST";
 
+      // Prepare global settings with default value for betterPriceLogicValue if empty
+      const globalSettings = {
+        ...formData.globalSettings,
+        modifyOptions: {
+          ...formData.globalSettings.modifyOptions,
+          betterPriceLogicValue:
+            formData.globalSettings.modifyOptions.betterPriceLogicValue === ""
+              ? 0
+              : parseFloat(
+                  formData.globalSettings.modifyOptions.betterPriceLogicValue
+                ) || 0,
+        },
+      };
+
       const response = await fetch(endpoint, {
         method: method,
         headers: {
@@ -169,7 +183,7 @@ const StrategyTags = () => {
           tagName: formData.tagName.trim(),
           description: formData.description.trim(),
           userMultipliers: formData.userMultipliers,
-          globalSettings: formData.globalSettings,
+          globalSettings: globalSettings,
         }),
       });
 
@@ -211,7 +225,7 @@ const StrategyTags = () => {
         modifyOptions: {
           priceType: "LTP",
           depthIndex: 0,
-          betterPriceLogicType: "Absolute",
+          betterPriceLogicType: "None",
           betterPriceLogicValue: 0,
         },
       },
@@ -239,7 +253,7 @@ const StrategyTags = () => {
         modifyOptions: {
           priceType: "LTP",
           depthIndex: 0,
-          betterPriceLogicType: "Absolute",
+          betterPriceLogicType: "None",
           betterPriceLogicValue: 0,
         },
       },
@@ -682,8 +696,10 @@ const StrategyTags = () => {
                       }
                       className="w-28 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
+                      <option value="None">None</option>
                       <option value="Absolute">Absolute</option>
                       <option value="Percentage">Percentage</option>
+                      <option value="Ticks">Ticks</option>
                     </select>
                   </div>
                   <div>
@@ -691,7 +707,7 @@ const StrategyTags = () => {
                       Better Price Value
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       value={
                         formData.globalSettings.modifyOptions
                           .betterPriceLogicValue
@@ -703,14 +719,12 @@ const StrategyTags = () => {
                             ...formData.globalSettings,
                             modifyOptions: {
                               ...formData.globalSettings.modifyOptions,
-                              betterPriceLogicValue:
-                                parseFloat(e.target.value) || 0,
+                              betterPriceLogicValue: e.target.value,
                             },
                           },
                         })
                       }
-                      step="0.01"
-                      min="0"
+                      placeholder="0"
                       className="w-20 px-2 py-1 text-[0.6rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     />
                   </div>

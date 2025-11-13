@@ -14,29 +14,69 @@ export interface GlobalTradingHandlers {
 }
 
 /**
+ * Fetch current global trading state from backend
+ */
+export const fetchGlobalTradingState = async (
+  handlers: GlobalTradingHandlers
+) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/global-trading-state`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch global trading state: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    const state = data.state; // "START", "STOP", or "PAUSE"
+
+    // Update local state based on backend state
+    if (state === "START") {
+      handlers.setIsTrading(true);
+      handlers.setIsPaused(false);
+    } else if (state === "PAUSE") {
+      handlers.setIsTrading(true);
+      handlers.setIsPaused(true);
+    } else {
+      // STOP
+      handlers.setIsTrading(false);
+      handlers.setIsPaused(false);
+    }
+
+    return { success: true, state };
+  } catch (error: any) {
+    console.error("Error fetching global trading state:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Handle global start trading
  */
 export const handleStartTrading = async (handlers: GlobalTradingHandlers) => {
   try {
     handlers.setTradingLoading(true);
 
-    // TODO: Implement start trading API call
-    // const response = await fetch(`${API_BASE_URL}/trading/start`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to start trading: ${response.status}`);
-    // }
+    const response = await fetch(`${API_BASE_URL}/global-trading-state`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ state: "START" }),
+    });
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!response.ok) {
+      throw new Error(`Failed to start trading: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     handlers.setIsTrading(true);
-    alert("Trading started successfully!");
+    handlers.setIsPaused(false);
+    alert(data.message || "Trading started successfully!");
   } catch (error: any) {
     console.error("Error starting trading:", error);
     alert(`Failed to start trading: ${error.message}`);
@@ -56,24 +96,23 @@ export const handleStopTrading = async (handlers: GlobalTradingHandlers) => {
   try {
     handlers.setTradingLoading(true);
 
-    // TODO: Implement stop trading API call
-    // const response = await fetch(`${API_BASE_URL}/trading/stop`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to stop trading: ${response.status}`);
-    // }
+    const response = await fetch(`${API_BASE_URL}/global-trading-state`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ state: "STOP" }),
+    });
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!response.ok) {
+      throw new Error(`Failed to stop trading: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     handlers.setIsTrading(false);
     handlers.setIsPaused(false); // Reset pause state when stopping
-    alert("Trading stopped successfully!");
+    alert(data.message || "Trading stopped successfully!");
   } catch (error: any) {
     console.error("Error stopping trading:", error);
     alert(`Failed to stop trading: ${error.message}`);
@@ -100,23 +139,26 @@ export const handlePauseTrading = async (
   try {
     handlers.setTradingLoading(true);
 
-    // TODO: Implement pause trading API call
-    // const response = await fetch(`${API_BASE_URL}/trading/${isPaused ? 'resume' : 'pause'}`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to ${isPaused ? 'resume' : 'pause'} trading: ${response.status}`);
-    // }
+    const response = await fetch(`${API_BASE_URL}/global-trading-state`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ state: isPaused ? "START" : "PAUSE" }),
+    });
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!response.ok) {
+      throw new Error(
+        `Failed to ${isPaused ? "resume" : "pause"} trading: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
 
     handlers.setIsPaused(!isPaused);
-    alert(`Trading ${isPaused ? "resumed" : "paused"} successfully!`);
+    alert(
+      data.message || `Trading ${isPaused ? "resumed" : "paused"} successfully!`
+    );
   } catch (error: any) {
     console.error("Error pausing trading:", error);
     alert(
@@ -162,6 +204,12 @@ export const handleStrategyStatusChange = async (
     stopped: "stop",
   };
 
+  const statusToBackend = {
+    running: "START",
+    paused: "PAUSE",
+    stopped: "STOP",
+  };
+
   if (
     !confirm(
       `Are you sure you want to ${statusText[newStatus]} strategy ${strategyId}?`
@@ -171,27 +219,34 @@ export const handleStrategyStatusChange = async (
   }
 
   try {
-    // TODO: Implement individual strategy control API call
-    // const response = await fetch(`${API_BASE_URL}/strategy/${strategyId}/${statusText[newStatus]}`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to ${statusText[newStatus]} strategy: ${response.status}`);
-    // }
+    const response = await fetch(
+      `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state: statusToBackend[newStatus] }),
+      }
+    );
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!response.ok) {
+      throw new Error(
+        `Failed to ${statusText[newStatus]} strategy: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
 
     handlers.setStrategyStatus((prev) => ({
       ...prev,
       [strategyId]: newStatus,
     }));
 
-    alert(`Strategy ${strategyId} ${statusText[newStatus]}ed successfully!`);
+    alert(
+      data.message ||
+        `Strategy ${strategyId} ${statusText[newStatus]}ed successfully!`
+    );
   } catch (error: any) {
     console.error(`Error changing strategy status:`, error);
     alert(`Failed to ${statusText[newStatus]} strategy: ${error.message}`);
@@ -206,17 +261,20 @@ export const startStrategy = async (
   handlers: StrategyStatusHandlers
 ) => {
   try {
-    // TODO: Implement start strategy API call
-    // const response = await fetch(`${API_BASE_URL}/strategy/${strategyId}/start`, {
-    //   method: 'POST',
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to start strategy: ${response.status}`);
-    // }
+    const response = await fetch(
+      `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state: "START" }),
+      }
+    );
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!response.ok) {
+      throw new Error(`Failed to start strategy: ${response.status}`);
+    }
 
     handlers.setStrategyStatus((prev) => ({
       ...prev,
@@ -238,17 +296,20 @@ export const pauseStrategy = async (
   handlers: StrategyStatusHandlers
 ) => {
   try {
-    // TODO: Implement pause strategy API call
-    // const response = await fetch(`${API_BASE_URL}/strategy/${strategyId}/pause`, {
-    //   method: 'POST',
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to pause strategy: ${response.status}`);
-    // }
+    const response = await fetch(
+      `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state: "PAUSE" }),
+      }
+    );
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!response.ok) {
+      throw new Error(`Failed to pause strategy: ${response.status}`);
+    }
 
     handlers.setStrategyStatus((prev) => ({
       ...prev,
@@ -270,17 +331,20 @@ export const stopStrategy = async (
   handlers: StrategyStatusHandlers
 ) => {
   try {
-    // TODO: Implement stop strategy API call
-    // const response = await fetch(`${API_BASE_URL}/strategy/${strategyId}/stop`, {
-    //   method: 'POST',
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`Failed to stop strategy: ${response.status}`);
-    // }
+    const response = await fetch(
+      `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state: "STOP" }),
+      }
+    );
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!response.ok) {
+      throw new Error(`Failed to stop strategy: ${response.status}`);
+    }
 
     handlers.setStrategyStatus((prev) => ({
       ...prev,
@@ -301,7 +365,7 @@ export const getStrategyStatus = (
   strategyId: string,
   strategyStatus: Record<string, StrategyStatus>
 ): StrategyStatus => {
-  return strategyStatus[strategyId] || "stopped";
+  return strategyStatus[strategyId] || "running";
 };
 
 /**
@@ -331,5 +395,50 @@ export const isStrategyStopped = (
   strategyId: string,
   strategyStatus: Record<string, StrategyStatus>
 ): boolean => {
-  return (strategyStatus[strategyId] || "stopped") === "stopped";
+  return (strategyStatus[strategyId] || "running") === "stopped";
+};
+
+/**
+ * Fetch strategy trading state from backend and update local state
+ */
+export const fetchStrategyTradingState = async (
+  strategyId: string,
+  handlers: StrategyStatusHandlers
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch strategy trading state: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    const state = data.state; // "START", "STOP", or "PAUSE"
+
+    // Map backend state to frontend status
+    const statusMap: Record<string, StrategyStatus> = {
+      START: "running",
+      PAUSE: "paused",
+      STOP: "stopped",
+    };
+
+    const frontendStatus = statusMap[state] || "running";
+
+    handlers.setStrategyStatus((prev) => ({
+      ...prev,
+      [strategyId]: frontendStatus,
+    }));
+
+    return { success: true, state: frontendStatus };
+  } catch (error: any) {
+    console.error(`Error fetching strategy trading state:`, error);
+    return { success: false, error: error.message };
+  }
 };

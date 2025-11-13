@@ -38,6 +38,7 @@ import {
   handleStopTrading as stopGlobalTrading,
   handlePauseTrading as pauseGlobalTrading,
   handleStrategyStatusChange as changeStrategyStatus,
+  fetchGlobalTradingState,
   type StrategyStatus,
   fetchStrategies as fetchStrategiesAPI,
   fetchStrategyTags as fetchStrategyTagsAPI,
@@ -259,6 +260,13 @@ const DeployedStrategies: React.FC = () => {
       fetchStrategies();
       fetchStrategyTags();
     };
+
+    // Fetch global trading state on mount
+    fetchGlobalTradingState({
+      setIsTrading,
+      setIsPaused,
+      setTradingLoading,
+    });
 
     // Run immediately on mount
     fetchData();
