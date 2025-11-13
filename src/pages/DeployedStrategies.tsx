@@ -266,17 +266,80 @@ const DeployedStrategies: React.FC = () => {
   };
 
   // Toggle isSelectedForTrading
-  const toggleSelectedForTrading = (strategyId: string) => {
+  const toggleSelectedForTrading = async (strategyId: string) => {
+    // Find the strategy to get its current state
+    const strategy = strategies.find((s) => s.strategyId === strategyId);
+    if (!strategy) return;
+
+    const newSelectedState = !strategy.isSelectedForTrading;
+
+    // Optimistically update UI
     setStrategies((prevStrategies) =>
-      prevStrategies.map((strategy) =>
-        strategy.strategyId === strategyId
+      prevStrategies.map((s) =>
+        s.strategyId === strategyId
           ? {
-              ...strategy,
-              isSelectedForTrading: !strategy.isSelectedForTrading,
+              ...s,
+              isSelectedForTrading: newSelectedState,
             }
-          : strategy
+          : s
       )
     );
+
+    // Update backend
+    try {
+      const updatedConfig = {
+        ...strategy.config,
+        baseConfig: {
+          ...(strategy.config as any)?.baseConfig,
+          isSelectedForTrading: newSelectedState,
+        },
+      };
+
+      console.log(
+        `🔄 Updating strategy ${strategyId} with isSelectedForTrading=${newSelectedState}`
+      );
+      console.log("Updated config:", updatedConfig);
+
+      const response = await fetch(
+        `${API_BASE_URL}/strategy/update/${strategyId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedConfig),
+        }
+      );
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.error("❌ Backend error:", responseData);
+        throw new Error(
+          `Failed to update: ${response.statusText} - ${JSON.stringify(
+            responseData
+          )}`
+        );
+      }
+
+      console.log(
+        `✅ Updated isSelectedForTrading for ${strategyId} to ${newSelectedState}`
+      );
+      console.log("Backend response:", responseData);
+    } catch (error) {
+      console.error("❌ Error updating isSelectedForTrading:", error);
+      // Revert optimistic update on error
+      setStrategies((prevStrategies) =>
+        prevStrategies.map((s) =>
+          s.strategyId === strategyId
+            ? {
+                ...s,
+                isSelectedForTrading: !newSelectedState,
+              }
+            : s
+        )
+      );
+    }
   };
 
   // Apply filters to strategies
