@@ -51,6 +51,9 @@ export interface BaseConfig {
   underlying: Underlying;
   buyTradesFirst: boolean;
   executionMode: ExecutionMode;
+  tradingState?: "START" | "STOP" | "PAUSE" | "RESUME" | "NONE";
+  isSelectedForTrading?: boolean;
+  strategyState?: string; // Backend-managed state like "NONE", "MONITORING", "UNDEREXECUTION", "Waiting", "Active", "Exited"
 }
 
 // Premium based strike configuration interface

@@ -144,7 +144,7 @@ export const handlePauseTrading = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ state: isPaused ? "START" : "PAUSE" }),
+      body: JSON.stringify({ state: isPaused ? "RESUME" : "PAUSE" }),
     });
 
     if (!response.ok) {

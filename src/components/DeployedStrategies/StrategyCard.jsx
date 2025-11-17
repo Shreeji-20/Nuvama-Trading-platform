@@ -7,9 +7,8 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  Play,
   Pause,
-  Square,
+  RotateCcw,
 } from "lucide-react";
 
 const StrategyCard = memo(
@@ -130,14 +129,40 @@ const StrategyCard = memo(
               )}
             </div>
 
+            {/* Strategy State Badge */}
+            {strategy.config?.baseConfig?.strategyState && (
+              <div className="mr-3">
+                <div className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg">
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                    {strategy.config.baseConfig.strategyState}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Selected for Trading Checkbox */}
             <div className="mr-3">
-              <label className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-650 transition-colors">
+              <label
+                className={`flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors ${
+                  strategy.config?.baseConfig?.strategyState &&
+                  strategy.config.baseConfig.strategyState !== "MONITORING" &&
+                  strategy.config.baseConfig.strategyState !== "FINISHED" &&
+                  strategy.config.baseConfig.strategyState !== "NONE"
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-650"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={isSelectedForTrading}
                   onChange={onToggleSelected}
-                  className="w-3.5 h-3.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-600 dark:border-gray-500"
+                  disabled={
+                    strategy.config?.baseConfig?.strategyState &&
+                    strategy.config.baseConfig.strategyState !== "MONITORING" &&
+                    strategy.config.baseConfig.strategyState !== "FINISHED" &&
+                    strategy.config.baseConfig.strategyState !== "NONE"
+                  }
+                  className="w-3.5 h-3.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-600 dark:border-gray-500 disabled:cursor-not-allowed"
                 />
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                   Selected
@@ -145,51 +170,38 @@ const StrategyCard = memo(
               </label>
             </div>
 
-            {/* Trading Status Radio Buttons */}
-            <div className="flex items-center gap-1 mr-3 bg-white dark:bg-gray-700 rounded-lg p-1.5 border border-gray-200 dark:border-gray-600">
-              <button
-                onClick={() =>
-                  onStrategyStatusChange?.(strategy.strategyId, "running")
-                }
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
-                  strategyStatus === "running"
-                    ? "bg-green-500 text-white shadow-md"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
-                }`}
-                title="Start Trading"
-              >
-                <Play className="w-3 h-3" />
-                <span className="hidden sm:inline">Start</span>
-              </button>
-              <button
-                onClick={() =>
-                  onStrategyStatusChange?.(strategy.strategyId, "paused")
-                }
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
-                  strategyStatus === "paused"
-                    ? "bg-yellow-500 text-white shadow-md"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
-                }`}
-                title="Pause Trading"
-              >
-                <Pause className="w-3 h-3" />
-                <span className="hidden sm:inline">Pause</span>
-              </button>
-              <button
-                onClick={() =>
-                  onStrategyStatusChange?.(strategy.strategyId, "stopped")
-                }
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
-                  strategyStatus === "stopped"
-                    ? "bg-red-500 text-white shadow-md"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
-                }`}
-                title="Stop Trading"
-              >
-                <Square className="w-3 h-3" />
-                <span className="hidden sm:inline">Stop</span>
-              </button>
-            </div>
+            {/* Trading Status Buttons - Only show if selected for trading */}
+            {isSelectedForTrading && (
+              <div className="flex items-center gap-1 mr-3 bg-white dark:bg-gray-700 rounded-lg p-1.5 border border-gray-200 dark:border-gray-600">
+                {strategyStatus === "paused" ? (
+                  <button
+                    onClick={() =>
+                      onStrategyStatusChange?.(strategy.strategyId, "running")
+                    }
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-500 text-white shadow-md hover:bg-blue-600 transition-all"
+                    title="Resume Trading"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span className="hidden sm:inline">Resume</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      onStrategyStatusChange?.(strategy.strategyId, "paused")
+                    }
+                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+                      strategyStatus === "paused"
+                        ? "bg-yellow-500 text-white shadow-md"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
+                    }`}
+                    title="Pause Trading"
+                  >
+                    <Pause className="w-3 h-3" />
+                    <span className="hidden sm:inline">Pause</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {isEditing ? (
               <>

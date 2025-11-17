@@ -15,6 +15,7 @@ import ExecutionParametersTab from "../components/ExecutionParametersTab";
 import StartTradingButton from "../components/StartTradingButton";
 import StopTradingButton from "../components/StopTradingButton";
 import PauseTradingButton from "../components/PauseTradingButton";
+import ResumeTradingButton from "../components/ResumeTradingButton";
 import { useStrategyOrders } from "../hooks/useStrategyOrders";
 import { usePnLCalculation } from "../hooks/usePnLCalculation";
 import {
@@ -503,11 +504,19 @@ const DeployedStrategies: React.FC = () => {
                 disabled={isTrading || tradingLoading}
                 loading={tradingLoading && !isTrading}
               />
-              <PauseTradingButton
-                onClick={handlePauseTrading}
-                disabled={!isTrading || tradingLoading}
-                loading={tradingLoading}
-              />
+              {isPaused ? (
+                <ResumeTradingButton
+                  onClick={handlePauseTrading}
+                  disabled={tradingLoading}
+                  loading={tradingLoading}
+                />
+              ) : (
+                <PauseTradingButton
+                  onClick={handlePauseTrading}
+                  disabled={!isTrading || tradingLoading}
+                  loading={tradingLoading}
+                />
+              )}
               <StopTradingButton
                 onClick={handleStopTrading}
                 disabled={!isTrading || tradingLoading}

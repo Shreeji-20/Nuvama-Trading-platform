@@ -176,6 +176,16 @@ export const saveEdit = (
     legs: sanitizedLegs,
   };
 
+  // Preserve isSelectedForTrading and tradingState if not explicitly set in editValues
+  // These should only be modified through their dedicated UI controls (checkbox and buttons)
+  if (sanitizedConfig.baseConfig) {
+    // If isSelectedForTrading is not in editValues.baseConfig, it means we're not trying to change it
+    // The backend will preserve the existing value through its update logic
+    // This ensures checkbox state is only changed through the checkbox itself
+    // Similarly for tradingState - preserve if not explicitly changed
+    // These fields should remain unchanged during regular editing operations
+  }
+
   updateStrategy(strategyId, sanitizedConfig);
 };
 

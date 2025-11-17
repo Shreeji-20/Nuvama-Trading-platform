@@ -60,6 +60,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
     underlying: "Spot",
     buyTradesFirst: false,
     executionMode: "Live Mode",
+    tradingState: "NONE",
+    isSelectedForTrading: false,
+    strategyState: "NONE",
   });
 
   // Legs state - Changed from array to dictionary
@@ -246,6 +249,44 @@ const AdvancedOptionsBuilder: React.FC = () => {
       strike500: false,
       strikeDistance: 1,
     });
+
+  // Effect to auto-populate strikeSteps with default values when legs change
+  useEffect(() => {
+    const uniqueSymbols = Array.from(
+      new Set(Object.values(legs).map((leg) => leg.symbol))
+    );
+
+    // Default strike steps per symbol
+    const defaultStrikeSteps: Record<string, number> = {
+      NIFTY: 50,
+      SENSEX: 100,
+      BANKNIFTY: 100,
+      FINNIFTY: 50,
+    };
+
+    // Check if strikeSteps needs updating
+    const currentStrikeSteps = dynamicHedgeSettings.strikeSteps || {};
+    let needsUpdate = false;
+    const updatedStrikeSteps: Record<string, number> = {
+      ...currentStrikeSteps,
+    };
+
+    // Add missing symbols with default values
+    uniqueSymbols.forEach((symbol) => {
+      if (!(symbol in updatedStrikeSteps)) {
+        updatedStrikeSteps[symbol] = defaultStrikeSteps[symbol] ?? 50;
+        needsUpdate = true;
+      }
+    });
+
+    // Update state if needed
+    if (needsUpdate) {
+      setDynamicHedgeSettings((prev) => ({
+        ...prev,
+        strikeSteps: updatedStrikeSteps,
+      }));
+    }
+  }, [legs]); // Run whenever legs change
 
   // At Broker settings state
   const [atBrokerSettings, setAtBrokerSettings] = useState<AtBrokerSettings>({
@@ -1229,6 +1270,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
                       underlying: "Spot",
                       buyTradesFirst: false,
                       executionMode: "Live Mode",
+                      tradingState: "NONE",
+                      isSelectedForTrading: false,
+                      strategyState: "NONE",
                     });
                     setLegs({});
                     setLegCounter(1);
