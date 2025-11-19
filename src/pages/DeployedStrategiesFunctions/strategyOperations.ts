@@ -223,9 +223,14 @@ export const copyStrategy = async (
   if (newConfig.baseConfig) {
     newConfig.baseConfig.strategyId = newStrategyId;
     newConfig.baseConfig.strategyName = newStrategyName;
+
+    // Reset state fields - copied strategy should start fresh
+    newConfig.baseConfig.isSelectedForTrading = false;
+    newConfig.baseConfig.tradingState = "NONE";
+    newConfig.baseConfig.strategyState = "NONE";
   }
 
-  // Update leg IDs and strategy references
+  // Update leg IDs and strategy references, and reset runtime fields
   if (newConfig.legs) {
     // Handle both array and dict format
     if (Array.isArray(newConfig.legs)) {
@@ -238,17 +243,31 @@ export const copyStrategy = async (
           legId: legId,
           strategyId: newStrategyId,
           strategyName: newStrategyName,
+          // Reset runtime fields in legs
+          reEnterCount: 0,
+          reEnterLogic: "NONE",
+          hedgeSelectedStrike: undefined,
+          selectedStrike: undefined,
+          initialPrice: undefined,
+          initialLegPrice: undefined,
         };
       });
       newConfig.legs = legsDict;
     } else {
-      // Already dict format, just update references
+      // Already dict format, just update references and reset runtime fields
       const updatedLegs: Record<string, any> = {};
       Object.entries(newConfig.legs).forEach(([legId, leg]: [string, any]) => {
         updatedLegs[legId] = {
           ...leg,
           strategyId: newStrategyId,
           strategyName: newStrategyName,
+          // Reset runtime fields in legs
+          reEnterCount: 0,
+          reEnterLogic: "NONE",
+          hedgeSelectedStrike: undefined,
+          selectedStrike: undefined,
+          initialPrice: undefined,
+          initialLegPrice: undefined,
         };
       });
       newConfig.legs = updatedLegs;

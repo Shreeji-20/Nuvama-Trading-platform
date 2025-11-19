@@ -293,11 +293,14 @@ const DeployedStrategies: React.FC = () => {
         baseConfig: {
           ...(strategy.config as any)?.baseConfig,
           isSelectedForTrading: newSelectedState,
+          tradingState: newSelectedState ? "START" : "STOP", // Set tradingState based on checkbox
         },
       };
 
       console.log(
-        `🔄 Updating strategy ${strategyId} with isSelectedForTrading=${newSelectedState}`
+        `🔄 Updating strategy ${strategyId} with isSelectedForTrading=${newSelectedState}, tradingState=${
+          newSelectedState ? "START" : "STOP"
+        }`
       );
       console.log("Updated config:", updatedConfig);
 
