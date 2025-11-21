@@ -33,7 +33,7 @@ interface UseStrategyOrdersReturn {
 export const useStrategyOrders = (
   options: UseStrategyOrdersOptions = {}
 ): UseStrategyOrdersReturn => {
-  const { autoRefresh = false, refreshInterval = 1000 } = options;
+  const { autoRefresh = false, refreshInterval = 10000 } = options;
 
   const [orders, setOrders] = useState<Record<string, Order[] | null>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});

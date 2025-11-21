@@ -440,6 +440,15 @@ const AdvancedOptionsBuilder: React.FC = () => {
         );
       }
 
+      if (
+        !executionParams.strategyTag ||
+        executionParams.strategyTag.trim() === ""
+      ) {
+        throw new Error(
+          "Strategy Tag is required. Please select a Strategy Tag in the Execution Parameters tab."
+        );
+      }
+
       const legsArray = Object.values(legs);
       if (legsArray.length === 0) {
         throw new Error("At least one leg is required to deploy the strategy");

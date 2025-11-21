@@ -488,20 +488,20 @@ const DeployedStrategies: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6">
       <div className="max-w-[100rem] mx-auto">
         {/* Header Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 md:p-6 mb-4 sm:mb-5 md:mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white mb-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
                 Deployed Strategies
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 Monitor and manage your active trading strategies
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <StartTradingButton
                 onClick={handleStartTrading}
                 disabled={isTrading || tradingLoading}
@@ -586,6 +586,7 @@ const DeployedStrategies: React.FC = () => {
                         strategy.isSelectedForTrading || false,
                       onToggleSelected: () =>
                         toggleSelectedForTrading(strategy.strategyId),
+                      isTrading: isTrading, // Pass global trading state
                     } as any)}
                   />
 
@@ -593,14 +594,14 @@ const DeployedStrategies: React.FC = () => {
                   {isExpanded && (
                     <div className="border-t border-gray-200 dark:border-gray-700">
                       {/* Always Visible Configuration Section */}
-                      <div className="p-3 space-y-3">
+                      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
                         {/* Base Configuration */}
                         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                          <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             Base Configuration
                           </h4>
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
                             <div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 p-1">
                                 Strategy ID
@@ -705,8 +706,8 @@ const DeployedStrategies: React.FC = () => {
                             ? (strategy.config as any).legs.length > 0
                             : Object.keys((strategy.config as any).legs)
                                 .length > 0) && (
-                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                              <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2 sm:p-3">
+                              <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 Legs Configuration (
                                 {isEditing
@@ -963,9 +964,9 @@ const DeployedStrategies: React.FC = () => {
                       </div>
 
                       {/* Order Tabs Section */}
-                      <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-xl shadow-lg border border-light-border dark:border-dark-border p-3 mt-4 mx-3 mb-3">
-                        <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
-                          <nav className="flex space-x-8 overflow-x-auto">
+                      <div className="bg-light-card-gradient dark:bg-dark-card-gradient rounded-lg sm:rounded-xl shadow-lg border border-light-border dark:border-dark-border p-2 sm:p-3 mt-3 sm:mt-4 mx-2 sm:mx-3 mb-2 sm:mb-3">
+                        <div className="border-b border-gray-200 dark:border-gray-700 mb-3 sm:mb-4">
+                          <nav className="flex space-x-4 sm:space-x-6 md:space-x-8 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600">
                             <TabNavigation
                               {...({
                                 tabs,
@@ -978,7 +979,7 @@ const DeployedStrategies: React.FC = () => {
                         </div>
 
                         {/* Tab Content */}
-                        <div className="mt-4">
+                        <div className="mt-3 sm:mt-4">
                           {/* Open Positions Tab */}
                           {getActiveTab(strategy.strategyId) ===
                             "positions" && (
@@ -1022,8 +1023,8 @@ const DeployedStrategies: React.FC = () => {
                           {getActiveTab(strategy.strategyId) === "settings" && (
                             <div>
                               {/* Nested Tabs for Settings */}
-                              <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
-                                <nav className="flex space-x-6 overflow-x-auto">
+                              <div className="border-b border-gray-200 dark:border-gray-700 mb-3 sm:mb-4">
+                                <nav className="flex space-x-3 sm:space-x-4 md:space-x-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600">
                                   {settingsTabs.map((tab) => (
                                     <button
                                       key={tab.id}

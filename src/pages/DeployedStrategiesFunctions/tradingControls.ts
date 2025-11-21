@@ -31,10 +31,11 @@ export const fetchGlobalTradingState = async (
     }
 
     const data = await response.json();
-    const state = data.state; // "START", "STOP", or "PAUSE"
+    const state = data.state; // "START", "STOP", "PAUSE", or "RESUME"
 
     // Update local state based on backend state
-    if (state === "START") {
+    // Note: RESUME should be treated same as START (backend converts RESUME to START)
+    if (state === "START" || state === "RESUME") {
       handlers.setIsTrading(true);
       handlers.setIsPaused(false);
     } else if (state === "PAUSE") {
@@ -155,7 +156,18 @@ export const handlePauseTrading = async (
 
     const data = await response.json();
 
-    handlers.setIsPaused(!isPaused);
+    // When resuming (isPaused was true), set isTrading to true and isPaused to false
+    // When pausing (isPaused was false), set isTrading to true and isPaused to true
+    if (isPaused) {
+      // Resuming
+      handlers.setIsTrading(true);
+      handlers.setIsPaused(false);
+    } else {
+      // Pausing
+      handlers.setIsTrading(true);
+      handlers.setIsPaused(true);
+    }
+
     alert(
       data.message || `Trading ${isPaused ? "resumed" : "paused"} successfully!`
     );
