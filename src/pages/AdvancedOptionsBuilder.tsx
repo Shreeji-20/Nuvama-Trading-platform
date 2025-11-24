@@ -10,6 +10,51 @@ import ExitSettingsTab from "../components/ExitSettingsTab";
 import DynamicHedgeTab from "../components/DynamicHedgeTab";
 import AtBrokerTab from "../components/AtBrokerTab";
 import config from "../config/api";
+import {
+  // Constants
+  symbolOptions,
+  expiryOptions,
+  dynamicExpiryOptions,
+  underlyingOptions,
+  priceTypeOptions,
+  orderTypeOptions,
+  targetOptions,
+  stoplossOptions,
+  depthOptions,
+  actionOptions,
+  tabs,
+  productOptions,
+  legsExecutionOptions,
+  portfolioExecutionModeOptions,
+  entryOrderTypeOptions,
+  daysOptions,
+  targetTypeOptions,
+  stoplossTypeOptions,
+  exitOrderTypeOptions,
+  hedgeTypeOptions,
+  // Utils
+  getStrikeOptions,
+  ToggleButton,
+  // Handlers
+  createBaseConfigChangeHandler,
+  createExecutionParamChangeHandler,
+  createDaysChangeHandler,
+  createTargetSettingsChangeHandler,
+  createStoplossSettingsChangeHandler,
+  createExitSettingsChangeHandler,
+  createDynamicHedgeSettingsChangeHandler,
+  createAtBrokerSettingsChangeHandler,
+  // Leg Management
+  createAddLegHandler,
+  createCopyLegHandler,
+  createUpdateLegHandler,
+  createUpdatePremiumStrikeConfigHandler,
+  createRemoveLegHandler,
+  createGenerateNewStrategyIdHandler,
+  // API Services
+  fetchStrategyTags,
+  createDeployStrategyHandler,
+} from "./AdvancedOptionsBuilderFunctions";
 import type {
   Underlying,
   ExecutionMode,
@@ -77,71 +122,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
     actionType: "target" | "stoploss" | "squareoff" | null;
   }>({ legId: null, actionType: null });
 
-  // Options for dropdowns
-  const symbolOptions: string[] = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
-  const expiryOptions: number[] = [0, 1, 2, 3, 4, 5];
-  const dynamicExpiryOptions: string[] = [
-    "None",
-    "Current Week",
-    "Next Week",
-    "Next Week+1",
-    "Monthly",
-  ];
-  const underlyingOptions: Underlying[] = ["Spot", "Futures"];
-  const priceTypeOptions: PriceType[] = [
-    "LTP",
-    "BIDASK",
-    "DEPTH",
-    "BID",
-    "ASK",
-  ];
-  const orderTypeOptions: OrderType[] = ["LIMIT", "MARKET"];
-
-  // Generate dynamic strike options based on symbol
-  const getStrikeOptions = (symbol: string): string[] => {
-    const stepSize = symbol === "NIFTY" || symbol === "FINNIFTY" ? 50 : 100;
-    const strikes: string[] = [];
-
-    for (let i = -50; i <= 50; i++) {
-      const offset = i * stepSize;
-      if (offset === 0) {
-        strikes.push("ATM");
-      } else if (offset > 0) {
-        strikes.push(`ATM+${offset}`);
-      } else {
-        strikes.push(`ATM${offset}`);
-      }
-    }
-
-    return strikes;
-  };
-
-  const targetOptions: TargetStoplossType[] = [
-    "NONE",
-    "ABSOLUTE",
-    "PERCENTAGE",
-    "POINTS",
-  ];
-  const stoplossOptions: TargetStoplossType[] = [
-    "NONE",
-    "ABSOLUTE",
-    "PERCENTAGE",
-    "POINTS",
-  ];
-  const depthOptions: number[] = [1, 2, 3, 4, 5];
-  const actionOptions: ActionType[] = ["NONE", "REENTRY", "REEXECUTE"];
-
-  const tabs: Tab[] = [
-    { id: "strategy", label: "Execution Parameters" },
-    { id: "analysis", label: "Target Settings" },
-    { id: "stoploss", label: "Stoploss Settings" },
-    { id: "exit", label: "Exit Settings" },
-    { id: "hedge", label: "Dynamic Hedge" },
-    { id: "atbroker", label: "At Broker" },
-    { id: "backtest", label: "Backtest" },
-    { id: "deploy", label: "Deploy" },
-  ];
-
   // Execution parameters state
   const [executionParams, setExecutionParams] = useState<ExecutionParams>({
     product: "NRML",
@@ -158,66 +138,11 @@ const AdvancedOptionsBuilder: React.FC = () => {
   // API Base URL
   const API_BASE_URL = config.API_BASE_URL;
 
-  // Options for execution parameters
-  const productOptions: Product[] = ["NRML", "MIS", "CNC"];
-  const legsExecutionOptions: LegsExecution[] = [
-    "Parallel",
-    "One by One",
-    "Sequential",
-  ];
-  const portfolioExecutionModeOptions: PortfolioExecutionMode[] = [
-    "startTime",
-    "underlyingPremium",
-    "combinedPremium",
-  ];
-  const entryOrderTypeOptions: EntryOrderType[] = [
-    "LIMIT",
-    "MARKET",
-    "SL",
-    "SL-M",
-  ];
-  const daysOptions: DayOfWeek[] = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-
   // Target settings state
   const [targetSettings, setTargetSettings] = useState<TargetSettings>({
     targetType: "CombinedProfit",
     targetValue: 0,
   });
-
-  // Options for target settings
-  const targetTypeOptions: TargetType[] = [
-    "CombinedProfit",
-    "IndividualLegProfit",
-    "PercentageProfit",
-    "PremiumTarget",
-    "UnderlyingMovement",
-  ];
-
-  // Options for stoploss settings
-  const stoplossTypeOptions: StoplossType[] = [
-    "CombinedLoss",
-    "IndividualLegLoss",
-    "PercentageLoss",
-    "PremiumLoss",
-    "UnderlyingMovement",
-  ];
-
-  // Options for exit settings
-  const exitOrderTypeOptions: ExitOrderType[] = [
-    "LIMIT",
-    "MARKET",
-    "SL",
-    "SL-M",
-    "SL-L",
-  ];
 
   // Stoploss settings state
   const [stoplossSettings, setStoplossSettings] = useState<StoplossSettings>({
@@ -306,372 +231,68 @@ const AdvancedOptionsBuilder: React.FC = () => {
     useState<DeploymentStatus>(null);
   const [deploymentMessage, setDeploymentMessage] = useState<string>("");
 
-  // Options for dynamic hedge settings
-  const hedgeTypeOptions: HedgeType[] = ["premium Based", "fixed Distance"];
+  // Create handler functions using the imported factory functions
+  const handleBaseConfigChange = createBaseConfigChangeHandler(
+    setBaseConfig,
+    setLegs
+  );
 
-  // Handle base config changes
-  const handleBaseConfigChange = <K extends keyof BaseConfig>(
-    field: K,
-    value: BaseConfig[K]
-  ): void => {
-    setBaseConfig((prev) => ({ ...prev, [field]: value }));
+  const handleExecutionParamChange =
+    createExecutionParamChangeHandler(setExecutionParams);
 
-    if (field === "strategyId" || field === "strategyName") {
-      setLegs((prev) => {
-        const updated: Record<string, Leg> = {};
-        Object.entries(prev).forEach(([legId, leg]) => {
-          updated[legId] = { ...leg, [field]: value };
-        });
-        return updated;
-      });
-    }
-  };
+  const handleDaysChange = createDaysChangeHandler(setExecutionParams);
 
-  // Generate new strategy ID
-  const generateNewStrategyId = (): void => {
-    const newStrategyId = `STRATEGY_${Date.now().toString().slice(-6)}`;
-    setBaseConfig((prev) => ({
-      ...prev,
-      strategyId: newStrategyId,
-    }));
+  const handleTargetSettingsChange =
+    createTargetSettingsChangeHandler(setTargetSettings);
 
-    setLegs((prev) => {
-      const updated: Record<string, Leg> = {};
-      Object.entries(prev).forEach(([legId, leg]) => {
-        updated[legId] = { ...leg, strategyId: newStrategyId };
-      });
-      return updated;
-    });
-  };
+  const handleStoplossSettingsChange =
+    createStoplossSettingsChangeHandler(setStoplossSettings);
 
-  // Fetch available strategy tags
-  const fetchStrategyTags = async (): Promise<void> => {
-    try {
-      setLoadingTags(true);
-      const response = await fetch(`${API_BASE_URL}/strategy-tags/list`);
-      if (response.ok) {
-        const tags: StrategyTag[] = await response.json();
-        setAvailableTags(tags);
-      } else {
-        console.error("Failed to fetch strategy tags");
-      }
-    } catch (error) {
-      console.error("Error fetching strategy tags:", error);
-    } finally {
-      setLoadingTags(false);
-    }
-  };
+  const handleExitSettingsChange =
+    createExitSettingsChangeHandler(setExitSettings);
+
+  const handleDynamicHedgeSettingsChange =
+    createDynamicHedgeSettingsChangeHandler(setDynamicHedgeSettings);
+
+  const handleAtBrokerSettingsChange =
+    createAtBrokerSettingsChangeHandler(setAtBrokerSettings);
+
+  const addLeg = createAddLegHandler(setLegs, baseConfig);
+  const copyLeg = createCopyLegHandler(setLegs);
+  const updateLeg = createUpdateLegHandler(setLegs);
+  const updatePremiumStrikeConfig =
+    createUpdatePremiumStrikeConfigHandler(setLegs);
+  const removeLeg = createRemoveLegHandler(setLegs);
+  const generateNewStrategyId = createGenerateNewStrategyIdHandler(
+    setBaseConfig,
+    setLegs
+  );
+
+  const deployStrategy = createDeployStrategyHandler(
+    API_BASE_URL,
+    baseConfig,
+    legs,
+    executionParams,
+    targetSettings,
+    stoplossSettings,
+    exitSettings,
+    dynamicHedgeSettings,
+    atBrokerSettings,
+    setIsDeploying,
+    setDeploymentStatus,
+    setDeploymentMessage
+  );
 
   // Fetch tags on component mount
   useEffect(() => {
-    fetchStrategyTags();
-  }, []);
+    fetchStrategyTags(API_BASE_URL, setLoadingTags, setAvailableTags);
+  }, [API_BASE_URL]);
 
-  // Handle execution parameters changes
-  const handleExecutionParamChange = <K extends keyof ExecutionParams>(
-    field: K,
-    value: ExecutionParams[K]
-  ): void => {
-    setExecutionParams((prev) => ({ ...prev, [field]: value }));
-  };
+  // Add new leg - now using imported function
+  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
 
-  // Handle days selection (multiple)
-  const handleDaysChange = (day: DayOfWeek): void => {
-    setExecutionParams((prev) => ({
-      ...prev,
-      runOnDays: prev.runOnDays.includes(day)
-        ? prev.runOnDays.filter((d) => d !== day)
-        : [...prev.runOnDays, day],
-    }));
-  };
-
-  // Handle target settings changes
-  const handleTargetSettingsChange = <K extends keyof TargetSettings>(
-    field: K,
-    value: TargetSettings[K]
-  ): void => {
-    setTargetSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Handle stoploss settings changes
-  const handleStoplossSettingsChange = <K extends keyof StoplossSettings>(
-    field: K,
-    value: StoplossSettings[K]
-  ): void => {
-    setStoplossSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Handle exit settings changes
-  const handleExitSettingsChange = <K extends keyof ExitSettings>(
-    field: K,
-    value: ExitSettings[K]
-  ): void => {
-    setExitSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Handle dynamic hedge settings changes
-  const handleDynamicHedgeSettingsChange = <
-    K extends keyof DynamicHedgeSettings
-  >(
-    field: K,
-    value: DynamicHedgeSettings[K]
-  ): void => {
-    setDynamicHedgeSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Handle At Broker settings changes
-  const handleAtBrokerSettingsChange = <K extends keyof AtBrokerSettings>(
-    field: K,
-    value: AtBrokerSettings[K]
-  ): void => {
-    setAtBrokerSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // API deployment function
-  const deployStrategy = async (): Promise<void> => {
-    try {
-      setIsDeploying(true);
-      setDeploymentStatus(null);
-      setDeploymentMessage("");
-
-      if (!baseConfig.strategyName || baseConfig.strategyName.trim() === "") {
-        throw new Error(
-          "Strategy Name is required. Please enter a strategy name in Base Configuration."
-        );
-      }
-
-      if (
-        !executionParams.strategyTag ||
-        executionParams.strategyTag.trim() === ""
-      ) {
-        throw new Error(
-          "Strategy Tag is required. Please select a Strategy Tag in the Execution Parameters tab."
-        );
-      }
-
-      const legsArray = Object.values(legs);
-      if (legsArray.length === 0) {
-        throw new Error("At least one leg is required to deploy the strategy");
-      }
-
-      for (const leg of legsArray) {
-        if (!leg.symbol) {
-          throw new Error(`Symbol is required for Leg ${leg.legId}`);
-        }
-        if (leg.expiry === undefined || leg.expiry === null) {
-          throw new Error(`Expiry is required for Leg ${leg.legId}`);
-        }
-        if (!leg.priceType) {
-          throw new Error(`Price Type is required for Leg ${leg.legId}`);
-        }
-        if (!leg.action) {
-          throw new Error(`Action is required for Leg ${leg.legId}`);
-        }
-        if (!leg.orderType) {
-          throw new Error(`Order Type is required for Leg ${leg.legId}`);
-        }
-      }
-
-      // Transform legs array to dict format with legId as key
-      const transformedLegsDict: Record<string, any> = {};
-      legsArray.forEach((leg) => {
-        const transformed: any = { ...leg };
-
-        console.log("Original leg:", leg);
-
-        if (
-          transformed.orderType === "BUY" ||
-          transformed.orderType === "SELL"
-        ) {
-          console.log("Transforming old structure leg...");
-          transformed.action = transformed.orderType;
-          transformed.orderType =
-            transformed.legOrderType || leg.orderType || "LIMIT";
-          delete transformed.legOrderType;
-        }
-
-        transformed.action = transformed.action || "BUY";
-        transformed.orderType = transformed.orderType || "LIMIT";
-        transformed.target = transformed.target || "NONE";
-        transformed.targetValue =
-          transformed.targetValue !== undefined ? transformed.targetValue : 0;
-        transformed.stoploss = transformed.stoploss || "NONE";
-        transformed.stoplossValue =
-          transformed.stoplossValue !== undefined
-            ? transformed.stoplossValue
-            : 0;
-        transformed.priceType = transformed.priceType || "BIDASK";
-        transformed.depthIndex = transformed.depthIndex || 1;
-        transformed.waitAndTrade =
-          transformed.waitAndTrade !== undefined ? transformed.waitAndTrade : 0;
-        transformed.waitAndTradeLogic = transformed.waitAndTradeLogic || "NONE";
-        transformed.onTargetAction = transformed.onTargetAction || "NONE";
-        transformed.onStoplossAction = transformed.onStoplossAction || "NONE";
-        transformed.dynamicHedge =
-          transformed.dynamicHedge !== undefined
-            ? transformed.dynamicHedge
-            : false;
-        transformed.premiumBasedStrike =
-          transformed.premiumBasedStrike !== undefined
-            ? transformed.premiumBasedStrike
-            : false;
-
-        // Sanitize action configs - ensure numbers are numbers, not strings
-        const sanitizeActionConfig = (config: any) => {
-          if (!config) return config;
-          return {
-            ...config,
-            actionCount:
-              typeof config.actionCount === "string"
-                ? parseInt(config.actionCount) || 1
-                : config.actionCount,
-            slOrderAdjust: config.slOrderAdjust
-              ? {
-                  minPoints:
-                    typeof config.slOrderAdjust.minPoints === "string"
-                      ? parseFloat(config.slOrderAdjust.minPoints) || 0
-                      : config.slOrderAdjust.minPoints,
-                  maxPercentage:
-                    typeof config.slOrderAdjust.maxPercentage === "string"
-                      ? parseFloat(config.slOrderAdjust.maxPercentage) || 0
-                      : config.slOrderAdjust.maxPercentage,
-                }
-              : { minPoints: 0, maxPercentage: 0 },
-          };
-        };
-
-        // Debug: Log action configs before sanitization
-        console.log(
-          `🔍 DEBUG CREATE Frontend - Leg ${leg.legId} BEFORE sanitization:`
-        );
-        if (transformed.onTargetActionConfig) {
-          console.log(
-            `  onTargetActionConfig:`,
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          console.log(
-            `  onStoplossActionConfig:`,
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          console.log(
-            `  onSquareOffActionConfig:`,
-            transformed.onSquareOffActionConfig
-          );
-        }
-
-        if (transformed.onTargetActionConfig) {
-          transformed.onTargetActionConfig = sanitizeActionConfig(
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          transformed.onStoplossActionConfig = sanitizeActionConfig(
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          transformed.onSquareOffActionConfig = sanitizeActionConfig(
-            transformed.onSquareOffActionConfig
-          );
-        }
-
-        // Debug: Log action configs after sanitization
-        console.log(
-          `✅ DEBUG CREATE Frontend - Leg ${leg.legId} AFTER sanitization:`
-        );
-        if (transformed.onTargetActionConfig) {
-          console.log(
-            `  onTargetActionConfig:`,
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          console.log(
-            `  onStoplossActionConfig:`,
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          console.log(
-            `  onSquareOffActionConfig:`,
-            transformed.onSquareOffActionConfig
-          );
-        }
-
-        console.log("Transformed leg:", transformed);
-        transformedLegsDict[leg.legId] = transformed;
-      });
-
-      const strategyData: StrategyConfiguration = {
-        baseConfig,
-        legs: transformedLegsDict,
-        executionParams,
-        targetSettings,
-        stoplossSettings,
-        exitSettings,
-        dynamicHedgeSettings,
-        atBrokerSettings,
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log("Deploying Strategy Data:", strategyData);
-      console.log(
-        "Legs with action configs:",
-        JSON.stringify(strategyData.legs, null, 2)
-      );
-
-      const response = await fetch(`${API_BASE_URL}/strategy/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(strategyData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: "Unknown error occurred" }));
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("Strategy Deployment Result:", result);
-
-      setDeploymentStatus("success");
-      setDeploymentMessage(
-        `Strategy deployed successfully! Strategy ID: ${result.strategyId}`
-      );
-
-      setTimeout(() => {
-        setDeploymentStatus(null);
-        setDeploymentMessage("");
-      }, 5000);
-    } catch (error) {
-      console.error("Strategy Deployment Error:", error);
-      setDeploymentStatus("error");
-      setDeploymentMessage(
-        (error as Error).message ||
-          "Failed to deploy strategy. Please check your configuration and try again."
-      );
-
-      setTimeout(() => {
-        setDeploymentStatus(null);
-        setDeploymentMessage("");
-      }, 8000);
-    } finally {
-      setIsDeploying(false);
-    }
-  };
-
-  // Add new leg
-  const addLeg = (): void => {
+  // Legacy function kept for reference (can be removed)
+  const addLegLegacy = (): void => {
     // Find the next available leg ID
     const existingLegNumbers = Object.values(legs)
       .map((leg) => {
@@ -756,8 +377,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
     setLegs((prev) => ({ ...prev, [legId]: newLeg }));
   };
 
-  // Copy existing leg
-  const copyLeg = (legIdToCopy: string): void => {
+  // Copy existing leg - now using imported function
+  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
+  const copyLegLegacy = (legIdToCopy: string): void => {
     const legToCopy = legs[legIdToCopy];
     if (legToCopy) {
       // Find the next available leg ID
@@ -787,8 +409,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
     }
   };
 
-  // Update leg
-  const updateLeg = <K extends keyof Leg>(
+  // Update leg - now using imported function
+  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
+  const updateLegLegacy = <K extends keyof Leg>(
     legId: string,
     field: K,
     value: Leg[K]
@@ -802,8 +425,11 @@ const AdvancedOptionsBuilder: React.FC = () => {
     });
   };
 
-  // Update premium based strike config for a specific leg
-  const updatePremiumStrikeConfig = <K extends keyof PremiumBasedStrikeConfig>(
+  // Update premium based strike config - now using imported function
+  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
+  const updatePremiumStrikeConfigLegacy = <
+    K extends keyof PremiumBasedStrikeConfig
+  >(
     legId: string,
     field: K,
     value: PremiumBasedStrikeConfig[K]
@@ -823,8 +449,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
     });
   };
 
-  // Remove leg
-  const removeLeg = (legId: string): void => {
+  // Remove leg - now using imported function
+  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
+  const removeLegLegacy = (legId: string): void => {
     setLegs((prev) => {
       const updated = { ...prev };
       delete updated[legId];
@@ -832,61 +459,8 @@ const AdvancedOptionsBuilder: React.FC = () => {
     });
   };
 
-  // Toggle button component with color coding
-  const ToggleButton: React.FC<ToggleButtonProps> = ({
-    value,
-    onChange,
-    options,
-    colorScheme,
-  }) => {
-    const handleToggle = (): void => {
-      const currentIndex = options.indexOf(value);
-      const nextIndex = (currentIndex + 1) % options.length;
-      onChange(options[nextIndex]);
-    };
-
-    const getDisplayLabel = (): string => {
-      if (colorScheme === "buysell") {
-        if (value === "BUY") return "B";
-        if (value === "SELL") return "S";
-      }
-      return value;
-    };
-
-    const getColorClasses = (): string => {
-      if (!colorScheme) {
-        return "bg-blue-500 hover:bg-blue-600 text-white border-blue-600";
-      }
-
-      if (colorScheme === "buysell") {
-        if (value === "BUY") {
-          return "bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500";
-        } else if (value === "SELL") {
-          return "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500";
-        }
-      }
-
-      if (colorScheme === "callput") {
-        if (value === "CE") {
-          return "bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500";
-        } else if (value === "PE") {
-          return "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500";
-        }
-      }
-
-      return "bg-blue-500 hover:bg-blue-600 text-white border-blue-600";
-    };
-
-    return (
-      <button
-        type="button"
-        onClick={handleToggle}
-        className={`px-2 py-1 text-[0.6rem] font-medium rounded border transition-colors min-w-[40px] ${getColorClasses()}`}
-      >
-        {getDisplayLabel()}
-      </button>
-    );
-  };
+  // ToggleButton component - now using imported component
+  // (Component implementation moved to AdvancedOptionsBuilderFunctions/utils.tsx)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-2 md:p-4 ">
@@ -898,13 +472,13 @@ const AdvancedOptionsBuilder: React.FC = () => {
               <h1 className="text-md font-bold text-gray-900 dark:text-white">
                 Advanced Options Strategy Builder
               </h1>
-              <p className="text-[0.6rem] text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-[0.7rem] text-gray-600 dark:text-gray-400 mt-1">
                 Build and analyze complex options strategies
               </p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-[0.6rem] text-green-500 font-medium">
+              <span className="text-[0.7rem] text-green-500 font-medium">
                 Live Data
               </span>
             </div>
@@ -924,7 +498,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div>
-              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Strategy Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -935,11 +509,11 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 }
                 placeholder="Enter strategy name (required)"
                 required
-                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.7rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Lots
               </label>
               <input
@@ -948,12 +522,12 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleBaseConfigChange("lots", parseInt(e.target.value) || 1)
                 }
-                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.7rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="1"
               />
             </div>
             <div>
-              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Underlying
               </label>
               <select
@@ -964,7 +538,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                     e.target.value as Underlying
                   )
                 }
-                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.7rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {underlyingOptions.map((option) => (
                   <option key={option} value={option}>
@@ -974,7 +548,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-[0.6rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Execution Mode
               </label>
               <select
@@ -985,28 +559,33 @@ const AdvancedOptionsBuilder: React.FC = () => {
                     e.target.value as ExecutionMode
                   )
                 }
-                className="w-full text-[0.6rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-[0.7rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="Live Mode">Live Mode</option>
                 <option value="Simulation Mode">Simulation Mode</option>
               </select>
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="buyTradesFirst"
-                checked={baseConfig.buyTradesFirst}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  handleBaseConfigChange("buyTradesFirst", e.target.checked)
-                }
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <label
-                htmlFor="buyTradesFirst"
-                className="ml-2 text-[0.6rem] text-gray-700 dark:text-gray-300"
-              >
-                Buy Trades First
+            <div>
+              <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Trading Options
               </label>
+              <div className="flex items-center h-[38px] px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700">
+                <input
+                  type="checkbox"
+                  id="buyTradesFirst"
+                  checked={baseConfig.buyTradesFirst}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    handleBaseConfigChange("buyTradesFirst", e.target.checked)
+                  }
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label
+                  htmlFor="buyTradesFirst"
+                  className="ml-2 text-[0.7rem] text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                >
+                  Buy Trades First
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1022,7 +601,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
             </div>
             <button
               onClick={addLeg}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[0.7rem] font-medium rounded-lg transition-colors"
             >
               + Add Leg
             </button>
@@ -1045,7 +624,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-[0.6rem]">
+              <p className="text-gray-500 dark:text-gray-400 text-[0.7rem]">
                 No legs added yet. Click "Add Leg" to start building your
                 strategy.
               </p>
@@ -1093,7 +672,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-[0.6rem] whitespace-nowrap transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-[0.7rem] whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600 dark:text-blue-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
@@ -1194,34 +773,34 @@ const AdvancedOptionsBuilder: React.FC = () => {
             {/* Strategy Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
               <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg text-center">
-                <div className="text-[0.6rem] text-indigo-600 dark:text-indigo-400 font-medium">
+                <div className="text-[0.7rem] text-indigo-600 dark:text-indigo-400 font-medium">
                   Strategy ID
                 </div>
-                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
                   {baseConfig.strategyId}
                 </div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
-                <div className="text-[0.6rem] text-blue-600 dark:text-blue-400 font-medium">
+                <div className="text-[0.7rem] text-blue-600 dark:text-blue-400 font-medium">
                   Total Legs
                 </div>
-                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
                   {Object.keys(legs).length}
                 </div>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
-                <div className="text-[0.6rem] text-green-600 dark:text-green-400 font-medium">
+                <div className="text-[0.7rem] text-green-600 dark:text-green-400 font-medium">
                   Execution Mode
                 </div>
-                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
                   {executionParams.legsExecution}
                 </div>
               </div>
               <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg text-center">
-                <div className="text-[0.6rem] text-orange-600 dark:text-orange-400 font-medium">
+                <div className="text-[0.7rem] text-orange-600 dark:text-orange-400 font-medium">
                   Target Type
                 </div>
-                <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white">
+                <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
                   {targetSettings.targetType}
                 </div>
               </div>
@@ -1232,7 +811,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
               <button
                 onClick={deployStrategy}
                 disabled={isDeploying}
-                className={`px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[0.6rem] font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                className={`px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[0.7rem] font-semibold rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
                   isDeploying ? "animate-pulse" : ""
                 }`}
               >
@@ -1339,7 +918,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                     setActiveTab("strategy");
                   }
                 }}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white text-[0.6rem] font-medium rounded-lg transition-colors"
+                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white text-[0.7rem] font-medium rounded-lg transition-colors"
               >
                 🗑️ Clear All
               </button>
@@ -1386,7 +965,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   </svg>
                 )}
                 <p
-                  className={`text-[0.6rem] font-medium ${
+                  className={`text-[0.7rem] font-medium ${
                     deploymentStatus === "success"
                       ? "text-green-800 dark:text-green-200"
                       : "text-red-800 dark:text-red-200"

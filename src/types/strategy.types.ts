@@ -110,7 +110,6 @@ export interface Leg {
   premiumBasedStrike: boolean;
   premiumBasedStrikeConfig: PremiumBasedStrikeConfig;
   hedgeSelectedStrike?: number | null;
-  initialPrice?: number | null;
   selectedStrike?: number | null;
 }
 

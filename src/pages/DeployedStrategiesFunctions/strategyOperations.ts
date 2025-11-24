@@ -78,33 +78,6 @@ export const updateStrategy = async (
   fetchStrategies: () => void
 ) => {
   try {
-    // Debug: Log the config being sent
-    console.log("🔍 DEBUG UPDATE Frontend: Sending config to backend:");
-    if (updatedConfig.legs) {
-      Object.entries(updatedConfig.legs).forEach(
-        ([legId, leg]: [string, any]) => {
-          if (leg.onTargetActionConfig) {
-            console.log(
-              `  Leg ${legId} onTargetActionConfig:`,
-              leg.onTargetActionConfig
-            );
-          }
-          if (leg.onStoplossActionConfig) {
-            console.log(
-              `  Leg ${legId} onStoplossActionConfig:`,
-              leg.onStoplossActionConfig
-            );
-          }
-          if (leg.onSquareOffActionConfig) {
-            console.log(
-              `  Leg ${legId} onSquareOffActionConfig:`,
-              leg.onSquareOffActionConfig
-            );
-          }
-        }
-      );
-    }
-
     const response = await fetch(
       `${API_BASE_URL}/strategy/update/${strategyId}`,
       {
@@ -248,7 +221,6 @@ export const copyStrategy = async (
           reEnterLogic: "NONE",
           hedgeSelectedStrike: undefined,
           selectedStrike: undefined,
-          initialPrice: undefined,
           initialLegPrice: undefined,
         };
       });
@@ -266,7 +238,6 @@ export const copyStrategy = async (
           reEnterLogic: "NONE",
           hedgeSelectedStrike: undefined,
           selectedStrike: undefined,
-          initialPrice: undefined,
           initialLegPrice: undefined,
         };
       });
