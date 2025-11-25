@@ -14,9 +14,7 @@ export const getInitialFormData = () => ({
       marketAtLast: false,
     },
     modifyOptions: {
-      priceType: "LTP",
-      depthIndex: 0,
-      betterPriceLogicType: "None",
+      betterPriceLogicType: "NONE",
       betterPriceLogicValue: 0,
     },
   },

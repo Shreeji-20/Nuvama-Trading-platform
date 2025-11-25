@@ -185,10 +185,47 @@ export const copyStrategy = async (
     }
   }
 
+  const defaultNewStrategyName = `${originalName}_copy_${nextCopyNumber}`;
+
+  // Ask user if they want to use default name or enter custom name
+  const useDefaultName = confirm(
+    `Copy strategy "${originalName}"?\n\nDefault name: "${defaultNewStrategyName}"\n\nClick OK to use default name, or Cancel to enter custom name.`
+  );
+
+  let newStrategyName: string | null;
+
+  if (useDefaultName) {
+    newStrategyName = defaultNewStrategyName;
+  } else {
+    // Ask for custom name
+    newStrategyName = prompt(
+      `Enter a custom name for the copied strategy:`,
+      defaultNewStrategyName
+    );
+
+    // If user cancelled the prompt or entered empty string
+    if (!newStrategyName || newStrategyName.trim() === "") {
+      return; // Cancel the copy operation
+    }
+
+    newStrategyName = newStrategyName.trim();
+
+    // Check if name already exists
+    const nameExists = strategies.some(
+      (s) => (s.config as any)?.baseConfig?.strategyName === newStrategyName
+    );
+
+    if (nameExists) {
+      alert(
+        `A strategy with the name "${newStrategyName}" already exists. Please choose a different name.`
+      );
+      return;
+    }
+  }
+
   // Generate a new unique strategy ID (8 character hex like backend does)
   const randomHex = Math.random().toString(16).substring(2, 10).toUpperCase();
   const newStrategyId = `STRATEGY_${randomHex}`;
-  const newStrategyName = `${originalName}_copy_${nextCopyNumber}`;
 
   // Deep clone the configuration
   const newConfig = JSON.parse(JSON.stringify(strategy.config));
@@ -243,14 +280,6 @@ export const copyStrategy = async (
       });
       newConfig.legs = updatedLegs;
     }
-  }
-
-  if (
-    !confirm(
-      `Create a copy of strategy "${originalName}"?\n\nNew Strategy Name: ${newStrategyName}`
-    )
-  ) {
-    return;
   }
 
   try {

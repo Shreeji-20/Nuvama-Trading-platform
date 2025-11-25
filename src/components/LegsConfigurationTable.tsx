@@ -208,6 +208,18 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
               On SquareOff Action
             </th>
             <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Initial Leg Price
+            </th>
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Selected Strike
+            </th>
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Hedge Selected Strike
+            </th>
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Re-Enter Count
+            </th>
+            <th className="text-center p-1 text-[0.7rem] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Actions
             </th>
           </tr>
@@ -763,6 +775,50 @@ const LegsConfigurationTable: React.FC<LegsConfigurationTableProps> = ({
                       "NONE"}
                   </span>
                 )}
+              </td>
+
+              {/* Initial Leg Price */}
+              <td className="p-1 text-center">
+                {isEditing && onLegChange ? (
+                  <input
+                    type="number"
+                    value={leg.initialLegPrice || ""}
+                    onChange={(e) =>
+                      onLegChange(
+                        leg.legId,
+                        "initialLegPrice",
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
+                    step="0.01"
+                    className="w-20 text-[0.7rem] p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                ) : (
+                  <span className="text-gray-900 dark:text-white text-[0.7rem]">
+                    {leg.initialLegPrice ?? "-"}
+                  </span>
+                )}
+              </td>
+
+              {/* Selected Strike */}
+              <td className="p-1 text-center">
+                <span className="text-gray-900 dark:text-white text-[0.7rem]">
+                  {leg.selectedStrike ?? "-"}
+                </span>
+              </td>
+
+              {/* Hedge Selected Strike */}
+              <td className="p-1 text-center">
+                <span className="text-gray-900 dark:text-white text-[0.7rem]">
+                  {leg.hedgeSelectedStrike ?? "-"}
+                </span>
+              </td>
+
+              {/* Re-Enter Count */}
+              <td className="p-1 text-center">
+                <span className="text-gray-900 dark:text-white text-[0.7rem]">
+                  {leg.reEnterCount ?? 0}
+                </span>
               </td>
 
               {/* Actions */}

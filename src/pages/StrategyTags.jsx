@@ -21,9 +21,7 @@ const StrategyTags = () => {
         marketAtLast: false,
       },
       modifyOptions: {
-        priceType: "LTP",
-        depthIndex: 0,
-        betterPriceLogicType: "None",
+        betterPriceLogicType: "NONE",
         betterPriceLogicValue: 0,
       },
     },
@@ -167,6 +165,8 @@ const StrategyTags = () => {
         ...formData.globalSettings,
         modifyOptions: {
           ...formData.globalSettings.modifyOptions,
+          betterPriceLogicType:
+            formData.globalSettings.modifyOptions.betterPriceLogicType.toUpperCase(),
           betterPriceLogicValue:
             formData.globalSettings.modifyOptions.betterPriceLogicValue === ""
               ? 0
@@ -225,9 +225,7 @@ const StrategyTags = () => {
           marketAtLast: false,
         },
         modifyOptions: {
-          priceType: "LTP",
-          depthIndex: 0,
-          betterPriceLogicType: "None",
+          betterPriceLogicType: "NONE",
           betterPriceLogicValue: 0,
         },
       },
@@ -260,6 +258,8 @@ const StrategyTags = () => {
         ...inlineEditData.globalSettings,
         modifyOptions: {
           ...inlineEditData.globalSettings.modifyOptions,
+          betterPriceLogicType:
+            inlineEditData.globalSettings.modifyOptions.betterPriceLogicType.toUpperCase(),
           betterPriceLogicValue:
             inlineEditData.globalSettings.modifyOptions
               .betterPriceLogicValue === ""
@@ -322,9 +322,7 @@ const StrategyTags = () => {
           marketAtLast: false,
         },
         modifyOptions: {
-          priceType: "LTP",
-          depthIndex: 0,
-          betterPriceLogicType: "None",
+          betterPriceLogicType: "NONE",
           betterPriceLogicValue: 0,
         },
       },
@@ -696,63 +694,6 @@ const StrategyTags = () => {
                   <div className="flex flex-wrap items-end gap-3">
                     <div>
                       <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Price Type
-                      </label>
-                      <select
-                        value={formData.globalSettings.modifyOptions.priceType}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            globalSettings: {
-                              ...formData.globalSettings,
-                              modifyOptions: {
-                                ...formData.globalSettings.modifyOptions,
-                                priceType: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                        className="w-28 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                      >
-                        <option value="LTP">LTP</option>
-                        <option value="BidAsk">BidAsk</option>
-                        <option value="Depth">Depth</option>
-                      </select>
-                    </div>
-                    {formData.globalSettings.modifyOptions.priceType ===
-                      "Depth" && (
-                      <div>
-                        <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Depth Index
-                        </label>
-                        <select
-                          value={
-                            formData.globalSettings.modifyOptions.depthIndex
-                          }
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              globalSettings: {
-                                ...formData.globalSettings,
-                                modifyOptions: {
-                                  ...formData.globalSettings.modifyOptions,
-                                  depthIndex: parseInt(e.target.value),
-                                },
-                              },
-                            })
-                          }
-                          className="w-20 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                        >
-                          <option value={0}>0</option>
-                          <option value={1}>1</option>
-                          <option value={2}>2</option>
-                          <option value={3}>3</option>
-                          <option value={4}>4</option>
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Better Price Logic
                       </label>
                       <select
@@ -767,17 +708,18 @@ const StrategyTags = () => {
                               ...formData.globalSettings,
                               modifyOptions: {
                                 ...formData.globalSettings.modifyOptions,
-                                betterPriceLogicType: e.target.value,
+                                betterPriceLogicType:
+                                  e.target.value.toUpperCase(),
                               },
                             },
                           })
                         }
                         className="w-32 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                       >
-                        <option value="None">None</option>
-                        <option value="Absolute">Absolute</option>
-                        <option value="Percentage">Percentage</option>
-                        <option value="Ticks">Ticks</option>
+                        <option value="NONE">NONE</option>
+                        <option value="POINTS">POINTS</option>
+                        <option value="PERCENTAGE">PERCENTAGE</option>
+                        <option value="TICKS">TICKS</option>
                       </select>
                     </div>
                     <div>
@@ -1131,67 +1073,36 @@ const StrategyTags = () => {
                           {editData.globalSettings && (
                             <>
                               {isEditing ? (
-                                <div className="space-y-1">
-                                  <select
-                                    value={
-                                      editData.globalSettings.modifyOptions
-                                        .priceType
-                                    }
-                                    onChange={(e) =>
-                                      setInlineEditData({
-                                        ...inlineEditData,
-                                        globalSettings: {
-                                          ...inlineEditData.globalSettings,
-                                          modifyOptions: {
-                                            ...inlineEditData.globalSettings
-                                              .modifyOptions,
-                                            priceType: e.target.value,
-                                          },
+                                <select
+                                  value={
+                                    editData.globalSettings.modifyOptions
+                                      .betterPriceLogicType
+                                  }
+                                  onChange={(e) =>
+                                    setInlineEditData({
+                                      ...inlineEditData,
+                                      globalSettings: {
+                                        ...inlineEditData.globalSettings,
+                                        modifyOptions: {
+                                          ...inlineEditData.globalSettings
+                                            .modifyOptions,
+                                          betterPriceLogicType:
+                                            e.target.value.toUpperCase(),
                                         },
-                                      })
-                                    }
-                                    className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
-                                  >
-                                    <option value="LTP">LTP</option>
-                                    <option value="BidAsk">BidAsk</option>
-                                    <option value="Depth">Depth</option>
-                                  </select>
-                                  <select
-                                    value={
-                                      editData.globalSettings.modifyOptions
-                                        .betterPriceLogicType
-                                    }
-                                    onChange={(e) =>
-                                      setInlineEditData({
-                                        ...inlineEditData,
-                                        globalSettings: {
-                                          ...inlineEditData.globalSettings,
-                                          modifyOptions: {
-                                            ...inlineEditData.globalSettings
-                                              .modifyOptions,
-                                            betterPriceLogicType:
-                                              e.target.value,
-                                          },
-                                        },
-                                      })
-                                    }
-                                    className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
-                                  >
-                                    <option value="None">None</option>
-                                    <option value="Absolute">Absolute</option>
-                                    <option value="Percentage">
-                                      Percentage
-                                    </option>
-                                    <option value="Ticks">Ticks</option>
-                                  </select>
-                                </div>
+                                      },
+                                    })
+                                  }
+                                  className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
+                                >
+                                  <option value="NONE">NONE</option>
+                                  <option value="POINTS">POINTS</option>
+                                  <option value="PERCENTAGE">PERCENTAGE</option>
+                                  <option value="TICKS">TICKS</option>
+                                </select>
                               ) : (
                                 <span className="text-gray-700 dark:text-gray-300">
                                   {tag.globalSettings.modifyOptions
-                                    ?.priceType || "LTP"}{" "}
-                                  |{" "}
-                                  {tag.globalSettings.modifyOptions
-                                    ?.betterPriceLogicType || "None"}
+                                    ?.betterPriceLogicType || "NONE"}
                                 </span>
                               )}
                             </>

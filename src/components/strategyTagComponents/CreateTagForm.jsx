@@ -297,61 +297,6 @@ const CreateTagForm = ({
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Price Type
-                  </label>
-                  <select
-                    value={formData.globalSettings.modifyOptions.priceType}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        globalSettings: {
-                          ...formData.globalSettings,
-                          modifyOptions: {
-                            ...formData.globalSettings.modifyOptions,
-                            priceType: e.target.value,
-                          },
-                        },
-                      })
-                    }
-                    className="w-28 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                  >
-                    <option value="LTP">LTP</option>
-                    <option value="BidAsk">BidAsk</option>
-                    <option value="Depth">Depth</option>
-                  </select>
-                </div>
-                {formData.globalSettings.modifyOptions.priceType ===
-                  "Depth" && (
-                  <div>
-                    <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Depth Index
-                    </label>
-                    <select
-                      value={formData.globalSettings.modifyOptions.depthIndex}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          globalSettings: {
-                            ...formData.globalSettings,
-                            modifyOptions: {
-                              ...formData.globalSettings.modifyOptions,
-                              depthIndex: parseInt(e.target.value),
-                            },
-                          },
-                        })
-                      }
-                      className="w-20 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    >
-                      <option value={0}>0</option>
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                      <option value={4}>4</option>
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Better Price Logic
                   </label>
                   <select
@@ -372,10 +317,10 @@ const CreateTagForm = ({
                     }
                     className="w-32 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
-                    <option value="None">None</option>
-                    <option value="Absolute">Absolute</option>
-                    <option value="Percentage">Percentage</option>
-                    <option value="Ticks">Ticks</option>
+                    <option value="NONE">NONE</option>
+                    <option value="POINTS">POINTS</option>
+                    <option value="PERCENTAGE">PERCENTAGE</option>
+                    <option value="TICKS">TICKS</option>
                   </select>
                 </div>
                 <div>

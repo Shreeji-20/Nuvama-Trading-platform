@@ -707,20 +707,45 @@ const DeployedStrategies: React.FC = () => {
                             : Object.keys((strategy.config as any).legs)
                                 .length > 0) && (
                             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2 sm:p-3">
-                              <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                Legs Configuration (
-                                {isEditing
-                                  ? Array.isArray(editValues.legs)
-                                    ? editValues.legs?.length
-                                    : Object.keys(editValues.legs || {}).length
-                                  : Array.isArray((strategy.config as any).legs)
-                                  ? (strategy.config as any).legs.length
-                                  : Object.keys(
-                                      (strategy.config as any).legs || {}
-                                    ).length}{" "}
-                                legs)
-                              </h4>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  Legs Configuration (
+                                  {isEditing
+                                    ? Array.isArray(editValues.legs)
+                                      ? editValues.legs?.length
+                                      : Object.keys(editValues.legs || {})
+                                          .length
+                                    : Array.isArray(
+                                        (strategy.config as any).legs
+                                      )
+                                    ? (strategy.config as any).legs.length
+                                    : Object.keys(
+                                        (strategy.config as any).legs || {}
+                                      ).length}{" "}
+                                  legs)
+                                </h4>
+                                <button
+                                  onClick={() => fetchStrategies()}
+                                  className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[0.65rem] font-medium rounded transition-colors flex items-center gap-1"
+                                  title="Refresh legs data"
+                                >
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                  </svg>
+                                  Refresh
+                                </button>
+                              </div>
                               <LegsConfigurationTable
                                 legs={
                                   isEditing

@@ -111,6 +111,8 @@ export interface Leg {
   premiumBasedStrikeConfig: PremiumBasedStrikeConfig;
   hedgeSelectedStrike?: number | null;
   selectedStrike?: number | null;
+  initialLegPrice?: number | null; // Price at which leg was initially entered
+  reEnterCount?: number; // Number of times leg has been re-entered
 }
 
 // Execution parameters interface

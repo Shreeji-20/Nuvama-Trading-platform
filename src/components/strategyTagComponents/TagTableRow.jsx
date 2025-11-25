@@ -205,45 +205,27 @@ const TagTableRow = ({
         {currentData.globalSettings && (
           <>
             {isEditing ? (
-              <div className="space-y-1">
-                <select
-                  value={currentData.globalSettings.modifyOptions.priceType}
-                  onChange={(e) =>
-                    handleGlobalSettingChange(
-                      "modifyOptions.priceType",
-                      e.target.value
-                    )
-                  }
-                  className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
-                >
-                  <option value="LTP">LTP</option>
-                  <option value="BidAsk">BidAsk</option>
-                  <option value="Depth">Depth</option>
-                </select>
-                <select
-                  value={
-                    currentData.globalSettings.modifyOptions
-                      .betterPriceLogicType
-                  }
-                  onChange={(e) =>
-                    handleGlobalSettingChange(
-                      "modifyOptions.betterPriceLogicType",
-                      e.target.value
-                    )
-                  }
-                  className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
-                >
-                  <option value="None">None</option>
-                  <option value="Absolute">Absolute</option>
-                  <option value="Percentage">Percentage</option>
-                  <option value="Ticks">Ticks</option>
-                </select>
-              </div>
+              <select
+                value={
+                  currentData.globalSettings.modifyOptions.betterPriceLogicType
+                }
+                onChange={(e) =>
+                  handleGlobalSettingChange(
+                    "modifyOptions.betterPriceLogicType",
+                    e.target.value
+                  )
+                }
+                className="w-full px-1 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
+              >
+                <option value="NONE">NONE</option>
+                <option value="POINTS">POINTS</option>
+                <option value="PERCENTAGE">PERCENTAGE</option>
+                <option value="TICKS">TICKS</option>
+              </select>
             ) : (
               <span className="text-gray-700 dark:text-gray-300">
-                {tag.globalSettings.modifyOptions?.priceType || "LTP"} |{" "}
                 {tag.globalSettings.modifyOptions?.betterPriceLogicType ||
-                  "None"}
+                  "NONE"}
               </span>
             )}
           </>
