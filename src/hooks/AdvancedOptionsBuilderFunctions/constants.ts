@@ -24,6 +24,7 @@ export const symbolOptions: string[] = [
   "SENSEX",
 ];
 export const expiryOptions: number[] = [0, 1, 2, 3, 4, 5];
+
 export const dynamicExpiryOptions: string[] = [
   "None",
   "Current Week",
@@ -32,13 +33,7 @@ export const dynamicExpiryOptions: string[] = [
   "Monthly",
 ];
 export const underlyingOptions: Underlying[] = ["Spot", "Futures"];
-export const priceTypeOptions: PriceType[] = [
-  "LTP",
-  "BIDASK",
-  "DEPTH",
-  "BID",
-  "ASK",
-];
+export const priceTypeOptions: PriceType[] = ["LTP", "BIDASK", "BID", "ASK"];
 export const orderTypeOptions: OrderType[] = ["LIMIT", "MARKET"];
 
 export const targetOptions: TargetStoplossType[] = [

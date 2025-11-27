@@ -162,12 +162,70 @@ export const prepareSanitizedLegs = (
 };
 
 /**
- * Save edited strategy
+ * Deep compare two objects and return only the changed fields
+ */
+const getChangedFields = (original: any, updated: any): any => {
+  if (original === updated) return undefined;
+
+  // Handle null/undefined cases
+  if (original === null || original === undefined) return updated;
+  if (updated === null || updated === undefined) return updated;
+
+  // Handle primitive types
+  if (typeof original !== "object" || typeof updated !== "object") {
+    return original !== updated ? updated : undefined;
+  }
+
+  // Handle arrays
+  if (Array.isArray(original) || Array.isArray(updated)) {
+    // For arrays, if they're different, return the whole updated array
+    if (JSON.stringify(original) !== JSON.stringify(updated)) {
+      return updated;
+    }
+    return undefined;
+  }
+
+  // Handle objects
+  const changes: any = {};
+  let hasChanges = false;
+
+  // Check all keys in updated object
+  const allKeys = new Set([
+    ...Object.keys(original || {}),
+    ...Object.keys(updated || {}),
+  ]);
+
+  for (const key of allKeys) {
+    const originalValue = original[key];
+    const updatedValue = updated[key];
+
+    if (
+      typeof updatedValue === "object" &&
+      updatedValue !== null &&
+      !Array.isArray(updatedValue)
+    ) {
+      const nestedChanges = getChangedFields(originalValue, updatedValue);
+      if (nestedChanges !== undefined) {
+        changes[key] = nestedChanges;
+        hasChanges = true;
+      }
+    } else if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+      changes[key] = updatedValue;
+      hasChanges = true;
+    }
+  }
+
+  return hasChanges ? changes : undefined;
+};
+
+/**
+ * Save edited strategy (sends only changed fields)
  */
 export const saveEdit = (
   strategyId: string,
   editValues: any,
-  updateStrategy: (strategyId: string, config: any) => void
+  updateStrategy: (strategyId: string, config: any) => void,
+  originalStrategy?: Strategy
 ) => {
   const sanitizedLegs = prepareSanitizedLegs(editValues, strategyId);
 
@@ -176,17 +234,25 @@ export const saveEdit = (
     legs: sanitizedLegs,
   };
 
-  // Preserve isSelectedForTrading and tradingState if not explicitly set in editValues
-  // These should only be modified through their dedicated UI controls (checkbox and buttons)
-  if (sanitizedConfig.baseConfig) {
-    // If isSelectedForTrading is not in editValues.baseConfig, it means we're not trying to change it
-    // The backend will preserve the existing value through its update logic
-    // This ensures checkbox state is only changed through the checkbox itself
-    // Similarly for tradingState - preserve if not explicitly changed
-    // These fields should remain unchanged during regular editing operations
-  }
+  // If we have the original strategy, calculate only the changed fields
+  if (originalStrategy?.config) {
+    const changedFields = getChangedFields(
+      originalStrategy.config,
+      sanitizedConfig
+    );
 
-  updateStrategy(strategyId, sanitizedConfig);
+    if (changedFields && Object.keys(changedFields).length > 0) {
+      // Send only changed fields
+      updateStrategy(strategyId, changedFields);
+    } else {
+      console.log("No changes detected, skipping update");
+      // Still close editing mode even if no changes
+      return;
+    }
+  } else {
+    // Fallback: send full config if original not available
+    updateStrategy(strategyId, sanitizedConfig);
+  }
 };
 
 /**

@@ -39,6 +39,8 @@ export {
   updateStrategy,
   deleteStrategy,
   copyStrategy,
+  fetchStrategyStatus,
+  fetchMultipleStrategyStatuses,
   type StrategyOperationHandlers,
 } from "./strategyOperations";
 

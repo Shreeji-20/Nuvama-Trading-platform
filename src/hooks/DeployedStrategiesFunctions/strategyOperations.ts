@@ -1,5 +1,6 @@
 import config from "../../config/api";
 import { Strategy } from "../../types/deployedStrategies.types";
+import axios from "axios";
 
 const API_BASE_URL = config.API_BASE_URL;
 
@@ -9,7 +10,6 @@ const API_BASE_URL = config.API_BASE_URL;
  */
 
 export interface StrategyOperationHandlers {
-  setLoading: (value: boolean) => void;
   setError: (value: string | null) => void;
   setStrategies: (strategies: Strategy[]) => void;
   setEditingStrategy: (id: string | null) => void;
@@ -20,25 +20,15 @@ export interface StrategyOperationHandlers {
  * Fetch all deployed strategies from the backend
  */
 export const fetchStrategies = async (
-  handlers: Pick<
-    StrategyOperationHandlers,
-    "setLoading" | "setError" | "setStrategies"
-  >
+  handlers: Pick<StrategyOperationHandlers, "setError" | "setStrategies">
 ) => {
   try {
-    handlers.setLoading(true);
     handlers.setError(null);
-    const response = await fetch(`${API_BASE_URL}/strategy/list`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    handlers.setStrategies(data.strategies || []);
+    const response = await axios.get(`${API_BASE_URL}/strategy/list`);
+    handlers.setStrategies(response.data.strategies || []);
   } catch (err: any) {
     console.error("Error fetching strategies:", err);
     handlers.setError(err.message);
-  } finally {
-    handlers.setLoading(false);
   }
 };
 
@@ -46,22 +36,13 @@ export const fetchStrategies = async (
  * Fetch available strategy tags
  */
 export const fetchStrategyTags = async (
-  setAvailableTags: (tags: any[]) => void,
-  setLoadingTags: (loading: boolean) => void
+  setAvailableTags: (tags: any[]) => void
 ) => {
   try {
-    setLoadingTags(true);
-    const response = await fetch(`${API_BASE_URL}/strategy-tags/list`);
-    if (response.ok) {
-      const tags = await response.json();
-      setAvailableTags(tags);
-    } else {
-      console.error("Failed to fetch strategy tags");
-    }
+    const response = await axios.get(`${API_BASE_URL}/strategy-tags/list`);
+    setAvailableTags(response.data);
   } catch (error) {
     console.error("Error fetching strategy tags:", error);
-  } finally {
-    setLoadingTags(false);
   }
 };
 
@@ -78,35 +59,11 @@ export const updateStrategy = async (
   fetchStrategies: () => void
 ) => {
   try {
-    const response = await fetch(
+    await axios.put(
       `${API_BASE_URL}/strategy/update/${strategyId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedConfig),
-      }
+      updatedConfig
     );
 
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ detail: "Unknown error" }));
-      console.error("Update error response:", errorData);
-
-      if (response.status === 422 && errorData.detail?.errors) {
-        const errorMessages = errorData.detail.errors
-          .map((err: any) => `${err.loc.join(".")}: ${err.msg}`)
-          .join("\n");
-        throw new Error(`Validation errors:\n${errorMessages}`);
-      }
-
-      throw new Error(
-        errorData.detail || `HTTP error! status: ${response.status}`
-      );
-    }
-    await response.json();
     fetchStrategies();
     handlers.setEditingStrategy(null);
     handlers.setEditValues({});
@@ -114,7 +71,19 @@ export const updateStrategy = async (
     alert("Strategy updated successfully!");
   } catch (err: any) {
     console.error("Error updating strategy:", err);
-    alert(`Failed to update strategy: ${err.message}`);
+
+    if (err.response?.status === 422 && err.response?.data?.detail?.errors) {
+      const errorMessages = err.response.data.detail.errors
+        .map((error: any) => `${error.loc.join(".")}: ${error.msg}`)
+        .join("\n");
+      alert(`Failed to update strategy:\nValidation errors:\n${errorMessages}`);
+    } else {
+      alert(
+        `Failed to update strategy: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
+    }
   }
 };
 
@@ -130,16 +99,7 @@ export const deleteStrategy = async (
   }
 
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/strategy/delete/${strategyId}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    await axios.delete(`${API_BASE_URL}/strategy/delete/${strategyId}`);
 
     alert("Strategy deleted successfully!");
     fetchStrategies();
@@ -284,29 +244,58 @@ export const copyStrategy = async (
 
   try {
     // Use the correct backend endpoint
-    const response = await fetch(`${API_BASE_URL}/strategy/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(newConfig),
-    });
+    const response = await axios.post(
+      `${API_BASE_URL}/strategy/create`,
+      newConfig
+    );
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Backend error:", errorData);
-      throw new Error(
-        errorData.detail || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    const result = await response.json();
     alert(
-      `Strategy copied successfully!\n\nNew Strategy ID: ${result.strategyId}\nNew Strategy Name: ${newStrategyName}`
+      `Strategy copied successfully!\n\nNew Strategy ID: ${response.data.strategyId}\nNew Strategy Name: ${newStrategyName}`
     );
     fetchStrategies();
   } catch (err: any) {
     console.error("Error copying strategy:", err);
-    alert(`Failed to copy strategy: ${err.message}`);
+    alert(
+      `Failed to copy strategy: ${err.response?.data?.detail || err.message}`
+    );
   }
+};
+
+/**
+ * Fetch strategy status from Redis (strategy_status:{strategy_id})
+ * Returns 'NONE' if key not found
+ */
+export const fetchStrategyStatus = async (
+  strategyId: string
+): Promise<string> => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/strategy/status/${strategyId}`
+    );
+    return response.data.status || "NONE";
+  } catch (error) {
+    console.error(`Error fetching strategy status for ${strategyId}:`, error);
+    return "NONE";
+  }
+};
+
+/**
+ * Fetch strategy statuses for multiple strategies
+ */
+export const fetchMultipleStrategyStatuses = async (
+  strategyIds: string[]
+): Promise<Record<string, string>> => {
+  const statusPromises = strategyIds.map(async (strategyId) => {
+    const status = await fetchStrategyStatus(strategyId);
+    return { strategyId, status };
+  });
+
+  const results = await Promise.all(statusPromises);
+
+  const statusMap: Record<string, string> = {};
+  results.forEach(({ strategyId, status }) => {
+    statusMap[strategyId] = status;
+  });
+
+  return statusMap;
 };

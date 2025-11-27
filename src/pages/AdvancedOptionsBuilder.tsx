@@ -2,7 +2,6 @@ import React, { useState, useEffect, ChangeEvent } from "react";
 import LegsConfigurationTable from "../components/LegsConfigurationTable";
 import PremiumStrikeModal from "../components/PremiumStrikeModal";
 import ActionConfigModal from "../components/ActionConfigModal";
-import StatusBadge from "../components/StatusBadge";
 import ExecutionParametersTab from "../components/ExecutionParametersTab";
 import TargetSettingsTab from "../components/TargetSettingsTab";
 import StoplossSettingsTab from "../components/StoplossSettingsTab";
@@ -11,16 +10,13 @@ import DynamicHedgeTab from "../components/DynamicHedgeTab";
 import AtBrokerTab from "../components/AtBrokerTab";
 import config from "../config/api";
 import {
-  // Constants
   symbolOptions,
   expiryOptions,
-  dynamicExpiryOptions,
   underlyingOptions,
   priceTypeOptions,
   orderTypeOptions,
   targetOptions,
   stoplossOptions,
-  depthOptions,
   actionOptions,
   tabs,
   productOptions,
@@ -32,10 +28,6 @@ import {
   stoplossTypeOptions,
   exitOrderTypeOptions,
   hedgeTypeOptions,
-  // Utils
-  getStrikeOptions,
-  ToggleButton,
-  // Handlers
   createBaseConfigChangeHandler,
   createExecutionParamChangeHandler,
   createDaysChangeHandler,
@@ -44,38 +36,17 @@ import {
   createExitSettingsChangeHandler,
   createDynamicHedgeSettingsChangeHandler,
   createAtBrokerSettingsChangeHandler,
-  // Leg Management
   createAddLegHandler,
   createCopyLegHandler,
   createUpdateLegHandler,
   createUpdatePremiumStrikeConfigHandler,
   createRemoveLegHandler,
-  createGenerateNewStrategyIdHandler,
-  // API Services
   fetchStrategyTags,
   createDeployStrategyHandler,
-} from "./AdvancedOptionsBuilderFunctions";
+} from "../hooks/AdvancedOptionsBuilderFunctions";
 import type {
   Underlying,
   ExecutionMode,
-  PriceType,
-  OrderType,
-  Action,
-  OptionType,
-  TargetStoplossType,
-  ActionType,
-  Product,
-  LegsExecution,
-  PortfolioExecutionMode,
-  EntryOrderType,
-  DayOfWeek,
-  TargetType,
-  StoplossType,
-  ExitOrderType,
-  HedgeType,
-  StrikeType,
-  SearchSide,
-  Condition,
   BaseConfig,
   PremiumBasedStrikeConfig,
   Leg,
@@ -85,11 +56,8 @@ import type {
   ExitSettings,
   DynamicHedgeSettings,
   AtBrokerSettings,
-  StrategyConfiguration,
   StrategyTag,
-  Tab,
   DeploymentStatus,
-  ToggleButtonProps,
 } from "../types/strategy.types";
 
 const AdvancedOptionsBuilder: React.FC = () => {
@@ -240,8 +208,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
   const handleExecutionParamChange =
     createExecutionParamChangeHandler(setExecutionParams);
 
-  const handleDaysChange = createDaysChangeHandler(setExecutionParams);
-
   const handleTargetSettingsChange =
     createTargetSettingsChangeHandler(setTargetSettings);
 
@@ -263,10 +229,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
   const updatePremiumStrikeConfig =
     createUpdatePremiumStrikeConfigHandler(setLegs);
   const removeLeg = createRemoveLegHandler(setLegs);
-  const generateNewStrategyId = createGenerateNewStrategyIdHandler(
-    setBaseConfig,
-    setLegs
-  );
 
   const deployStrategy = createDeployStrategyHandler(
     API_BASE_URL,
@@ -287,180 +249,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
   useEffect(() => {
     fetchStrategyTags(API_BASE_URL, setLoadingTags, setAvailableTags);
   }, [API_BASE_URL]);
-
-  // Add new leg - now using imported function
-  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
-
-  // Legacy function kept for reference (can be removed)
-  const addLegLegacy = (): void => {
-    // Find the next available leg ID
-    const existingLegNumbers = Object.values(legs)
-      .map((leg) => {
-        const match = leg.legId?.match(/LEG_(\d+)/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .sort((a, b) => a - b);
-
-    let nextLegNumber = 1;
-    for (const num of existingLegNumbers) {
-      if (num === nextLegNumber) {
-        nextLegNumber++;
-      } else {
-        break;
-      }
-    }
-
-    const legId = `LEG_${nextLegNumber.toString().padStart(3, "0")}`;
-    const newLeg: Leg = {
-      id: Date.now(),
-      legId: legId,
-      strategyId: baseConfig.strategyId,
-      strategyName: baseConfig.strategyName,
-      symbol: "NIFTY",
-      expiry: 0,
-      action: "BUY",
-      optionType: "CE",
-      lots: 1,
-      strike: "ATM",
-      target: "NONE",
-      targetValue: 0,
-      stoploss: "NONE",
-      stoplossValue: 0,
-      priceType: "BIDASK",
-      depthIndex: 1,
-      orderType: "LIMIT",
-      startTime: "",
-      waitAndTrade: 0,
-      waitAndTradeLogic: "NONE",
-      dynamicHedge: false,
-      onTargetAction: "NONE",
-      onStoplossAction: "NONE",
-      onSquareOffAction: "NONE",
-      onTargetActionConfig: {
-        actionType: "NONE",
-        actionCount: 1,
-        orderAtBroker: false,
-        slOrderAdjust: {
-          minPoints: 0,
-          maxPercentage: 0,
-        },
-      },
-      onStoplossActionConfig: {
-        actionType: "NONE",
-        actionCount: 1,
-        orderAtBroker: false,
-        slOrderAdjust: {
-          minPoints: 0,
-          maxPercentage: 0,
-        },
-      },
-      onSquareOffActionConfig: {
-        actionType: "NONE",
-        actionCount: 1,
-        orderAtBroker: false,
-        slOrderAdjust: {
-          minPoints: 0,
-          maxPercentage: 0,
-        },
-      },
-      premiumBasedStrike: false,
-      premiumBasedStrikeConfig: {
-        strikeType: "NearestPremium",
-        maxDepth: 5,
-        searchSide: "BOTH",
-        value: 0,
-        condition: "Greaterthanequal",
-        between: 0,
-        and: 0,
-      },
-    };
-    setLegs((prev) => ({ ...prev, [legId]: newLeg }));
-  };
-
-  // Copy existing leg - now using imported function
-  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
-  const copyLegLegacy = (legIdToCopy: string): void => {
-    const legToCopy = legs[legIdToCopy];
-    if (legToCopy) {
-      // Find the next available leg ID
-      const existingLegNumbers = Object.values(legs)
-        .map((leg) => {
-          const match = leg.legId?.match(/LEG_(\d+)/);
-          return match ? parseInt(match[1], 10) : 0;
-        })
-        .sort((a, b) => a - b);
-
-      let nextLegNumber = 1;
-      for (const num of existingLegNumbers) {
-        if (num === nextLegNumber) {
-          nextLegNumber++;
-        } else {
-          break;
-        }
-      }
-
-      const newLegId = `LEG_${nextLegNumber.toString().padStart(3, "0")}`;
-      const newLeg: Leg = {
-        ...legToCopy,
-        id: Date.now(),
-        legId: newLegId,
-      };
-      setLegs((prev) => ({ ...prev, [newLegId]: newLeg }));
-    }
-  };
-
-  // Update leg - now using imported function
-  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
-  const updateLegLegacy = <K extends keyof Leg>(
-    legId: string,
-    field: K,
-    value: Leg[K]
-  ): void => {
-    setLegs((prev) => {
-      if (!prev[legId]) return prev;
-      return {
-        ...prev,
-        [legId]: { ...prev[legId], [field]: value },
-      };
-    });
-  };
-
-  // Update premium based strike config - now using imported function
-  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
-  const updatePremiumStrikeConfigLegacy = <
-    K extends keyof PremiumBasedStrikeConfig
-  >(
-    legId: string,
-    field: K,
-    value: PremiumBasedStrikeConfig[K]
-  ): void => {
-    setLegs((prev) => {
-      if (!prev[legId]) return prev;
-      return {
-        ...prev,
-        [legId]: {
-          ...prev[legId],
-          premiumBasedStrikeConfig: {
-            ...prev[legId].premiumBasedStrikeConfig,
-            [field]: value,
-          },
-        },
-      };
-    });
-  };
-
-  // Remove leg - now using imported function
-  // (Function implementation moved to AdvancedOptionsBuilderFunctions/legManagement.ts)
-  const removeLegLegacy = (legId: string): void => {
-    setLegs((prev) => {
-      const updated = { ...prev };
-      delete updated[legId];
-      return updated;
-    });
-  };
-
-  // ToggleButton component - now using imported component
-  // (Component implementation moved to AdvancedOptionsBuilderFunctions/utils.tsx)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-2 md:p-4 ">

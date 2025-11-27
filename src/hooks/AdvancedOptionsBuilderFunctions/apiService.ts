@@ -1,3 +1,4 @@
+import axios from "axios";
 import type {
   StrategyTag,
   BaseConfig,
@@ -161,29 +162,6 @@ export const createDeployStrategyHandler = (
           };
         };
 
-        // Debug: Log action configs before sanitization
-        console.log(
-          `🔍 DEBUG CREATE Frontend - Leg ${leg.legId} BEFORE sanitization:`
-        );
-        if (transformed.onTargetActionConfig) {
-          console.log(
-            `  onTargetActionConfig:`,
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          console.log(
-            `  onStoplossActionConfig:`,
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          console.log(
-            `  onSquareOffActionConfig:`,
-            transformed.onSquareOffActionConfig
-          );
-        }
-
         if (transformed.onTargetActionConfig) {
           transformed.onTargetActionConfig = sanitizeActionConfig(
             transformed.onTargetActionConfig
@@ -200,30 +178,6 @@ export const createDeployStrategyHandler = (
           );
         }
 
-        // Debug: Log action configs after sanitization
-        console.log(
-          `✅ DEBUG CREATE Frontend - Leg ${leg.legId} AFTER sanitization:`
-        );
-        if (transformed.onTargetActionConfig) {
-          console.log(
-            `  onTargetActionConfig:`,
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          console.log(
-            `  onStoplossActionConfig:`,
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          console.log(
-            `  onSquareOffActionConfig:`,
-            transformed.onSquareOffActionConfig
-          );
-        }
-
-        console.log("Transformed leg:", transformed);
         transformedLegsDict[leg.legId] = transformed;
       });
 
@@ -239,36 +193,30 @@ export const createDeployStrategyHandler = (
         timestamp: new Date().toISOString(),
       };
 
-      console.log("Deploying Strategy Data:", strategyData);
-      console.log(
-        "Legs with action configs:",
-        JSON.stringify(strategyData.legs, null, 2)
-      );
-
-      const response = await fetch(`${API_BASE_URL}/strategy/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(strategyData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: "Unknown error occurred" }));
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/strategy/create`,
+          strategyData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
+
+        const result = response.data;
+        setDeploymentStatus("success");
+        setDeploymentMessage(
+          `Strategy deployed successfully! Strategy ID: ${result.strategyId}`
+        );
+      } catch (error: any) {
+        const errorMsg =
+          error.response?.data?.detail ||
+          error.message ||
+          "Unknown error occurred";
+
+        throw new Error(errorMsg);
       }
-
-      const result = await response.json();
-      console.log("Strategy Deployment Result:", result);
-
-      setDeploymentStatus("success");
-      setDeploymentMessage(
-        `Strategy deployed successfully! Strategy ID: ${result.strategyId}`
-      );
 
       setTimeout(() => {
         setDeploymentStatus(null);

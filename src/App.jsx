@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import { OrderBookTable } from "./components/OrderBookTable";
 import Sidebar from "./components/SideBar";
 import Users from "./pages/Users";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -106,7 +107,8 @@ function App() {
               />
               <Route
                 path="/observation-tables"
-                element={<ObservationTables />}
+                // element={<ObservationTables />}
+                element={<OrderBookTable />}
               />
               <Route path="/animated-counter" element={<AnimatedCounter />} />
             </Routes>

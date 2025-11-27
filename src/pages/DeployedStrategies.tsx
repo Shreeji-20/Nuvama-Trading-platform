@@ -22,20 +22,11 @@ import {
   StrategyCard,
   TabNavigation,
   EmptyState,
-  LoadingSpinner,
   StrategiesFilter,
 } from "../components/DeployedStrategies";
 import type { FilterOptions } from "../components/DeployedStrategies/StrategiesFilter";
-import { Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Strategy, Order } from "../types/deployedStrategies.types";
 import { StrategyTag } from "../types/strategy.types";
-import {
-  isOrderComplete,
-  isOrderRejected,
-  isOrderCancelled,
-  isOrderPending,
-  isOrderCompletedOrFinished,
-} from "../constants/deployedStrategies.constants";
 import {
   handleStartTrading as startGlobalTrading,
   handleStopTrading as stopGlobalTrading,
@@ -48,6 +39,8 @@ import {
   updateStrategy as updateStrategyAPI,
   deleteStrategy as deleteStrategyAPI,
   copyStrategy as copyStrategyAPI,
+  fetchStrategyStatus as fetchStrategyStatusAPI,
+  fetchMultipleStrategyStatuses as fetchMultipleStrategyStatusesAPI,
   startEditing as startEditingStrategy,
   cancelEditing as cancelEditingStrategy,
   saveEdit as saveEditStrategy,
@@ -58,20 +51,20 @@ import {
   handleSquareOff as handleSquareOffOrder,
   toggleStrategy as toggleStrategyExpansion,
   fetchOptionData as fetchOptionDataAPI,
-} from "./DeployedStrategiesFunctions";
+} from "../hooks/DeployedStrategiesFunctions";
 
 const DeployedStrategies: React.FC = () => {
   // Symbol options for dropdown
   const symbolOptions = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"];
 
   const [strategies, setStrategies] = useState<Strategy[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedStrategy, setExpandedStrategy] = useState<string | null>(null);
   const [editingStrategy, setEditingStrategy] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [originalEditingStrategy, setOriginalEditingStrategy] =
+    useState<Strategy | null>(null);
   const [availableTags, setAvailableTags] = useState<StrategyTag[]>([]);
-  const [loadingTags, setLoadingTags] = useState(false);
   const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState<any>(null);
   const [actionConfigModalState, setActionConfigModalState] = useState<{
     legId: string | null;
@@ -88,6 +81,11 @@ const DeployedStrategies: React.FC = () => {
   const [strategyStatus, setStrategyStatus] = useState<
     Record<string, StrategyStatus>
   >({});
+
+  // Strategy states from Redis (strategy_status:{strategy_id})
+  const [strategyStates, setStrategyStates] = useState<Record<string, string>>(
+    {}
+  );
 
   // Filter states - now using FilterOptions type
   const [filters, setFilters] = useState<FilterOptions>({
@@ -151,15 +149,23 @@ const DeployedStrategies: React.FC = () => {
   // Fetch all deployed strategies - wrapper
   const fetchStrategies = async () => {
     await fetchStrategiesAPI({
-      setLoading,
       setError,
       setStrategies,
     });
   };
 
+  // Fetch strategy statuses from Redis for all strategies
+  const fetchAllStrategyStatuses = async () => {
+    if (strategies.length === 0) return;
+
+    const strategyIds = strategies.map((s) => s.strategyId);
+    const statuses = await fetchMultipleStrategyStatusesAPI(strategyIds);
+    setStrategyStates(statuses);
+  };
+
   // Fetch available strategy tags - wrapper
   const fetchStrategyTags = async () => {
-    await fetchStrategyTagsAPI(setAvailableTags, setLoadingTags);
+    await fetchStrategyTagsAPI(setAvailableTags);
   };
 
   // Update strategy - wrapper
@@ -184,17 +190,25 @@ const DeployedStrategies: React.FC = () => {
 
   // Start editing strategy - wrapper
   const startEditing = (strategy: Strategy) => {
+    setOriginalEditingStrategy(strategy);
     startEditingStrategy(strategy, { setEditingStrategy, setEditValues });
   };
 
   // Cancel editing - wrapper
   const cancelEditing = () => {
+    setOriginalEditingStrategy(null);
     cancelEditingStrategy({ setEditingStrategy, setEditValues });
   };
 
   // Save edit - wrapper
   const saveEdit = (strategyId: string) => {
-    saveEditStrategy(strategyId, editValues, updateStrategy);
+    saveEditStrategy(
+      strategyId,
+      editValues,
+      updateStrategy,
+      originalEditingStrategy || undefined
+    );
+    setOriginalEditingStrategy(null);
   };
 
   // Handle edit change - wrapper
@@ -326,6 +340,27 @@ const DeployedStrategies: React.FC = () => {
         );
       }
 
+      // Update strategy_state in Redis (strategy_state:{strategy_id})
+      const stateValue = newSelectedState ? "START" : "NONE";
+      const stateResponse = await fetch(
+        `${API_BASE_URL}/strategy/trading-state/${strategyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            state: stateValue,
+          }),
+        }
+      );
+
+      if (!stateResponse.ok) {
+        console.error("❌ Failed to update strategy_state in Redis");
+      } else {
+        console.log(`✅ Updated strategy_state to ${stateValue}`);
+      }
+
       console.log(
         `✅ Updated isSelectedForTrading for ${strategyId} to ${newSelectedState}`
       );
@@ -425,6 +460,23 @@ const DeployedStrategies: React.FC = () => {
       }
     };
   }, []);
+
+  // Fetch strategy statuses from Redis periodically
+  useEffect(() => {
+    if (strategies.length === 0) return;
+
+    // Fetch immediately when strategies change
+    fetchAllStrategyStatuses();
+
+    // Set up interval to fetch every 2 seconds
+    const statusInterval = setInterval(() => {
+      fetchAllStrategyStatuses();
+    }, 2000);
+
+    return () => {
+      clearInterval(statusInterval);
+    };
+  }, [strategies]);
 
   // Conditionally refresh option data only if there are open positions
   useEffect(() => {
@@ -568,7 +620,18 @@ const DeployedStrategies: React.FC = () => {
                   {/* Strategy Card Header */}
                   <StrategyCard
                     {...({
-                      strategy,
+                      strategy: {
+                        ...strategy,
+                        config: {
+                          ...(strategy.config as any),
+                          baseConfig: {
+                            ...(strategy.config as any)?.baseConfig,
+                            // Override strategyState with Redis value
+                            strategyState:
+                              strategyStates[strategy.strategyId] || "NONE",
+                          },
+                        },
+                      },
                       isExpanded,
                       isEditing,
                       onToggleExpand: () => toggleStrategy(strategy.strategyId),
@@ -1091,7 +1154,6 @@ const DeployedStrategies: React.FC = () => {
                                       );
                                     }}
                                     availableTags={availableTags}
-                                    loadingTags={loadingTags}
                                   />
                                 )}
 
