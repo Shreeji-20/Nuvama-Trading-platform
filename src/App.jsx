@@ -8,7 +8,7 @@ import Stratergies from "./pages/Stratergies";
 import OptionChains from "./pages/OptionChain";
 import SpreadPage from "./pages/CustomOptionChain";
 import MultiLegSpread from "./pages/MultiLegSpread";
-// import AdvancedOptionsForm from "./pages/AdvancedOptionsForm";
+import { NetPositionsTable } from "./components/NetPositionsTable";
 import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
 import AdvancedOptionsBuilder from "./pages/AdvancedOptionsBuilder";
 import DeployedStrategies from "./pages/DeployedStrategies";
@@ -17,7 +17,6 @@ import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
 import ExecutionDetails from "./pages/ExecutionDetails";
-// import ObservationMonitor from "./pages/ObservationMonitor";
 import ObservationDashboard from "./pages/ObservationDashboard";
 import ObservationTables from "./pages/ObservationTables";
 import AnimatedCounter from "./pages/AnimatedCounter";
@@ -73,18 +72,6 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/users" element={<Users />} />
-              <Route path="/stratergies" element={<Stratergies />} />
-              <Route path="/optionchain" element={<OptionChains />} />
-              <Route path="/optionchaincustom" element={<SpreadPage />} />
-              <Route path="/multilegspread" element={<MultiLegSpread />} />
-              {/* <Route
-                  path="/advanced-options"
-                  element={<AdvancedOptionsForm />}
-                /> */}
-              <Route
-                path="/advanced-options-table"
-                element={<AdvancedOptionsTable />}
-              />
               <Route
                 path="/advanced-options-builder"
                 element={<AdvancedOptionsBuilder />}
@@ -96,21 +83,8 @@ function App() {
               <Route path="/strategy-tags" element={<StrategyTags />} />
               <Route path="/orders-new" element={<OrdersTableNew />} />
               <Route path="/auto-login" element={<AutoLogin />} />
-              <Route path="/execution-details" element={<ExecutionDetails />} />
-              {/* <Route
-                  path="/observation-monitor"
-                  element={<ObservationMonitor />}
-                /> */}
-              <Route
-                path="/observation-dashboard"
-                element={<ObservationDashboard />}
-              />
-              <Route
-                path="/observation-tables"
-                // element={<ObservationTables />}
-                element={<OrderBookTable />}
-              />
-              <Route path="/animated-counter" element={<AnimatedCounter />} />
+              <Route path="/OrderBook" element={<OrderBookTable />} />
+              <Route path="/NetPosition" element={<NetPositionsTable />} />
             </Routes>
           </main>
         </div>

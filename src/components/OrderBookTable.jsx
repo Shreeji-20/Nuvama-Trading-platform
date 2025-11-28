@@ -1,6 +1,14 @@
 import axios from "axios";
 import { ReactTable } from "../pages/table";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useContext,
+} from "react";
+import { createContext } from "react";
 // import requestAnimationFrame from "requestanimationframe";
 export const OrderBookTable = () => {
   const fetchOrders = async () => {
@@ -26,12 +34,14 @@ export const OrderBookTable = () => {
       }
     }
   };
+
   // Example 1: Simple flat data
   const [orderBook, setOrderBook] = useState([
     { orderId: 1, symbol: "AAPL", quantity: 10, price: 150 },
   ]);
 
   const currentDataRef = useRef(orderBook);
+  const orderBookContext = createContext();
 
   useEffect(() => {
     const timer = setInterval(async () => {
@@ -46,9 +56,11 @@ export const OrderBookTable = () => {
       title="Order Book"
       description="Real-time order book data"
       showHeader={true}
-      showFooter={true}
+      showFooter={false}
       rounded={true}
       columnOrder={["trsTyp", "sts", "opTyp"]}
+      scrollMode={true}
+      maxScrollHeight="25rem"
       cellStyler={(value, columnId, rowData) => {
         // Example 1: Style based on quantity
         if (columnId === "trsTyp") {

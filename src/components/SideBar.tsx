@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-
+import { Book, IndianRupee } from "lucide-react";
 interface NavbarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -108,24 +108,6 @@ export default function Navbar({
                 <NavLink to="/users" icon="👥">
                   Users
                 </NavLink>
-                <NavLink to="/stratergies" icon="💼">
-                  Strategies
-                </NavLink>
-                <NavLink to="/optionchain" icon="⛓️">
-                  Option Chain
-                </NavLink>
-                {/* <NavLink to="/optionchaincustom" icon="🎯">
-                  Custom Option Chain
-                </NavLink> */}
-                <NavLink to="/multilegspread" icon="📈">
-                  Multi-Leg Spread
-                </NavLink>
-                {/* <NavLink to="/advanced-options" icon="🚀">
-                  Advanced Options
-                </NavLink> */}
-                <NavLink to="/advanced-options-table" icon="📋">
-                  Advanced Options Table
-                </NavLink>
                 <NavLink to="/advanced-options-builder" icon="🔧">
                   Options Strategy Builder
                 </NavLink>
@@ -135,20 +117,13 @@ export default function Navbar({
                 <NavLink to="/strategy-tags" icon="🏷️">
                   Strategy Tags
                 </NavLink>
-                <NavLink to="/orders-new" icon="🔄">
-                  Orders Management
+                <NavLink to="/OrderBook">
+                  <Book size={15} className="inline m-1" />
+                  OrderBook
                 </NavLink>
-                {/* <NavLink to="/execution-details" icon="📊">
-                  Execution Details
-                </NavLink> */}
-                {/* <NavLink to="/observation-monitor" icon="📈">
-                  Observation Monitor
-                </NavLink> */}
-                {/* <NavLink to="/observation-dashboard" icon="🎯">
-                  Observation Dashboard
-                </NavLink> */}
-                <NavLink to="/observation-tables" icon="📊">
-                  Observation Tables
+                <NavLink to="/NetPosition">
+                  <IndianRupee size={15} className="inline m-1" />
+                  NetPosition
                 </NavLink>
               </div>
             </div>
