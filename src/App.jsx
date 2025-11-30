@@ -4,22 +4,14 @@ import { OrderBookTable } from "./components/OrderBookTable";
 import Sidebar from "./components/SideBar";
 import Users from "./pages/Users";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Stratergies from "./pages/Stratergies";
-import OptionChains from "./pages/OptionChain";
-import SpreadPage from "./pages/CustomOptionChain";
-import MultiLegSpread from "./pages/MultiLegSpread";
 import { NetPositionsTable } from "./components/NetPositionsTable";
-import AdvancedOptionsTable from "./pages/AdvancedOptionsTable";
 import AdvancedOptionsBuilder from "./pages/AdvancedOptionsBuilder";
 import DeployedStrategies from "./pages/DeployedStrategies";
 import StrategyTags from "./pages/StrategyTags";
 import Dashboard from "./pages/Dashboard";
 import OrdersTableNew from "./pages/OrdersTable_New";
 import AutoLogin from "./pages/AutoLogin";
-import ExecutionDetails from "./pages/ExecutionDetails";
-import ObservationDashboard from "./pages/ObservationDashboard";
-import ObservationTables from "./pages/ObservationTables";
-import AnimatedCounter from "./pages/AnimatedCounter";
+import { OptionsStrategyBuilder } from "./pages/OptionsBuilder/OptionsStrategyBuilder";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -79,6 +71,10 @@ function App() {
               <Route
                 path="/deployed-strategies"
                 element={<DeployedStrategies />}
+              />
+              <Route
+                path="/OptionsBuilder"
+                element={<OptionsStrategyBuilder />}
               />
               <Route path="/strategy-tags" element={<StrategyTags />} />
               <Route path="/orders-new" element={<OrdersTableNew />} />

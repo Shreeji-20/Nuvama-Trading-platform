@@ -73,18 +73,18 @@ const AdvancedOptionsBuilder: React.FC = () => {
     underlying: "Spot",
     buyTradesFirst: false,
     executionMode: "Live Mode",
-    tradingState: "NONE",
-    isSelectedForTrading: false,
-    strategyState: "NONE",
   });
 
   // Legs state - Changed from array to dictionary
   const [legs, setLegs] = useState<Record<string, Leg>>({});
+
   const [activeTab, setActiveTab] = useState<string>("strategy");
   const [legCounter, setLegCounter] = useState<number>(1);
+
   const [premiumStrikeModalLeg, setPremiumStrikeModalLeg] = useState<
     string | null
   >(null);
+
   const [actionConfigModalState, setActionConfigModalState] = useState<{
     legId: string | null;
     actionType: "target" | "stoploss" | "squareoff" | null;
@@ -646,9 +646,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
                       underlying: "Spot",
                       buyTradesFirst: false,
                       executionMode: "Live Mode",
-                      tradingState: "NONE",
-                      isSelectedForTrading: false,
-                      strategyState: "NONE",
                     });
                     setLegs({});
                     setLegCounter(1);

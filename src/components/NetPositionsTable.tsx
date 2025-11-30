@@ -1,12 +1,58 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { ReactTable } from "../pages/table";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 
-// import requestAnimationFrame from "requestanimationframe";
+// Type definitions
+interface Position {
+  orderId?: number;
+  symbol?: string;
+  quantity?: number;
+  price?: number;
+  trsTyp?: string;
+  sts?: string;
+  opTyp?: string;
+  stkPrc?: number;
+  dpExpDt?: string;
+  urlzPL?: number;
+  rlzPL?: number;
+  ntPL?: number;
+  ntQty?: number;
+  mtm?: number;
+  chg?: number;
+  chgP?: number;
+  [key: string]: any; // Allow additional dynamic properties
+}
+
+interface NetPnlData {
+  orderId?: number;
+  symbol?: string;
+  quantity?: number;
+  price?: number;
+  ntMTM?: number;
+  npos?: number;
+  opn?: number;
+  tdyMtm?: number;
+  urlMtm?: number;
+  cls?: number;
+  type?: string;
+  rlzPL?: number;
+  urlzPL?: number;
+  ntPL?: number;
+  opTyp?: string;
+  chg?: number;
+  chgP?: number;
+  [key: string]: any; // Allow additional dynamic properties
+}
+
+interface ApiResponse {
+  pos: Position[];
+  [key: string]: any; // For other fields that will become NetPnlData
+}
+
 export const NetPositionsTable = () => {
-  const fetchOrders = async () => {
+  const fetchOrders = async (): Promise<void> => {
     try {
-      const response = await axios.get(
+      const response = await axios.get<ApiResponse>(
         "http://100.64.231.34:8000/netPositions"
       );
       const { pos, ...rest } = response.data;
@@ -37,21 +83,21 @@ export const NetPositionsTable = () => {
   };
 
   // Example 1: Simple flat data
-  const [positions, setPositions] = useState([
+  const [positions, setPositions] = useState<Position[]>([
     { orderId: 1, symbol: "AAPL", quantity: 10, price: 150 },
   ]);
 
-  const [netPnlData, setNetPnlData] = useState([
+  const [netPnlData, setNetPnlData] = useState<NetPnlData[]>([
     { orderId: 1, symbol: "AAPL", quantity: 10, price: 150 },
   ]);
-  const netpnlDataRef = useRef(netPnlData);
+  const netpnlDataRef = useRef<NetPnlData[]>(netPnlData);
 
-  const currentDataRef = useRef(positions);
+  const currentDataRef = useRef<Position[]>(positions);
   useEffect(() => {
     const timer = setInterval(async () => {
       await fetchOrders();
     }, 1000);
-    return () => clearTimeout(timer);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -59,6 +105,24 @@ export const NetPositionsTable = () => {
       <ReactTable
         data={positions}
         editable={true}
+        editableColumns={["trsTyp", "opTyp"]}
+        cellInputType={{
+          trsTyp: "text",
+          opTyp: "select",
+        }}
+        dropdownOptions={{
+          opTyp: ["CE", "PE", "FUT"],
+        }}
+        onCellEdit={(rowIndex, columnId, newValue, rowData) => {
+          console.log("Cell edited:", {
+            rowIndex,
+            columnId,
+            newValue,
+            rowData,
+          });
+          // Here you can add logic to handle the edited cell value,
+          // such as updating the backend or state.
+        }}
         title="Net Positions"
         description="Real-time net positions data"
         showHeader={true}
@@ -165,7 +229,7 @@ export const NetPositionsTable = () => {
           return null; // No styling for other cases
         }}
       />
-      <br></br>
+      <br />
       <ReactTable
         data={netPnlData}
         description="Real-time net positions data"
