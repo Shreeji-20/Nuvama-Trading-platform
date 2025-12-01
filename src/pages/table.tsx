@@ -33,12 +33,20 @@ interface EditingCell {
   columnId: string;
 }
 
+interface ButtonConfig {
+  label: string | ((rowData: any, rowIndex: number) => string);
+  onClick: (rowData: any, rowIndex: number) => void;
+  variant?: "primary" | "secondary" | "danger" | "success";
+  icon?: React.ReactNode;
+}
+
 interface ReactTableProps {
   data: any[];
   title?: string;
   description?: string;
   showHeader?: boolean;
   headerStyle?: "card" | "inline"; // "card" = separate card above table, "inline" = label inside table card
+  headerGap?: boolean; // Controls gap between header and table (only for card style)
   showFooter?: boolean;
   showFilters?: boolean;
   cellStyler?: (value: any, columnId: string, rowData: any) => CellStyle | null;
@@ -57,8 +65,22 @@ interface ReactTableProps {
     newValue: any,
     rowData: any
   ) => void;
-  cellInputType?: Record<string, "text" | "number" | "select" | "checkbox">;
+  cellInputType?: Record<
+    string,
+    "text" | "number" | "select" | "checkbox" | "password"
+  >;
   dropdownOptions?: Record<string, string[]>;
+  buttonColumns?: Record<string, ButtonConfig | ButtonConfig[]>;
+  showAddRow?: boolean;
+  onAddRow?: (newRowData: any) => void;
+  defaultRowValues?: any;
+  addRowFields?: Array<{
+    key: string;
+    label: string;
+    type?: "text" | "number" | "select" | "checkbox" | "password";
+    options?: string[];
+    required?: boolean;
+  }>;
 }
 
 // Utility function to generate columns from data
@@ -103,6 +125,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
   description = "Displaying table data",
   showHeader = true,
   headerStyle = "card",
+  headerGap = true,
   showFooter = true,
   showFilters = true,
   cellStyler = null,
@@ -118,6 +141,11 @@ export const ReactTable: React.FC<ReactTableProps> = ({
   onCellEdit = null,
   cellInputType = {},
   dropdownOptions = {},
+  buttonColumns = {},
+  showAddRow = false,
+  onAddRow = null,
+  defaultRowValues = {},
+  addRowFields = [],
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -263,6 +291,68 @@ export const ReactTable: React.FC<ReactTableProps> = ({
     }
   };
 
+  // Get button variant classes
+  const getButtonVariantClasses = (variant?: string): string => {
+    switch (variant) {
+      case "primary":
+        return "bg-blue-600 hover:bg-blue-700 text-white";
+      case "secondary":
+        return "bg-gray-600 hover:bg-gray-700 text-white";
+      case "danger":
+        return "bg-red-600 hover:bg-red-700 text-white";
+      case "success":
+        return "bg-green-600 hover:bg-green-700 text-white";
+      default:
+        return "bg-blue-600 hover:bg-blue-700 text-white";
+    }
+  };
+
+  // Render button(s) for a cell
+  const renderButtonCell = (
+    columnId: string,
+    rowData: any,
+    rowIndex: number
+  ): React.ReactNode => {
+    const buttonConfig = buttonColumns[columnId];
+    if (!buttonConfig) return null;
+
+    const configs = Array.isArray(buttonConfig) ? buttonConfig : [buttonConfig];
+
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {configs.map((config, idx) => {
+          const buttonLabel =
+            typeof config.label === "function"
+              ? config.label(rowData, rowIndex)
+              : config.label;
+
+          return (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                config.onClick(rowData, rowIndex);
+              }}
+              className={`px-3 py-1 text-[11px] font-medium rounded transition-colors flex items-center gap-1 ${getButtonVariantClasses(
+                config.variant
+              )}`}
+            >
+              {config.icon && <span>{config.icon}</span>}
+              {buttonLabel}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Handle add row - directly adds row with default values
+  const handleAddRow = (): void => {
+    if (onAddRow && typeof onAddRow === "function") {
+      onAddRow(defaultRowValues);
+    }
+  };
+
   const table = useReactTable({
     data,
     columns: finalColumns,
@@ -281,23 +371,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
     autoResetPageIndex: false,
   });
 
-  if (!data || data.length === 0) {
-    return (
-      <div
-        className={`${
-          fullHeight ? "min-h-screen" : ""
-        } bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6`}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
-            <p className="text-gray-600 dark:text-gray-400">
-              No data available
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isEmpty = !data || data.length === 0;
 
   return (
     <div
@@ -310,7 +384,13 @@ export const ReactTable: React.FC<ReactTableProps> = ({
       <div className="max-w-[100rem] mx-auto">
         {/* Header Card - Only show if headerStyle is "card" */}
         {showHeader && headerStyle === "card" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 md:p-6 mb-4 sm:mb-5 md:mb-6">
+          <div
+            className={`bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 ${
+              headerGap
+                ? "rounded-lg sm:rounded-xl mb-4 sm:mb-5 md:mb-6 shadow-lg border border-gray-200 dark:border-gray-700"
+                : "rounded-t-xl"
+            }`}
+          >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-1">
@@ -320,235 +400,280 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                   {description}
                 </p>
               </div>
+              {showAddRow && (
+                <button
+                  onClick={handleAddRow}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <span>+</span>
+                  Add Row
+                </button>
+              )}
             </div>
           </div>
         )}
 
         {/* Table Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+        <div
+          className={`bg-white dark:bg-gray-800 overflow-hidden ${
+            showHeader && headerStyle === "card" && !headerGap
+              ? "rounded-b-xl shadow-lg border border-gray-200 dark:border-gray-700"
+              : "rounded-xl shadow-lg border border-gray-200 dark:border-gray-700"
+          }`}
+        >
           {/* Inline Header - Only show if headerStyle is "inline" */}
           {showHeader && headerStyle === "inline" && (
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {title}
-              </h2>
-              {description && (
-                <p className="text-[0.65rem] text-gray-600 dark:text-gray-400 mt-0.5">
-                  {description}
-                </p>
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {title}
+                </h2>
+                {description && (
+                  <p className="text-[0.65rem] text-gray-600 dark:text-gray-400 mt-0.5">
+                    {description}
+                  </p>
+                )}
+              </div>
+              {showAddRow && (
+                <button
+                  onClick={handleAddRow}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <span>+</span>
+                  Add Row
+                </button>
               )}
             </div>
           )}
-          <div
-            className={`overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 scrollbar-thumb-rounded-full ${
-              scrollMode ? "overflow-y-auto" : ""
-            }`}
-            style={
-              scrollMode
-                ? ({ maxHeight: maxScrollHeight } as CSSProperties)
-                : {}
-            }
-          >
-            <table className="w-full table-auto">
-              <thead>
-                {table.getHeaderGroups().map((group) => (
-                  <React.Fragment key={group.id}>
-                    <tr
-                      className={`border-b-2 border-gray-100 dark:border-gray-700 ${
-                        scrollMode ? "sticky top-0 z-20" : ""
-                      }`}
-                    >
-                      {group.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className={`text-center px-4 py-3 text-[0.63rem] font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
-                            scrollMode
-                              ? "bg-gray-50 dark:bg-gray-800"
-                              : "bg-gray-50/50 dark:bg-gray-800/50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={header.column.getToggleSortingHandler()}
-                              className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                            >
-                              <span>
-                                {header.column.columnDef.header as string}
-                              </span>
-                              <span className="flex flex-col">
-                                {header.column.getIsSorted() === "asc" ? (
-                                  <ChevronUp className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                ) : header.column.getIsSorted() === "desc" ? (
-                                  <ChevronDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                ) : (
-                                  <div className="flex flex-col">
-                                    <ChevronUp className="h-3 w-3 opacity-30" />
-                                    <ChevronDown className="h-3 w-3 opacity-30 -mt-1.5" />
-                                  </div>
-                                )}
-                              </span>
-                            </button>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                    {/* Filter Row */}
-                    {showFilters && (
+
+          {isEmpty ? (
+            <div className="p-8 text-center">
+              <p className="text-gray-600 dark:text-gray-400">
+                No data available
+              </p>
+            </div>
+          ) : (
+            <div
+              className={`overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 scrollbar-thumb-rounded-full ${
+                scrollMode ? "overflow-y-auto" : ""
+              }`}
+              style={
+                scrollMode
+                  ? ({ maxHeight: maxScrollHeight } as CSSProperties)
+                  : {}
+              }
+            >
+              <table className="w-full table-auto">
+                <thead>
+                  {table.getHeaderGroups().map((group) => (
+                    <React.Fragment key={group.id}>
                       <tr
-                        className={`border-b border-gray-100 dark:border-gray-700 ${
-                          scrollMode ? "sticky top-[2.5rem] z-20" : ""
+                        className={`border-b-2 border-gray-100 dark:border-gray-700 ${
+                          scrollMode ? "sticky top-0 z-20" : ""
                         }`}
                       >
                         {group.headers.map((header) => (
                           <th
-                            key={`${header.id}-filter`}
-                            className={`px-4 py-2 ${
+                            key={header.id}
+                            className={`text-center px-4 py-3 text-[0.63rem] font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
                               scrollMode
                                 ? "bg-gray-50 dark:bg-gray-800"
-                                : "bg-gray-50/30 dark:bg-gray-800/30"
+                                : "bg-gray-50/50 dark:bg-gray-800/50"
                             }`}
                           >
-                            <input
-                              type="text"
-                              value={
-                                (header.column.getFilterValue() ?? "") as string
-                              }
-                              onChange={(e) =>
-                                header.column.setFilterValue(e.target.value)
-                              }
-                              placeholder={`Filter...`}
-                              className="w-full px-3 py-1.5 text-[11px] border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
-                            />
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={header.column.getToggleSortingHandler()}
+                                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              >
+                                <span>
+                                  {header.column.columnDef.header as string}
+                                </span>
+                                <span className="flex flex-col">
+                                  {header.column.getIsSorted() === "asc" ? (
+                                    <ChevronUp className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                  ) : header.column.getIsSorted() === "desc" ? (
+                                    <ChevronDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                  ) : (
+                                    <div className="flex flex-col">
+                                      <ChevronUp className="h-3 w-3 opacity-30" />
+                                      <ChevronDown className="h-3 w-3 opacity-30 -mt-1.5" />
+                                    </div>
+                                  )}
+                                </span>
+                              </button>
+                            </div>
                           </th>
                         ))}
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </thead>
-
-              <tbody>
-                {table.getRowModel().rows.map((row, index) => (
-                  <tr
-                    key={row.id}
-                    className={`transition-all duration-150 hover:bg-gray-50 dark:hover:bg-gray-700/30 border-b border-gray-50 dark:border-gray-800 last:border-0 ${
-                      index % 2 === 0
-                        ? "bg-white dark:bg-gray-800"
-                        : "bg-gray-50/30 dark:bg-gray-800/50"
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const cellValue = cell.renderValue();
-                      const cellStyle = getCellStyle(
-                        cellValue,
-                        cell.column.id,
-                        row.original
-                      );
-                      const isEditing =
-                        editingCell?.rowIndex === row.index &&
-                        editingCell?.columnId === cell.column.id;
-                      const canEdit = isColumnEditable(cell.column.id);
-
-                      return (
-                        <td
-                          key={cell.id}
-                          className="px-4 text-center text-[11px] max-w-xs h-[2.5rem]"
-                          title={cellValue ? String(cellValue) : undefined}
-                          onClick={() =>
-                            !isEditing &&
-                            handleCellClick(
-                              row.index,
-                              cell.column.id,
-                              cellValue
-                            )
-                          }
+                      {/* Filter Row */}
+                      {showFilters && (
+                        <tr
+                          className={`border-b border-gray-100 dark:border-gray-700 ${
+                            scrollMode ? "sticky top-[2.5rem] z-20" : ""
+                          }`}
                         >
-                          {isEditing ? (
-                            cellInputType[cell.column.id] === "select" ? (
-                              <select
-                                value={editValue}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  handleSave(
-                                    row.index,
-                                    cell.column.id,
-                                    row.original
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleKeyDown(
-                                    e,
-                                    row.index,
-                                    cell.column.id,
-                                    row.original
-                                  )
-                                }
-                                autoFocus
-                                className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
-                              >
-                                {dropdownOptions[cell.column.id]?.map(
-                                  (option) => (
-                                    <option key={option} value={option}>
-                                      {option}
-                                    </option>
-                                  )
-                                )}
-                              </select>
-                            ) : (
-                              <input
-                                type={cellInputType[cell.column.id] || "text"}
-                                value={editValue}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  handleSave(
-                                    row.index,
-                                    cell.column.id,
-                                    row.original
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleKeyDown(
-                                    e,
-                                    row.index,
-                                    cell.column.id,
-                                    row.original
-                                  )
-                                }
-                                autoFocus
-                                className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
-                              />
-                            )
-                          ) : (
-                            <div
-                              className={`truncate ${cellStyle.bgColor || ""} ${
-                                cellStyle.textColor ||
-                                "text-gray-900 dark:text-gray-100"
-                              } ${cellStyle.rounded || ""} ${
-                                cellStyle.bgColor ? "px-2 py-1" : ""
-                              } ${
-                                canEdit
-                                  ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                  : ""
+                          {group.headers.map((header) => (
+                            <th
+                              key={`${header.id}-filter`}
+                              className={`px-4 py-2 ${
+                                scrollMode
+                                  ? "bg-gray-50 dark:bg-gray-800"
+                                  : "bg-gray-50/30 dark:bg-gray-800/30"
                               }`}
                             >
-                              {cellInputType[cell.column.id] === "checkbox"
-                                ? cellValue === true || cellValue === "true"
-                                  ? "✓ True"
-                                  : "✗ False"
-                                : (cellValue as string)}
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                              <input
+                                type="text"
+                                value={
+                                  (header.column.getFilterValue() ??
+                                    "") as string
+                                }
+                                onChange={(e) =>
+                                  header.column.setFilterValue(e.target.value)
+                                }
+                                placeholder={`Filter...`}
+                                className="w-full px-3 py-1.5 text-[11px] border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
+                              />
+                            </th>
+                          ))}
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </thead>
+
+                <tbody>
+                  {table.getRowModel().rows.map((row, index) => (
+                    <tr
+                      key={row.id}
+                      className={`transition-all duration-150 hover:bg-gray-50 dark:hover:bg-gray-700/30 border-b border-gray-50 dark:border-gray-800 last:border-0 ${
+                        index % 2 === 0
+                          ? "bg-white dark:bg-gray-800"
+                          : "bg-gray-50/30 dark:bg-gray-800/50"
+                      }`}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const cellValue = cell.renderValue();
+                        const cellStyle = getCellStyle(
+                          cellValue,
+                          cell.column.id,
+                          row.original
+                        );
+                        const isEditing =
+                          editingCell?.rowIndex === row.index &&
+                          editingCell?.columnId === cell.column.id;
+                        const canEdit = isColumnEditable(cell.column.id);
+
+                        return (
+                          <td
+                            key={cell.id}
+                            className="px-4 text-center text-[11px] max-w-xs h-[2.5rem]"
+                            title={cellValue ? String(cellValue) : undefined}
+                            onClick={() =>
+                              !isEditing &&
+                              !buttonColumns[cell.column.id] &&
+                              handleCellClick(
+                                row.index,
+                                cell.column.id,
+                                cellValue
+                              )
+                            }
+                          >
+                            {buttonColumns[cell.column.id] ? (
+                              renderButtonCell(
+                                cell.column.id,
+                                row.original,
+                                row.index
+                              )
+                            ) : isEditing ? (
+                              cellInputType[cell.column.id] === "select" ? (
+                                <select
+                                  value={editValue}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    handleSave(
+                                      row.index,
+                                      cell.column.id,
+                                      row.original
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleKeyDown(
+                                      e,
+                                      row.index,
+                                      cell.column.id,
+                                      row.original
+                                    )
+                                  }
+                                  autoFocus
+                                  className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                >
+                                  {dropdownOptions[cell.column.id]?.map(
+                                    (option) => (
+                                      <option key={option} value={option}>
+                                        {option}
+                                      </option>
+                                    )
+                                  )}
+                                </select>
+                              ) : (
+                                <input
+                                  type={cellInputType[cell.column.id] || "text"}
+                                  value={editValue}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    handleSave(
+                                      row.index,
+                                      cell.column.id,
+                                      row.original
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleKeyDown(
+                                      e,
+                                      row.index,
+                                      cell.column.id,
+                                      row.original
+                                    )
+                                  }
+                                  autoFocus
+                                  className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                />
+                              )
+                            ) : (
+                              <div
+                                className={`truncate ${
+                                  cellStyle.bgColor || ""
+                                } ${
+                                  cellStyle.textColor ||
+                                  "text-gray-900 dark:text-gray-100"
+                                } ${cellStyle.rounded || ""} ${
+                                  cellStyle.bgColor ? "px-2 py-1" : ""
+                                } ${
+                                  canEdit
+                                    ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                    : ""
+                                }`}
+                              >
+                                {cellInputType[cell.column.id] === "checkbox"
+                                  ? cellValue === true || cellValue === "true"
+                                    ? "✓ True"
+                                    : "✗ False"
+                                  : (cellValue as string)}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pagination Footer */}
-          {showFooter && !scrollMode && (
+          {showFooter && !scrollMode && !isEmpty && (
             <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 px-4 py-3">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 {/* Page Info */}
