@@ -15,6 +15,7 @@ export interface HorizontalTabsProps {
   variant?: "default" | "pills" | "underline";
   fullWidth?: boolean;
   centered?: boolean;
+  padding?: boolean | string;
 }
 
 export const HorizontalTabs: React.FC<HorizontalTabsProps> = ({
@@ -24,10 +25,17 @@ export const HorizontalTabs: React.FC<HorizontalTabsProps> = ({
   variant = "default",
   fullWidth = false,
   centered = true,
+  padding = true,
 }) => {
   const [activeTab, setActiveTab] = useState<string>(
     defaultActiveTab || tabs[0]?.id || ""
   );
+
+  const getPaddingClasses = () => {
+    if (padding === false) return "";
+    if (typeof padding === "string") return padding;
+    return "px-[4px] py-[4px] sm:px-4 md:px-6";
+  };
 
   const handleTabClick = (tabId: string, disabled?: boolean) => {
     if (disabled) return;
@@ -70,8 +78,14 @@ export const HorizontalTabs: React.FC<HorizontalTabsProps> = ({
   const activeTabContent = tabs.find((tab) => tab.id === activeTab)?.content;
 
   return (
-    <div className="w-full bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-4">
-      <div className={centered ? "max-w-[100rem] mx-auto" : "w-full"}>
+    // <div className="w-full bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-4">
+    // <div className="w-full bg-gray-50 dark:bg-gray-900 border-[2px] border-gray-700 dark:border-gray-700 rounded-xl px-3 sm:px-4 md:px-6 py-4">
+    <div
+      className={`${
+        centered ? "max-w-[100rem] mx-auto" : "w-full"
+      } mx-auto bg-gray-50 dark:bg-gray-900 ${getPaddingClasses()}`}
+    >
+      <div className={`${centered ? "max-w-[100rem] mx-auto" : "w-full"} `}>
         {/* Tab Headers Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
           <div
