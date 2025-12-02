@@ -14,6 +14,7 @@ import type {
   StoplossType,
   ExitOrderType,
   HedgeType,
+  ExecutionMode,
 } from "../../types/strategy.types";
 
 // Options for dropdowns
@@ -33,6 +34,10 @@ export const dynamicExpiryOptions: string[] = [
   "Monthly",
 ];
 export const underlyingOptions: Underlying[] = ["Spot", "Futures"];
+export const executionModeOptions: ExecutionMode[] = [
+  "Live Mode",
+  "Simulation Mode",
+];
 export const priceTypeOptions: PriceType[] = ["LTP", "BIDASK", "BID", "ASK"];
 export const orderTypeOptions: OrderType[] = ["LIMIT", "MARKET"];
 

@@ -313,13 +313,10 @@ const SampleData = [
     baseConfig: {
       strategyId: "STRATEGY_996751",
       strategyName: "NIFTY_NEW",
-      lots: 1,
+      multiplier: 1,
       underlying: "Spot",
       buyTradesFirst: false,
       executionMode: "Live Mode",
-      isSelectedForTrading: true,
-      tradingState: "START",
-      strategyState: "NONE",
     },
     atBrokerSettings: {
       legSlAtBroker: false,
