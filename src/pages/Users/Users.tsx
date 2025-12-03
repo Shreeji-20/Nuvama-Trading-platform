@@ -92,51 +92,6 @@ const Users = () => {
     },
   ];
 
-  // Quick data to show when card is collapsed
-  const quickDataPreview = (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-          Total Users
-        </p>
-        <p className="text-xl font-bold text-gray-900 dark:text-white">
-          {users.length}
-        </p>
-      </div>
-      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-          Active Users
-        </p>
-        <p className="text-xl font-bold text-green-600 dark:text-green-400">
-          {users.filter((u) => u.authToken && u.authToken !== "").length}
-        </p>
-      </div>
-      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Brokers</p>
-        <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-          {
-            new Set(users.map((u) => u.broker).filter((b) => b && b !== "None"))
-              .size
-          }
-        </p>
-      </div>
-      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-          Last Login
-        </p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-          {users
-            .filter((u) => u.lastLogin)
-            .sort(
-              (a, b) =>
-                new Date(b.lastLogin).getTime() -
-                new Date(a.lastLogin).getTime()
-            )[0]?.lastLogin || "N/A"}
-        </p>
-      </div>
-    </div>
-  );
-
   return (
     <>
       <ToastContainer
@@ -156,13 +111,13 @@ const Users = () => {
           {
             label: "Export",
             icon: <Download className="h-4 w-4" />,
-            onClick: () => exportData(),
+            onClick: () => {},
             variant: "primary",
           },
           {
             label: "Import",
             icon: <Upload className="h-4 w-4" />,
-            onClick: () => importData(),
+            onClick: () => {},
             variant: "success",
           },
         ]}

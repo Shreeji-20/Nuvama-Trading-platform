@@ -107,7 +107,7 @@ interface ButtonConfig {
 ```tsx
 buttonColumns={{
   actions: [
-    {
+    {strikeType
       label: "Edit",
       onClick: (rowData) => editUser(rowData),
       variant: "primary",

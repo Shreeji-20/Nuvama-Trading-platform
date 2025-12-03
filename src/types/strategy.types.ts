@@ -42,7 +42,7 @@ export type HedgeType = "premium Based" | "fixed Distance";
 export type StrikeType = "NearestPremium" | "premium";
 export type SearchSide = "ITM" | "OTM" | "BOTH";
 export type Condition = "Greaterthanequal" | "lessthanequal";
-
+export type Symbols = "NIFTY" | "SENSEX" | "BANKNIFTY" | "FINNIFTY";
 // Base configuration interface
 export interface BaseConfig {
   strategyId: string;

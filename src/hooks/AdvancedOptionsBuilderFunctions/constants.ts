@@ -15,10 +15,11 @@ import type {
   ExitOrderType,
   HedgeType,
   ExecutionMode,
+  Symbols,
 } from "../../types/strategy.types";
 
 // Options for dropdowns
-export const symbolOptions: string[] = [
+export const symbolOptions: Symbols[] = [
   "NIFTY",
   "BANKNIFTY",
   "FINNIFTY",

@@ -98,7 +98,7 @@ interface ReactTableProps {
     string,
     "text" | "number" | "select" | "checkbox" | "password"
   >;
-  dropdownOptions?: Record<string, string[]>;
+  dropdownOptions?: Record<string, string[] | ((rowData: any) => string[])>;
   buttonColumns?: Record<string, ButtonConfig | ButtonConfig[]>;
   headerButtons?: HeaderButtonConfig[];
   showAddRow?: boolean;
@@ -203,11 +203,22 @@ export const ReactTable: React.FC<ReactTableProps> = ({
   const columns = useMemo(() => {
     let generatedColumns = generateColumns(data);
 
-    // Filter out hidden columns
+    // Filter out hidden columns (supports exact match and wildcard patterns like "parent.*")
     if (hideColumns && hideColumns.length > 0) {
-      generatedColumns = generatedColumns.filter(
-        (col: any) => !hideColumns.includes(col.accessorKey)
-      );
+      generatedColumns = generatedColumns.filter((col: any) => {
+        return !hideColumns.some((hidePattern) => {
+          // Exact match
+          if (hidePattern === col.accessorKey) return true;
+
+          // Wildcard pattern (e.g., "slOrderAdjust.*")
+          if (hidePattern.endsWith(".*")) {
+            const prefix = hidePattern.slice(0, -2);
+            return col.accessorKey.startsWith(prefix + ".");
+          }
+
+          return false;
+        });
+      });
     }
 
     // Reorder columns if columnOrder is provided
@@ -434,7 +445,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
   const isEmpty = !data || data.length === 0;
 
   return (
-    <div className={centered ? "max-w-[100rem] mx-auto" : "w-full"}>
+    <div className={centered ? "max-w-[115rem] mx-auto" : "w-full"}>
       <div
         className={`${
           fullHeight ? " min-h-screen" : ""
@@ -574,7 +585,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                           {group.headers.map((header) => (
                             <th
                               key={header.id}
-                              className={`text-center px-4 py-3 text-[0.63rem] font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
+                              className={`text-center px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
                                 scrollMode
                                   ? "bg-gray-50 dark:bg-gray-800"
                                   : "bg-gray-50/50 dark:bg-gray-800/50"
@@ -655,7 +666,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                     header.column.setFilterValue(e.target.value)
                                   }
                                   placeholder={`Filter...`}
-                                  className="w-full px-3 py-1.5 text-[11px] border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
                                 />
                               </th>
                             ))}
@@ -690,7 +701,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                           return (
                             <td
                               key={cell.id}
-                              className="px-4 text-center text-[11px] max-w-xs h-[2.5rem]"
+                              className="px-4 text-center text-sm max-w-xs h-[2.5rem]"
                               title={cellValue ? String(cellValue) : undefined}
                               onClick={() =>
                                 !isEditing &&
@@ -729,15 +740,21 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                       )
                                     }
                                     autoFocus
-                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-sm border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
                                   >
-                                    {dropdownOptions[cell.column.id]?.map(
-                                      (option) => (
+                                    {(() => {
+                                      const options =
+                                        dropdownOptions[cell.column.id];
+                                      const optionsArray =
+                                        typeof options === "function"
+                                          ? options(row.original)
+                                          : options;
+                                      return optionsArray?.map((option) => (
                                         <option key={option} value={option}>
                                           {option}
                                         </option>
-                                      )
-                                    )}
+                                      ));
+                                    })()}
                                   </select>
                                 ) : (
                                   <input
@@ -762,7 +779,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                       )
                                     }
                                     autoFocus
-                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-[11px] border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-sm border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
                                   />
                                 )
                               ) : (

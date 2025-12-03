@@ -82,10 +82,10 @@ export const HorizontalTabs: React.FC<HorizontalTabsProps> = ({
     // <div className="w-full bg-gray-50 dark:bg-gray-900 border-[2px] border-gray-700 dark:border-gray-700 rounded-xl px-3 sm:px-4 md:px-6 py-4">
     <div
       className={`${
-        centered ? "max-w-[100rem] mx-auto" : "w-full"
+        centered ? "max-w-[115rem] mx-auto" : "w-full"
       } mx-auto bg-gray-50 dark:bg-gray-900 ${getPaddingClasses()}`}
     >
-      <div className={`${centered ? "max-w-[100rem] mx-auto" : "w-full"} `}>
+      <div className={`${centered ? "max-w-[115rem] mx-auto" : "w-full"} `}>
         {/* Tab Headers Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
           <div

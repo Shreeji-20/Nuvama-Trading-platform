@@ -1,3 +1,5 @@
+import { setNestedProperty } from "../../hooks/commonFunctions";
+
 // Types
 export type Strategy = any; // Replace with your actual strategy type
 
@@ -12,10 +14,7 @@ export const updateBaseConfig = (
     if (strategy.baseConfig.strategyId === strategyId) {
       return {
         ...strategy,
-        baseConfig: {
-          ...strategy.baseConfig,
-          [columnId]: newValue,
-        },
+        baseConfig: setNestedProperty(strategy.baseConfig, columnId, newValue),
       };
     }
     return strategy;
@@ -32,22 +31,16 @@ export const updateLegs = (
   return strategies.map((strategy) => {
     if (strategy.baseConfig.strategyId === strategyId) {
       const legKey = Object.keys(strategy.legs)[rowIndex];
-      console.log(
-        "Updating leg:",
-        legKey,
-        "Column:",
-        columnId,
-        "New Value:",
-        newValue
-      );
+
       return {
         ...strategy,
         legs: {
           ...strategy.legs,
-          [legKey]: {
-            ...strategy.legs[legKey],
-            [columnId]: newValue,
-          },
+          [legKey]: setNestedProperty(
+            strategy.legs[legKey],
+            columnId,
+            newValue
+          ),
         },
       };
     }
@@ -65,10 +58,11 @@ export const updateExecutionParams = (
     if (strategy.baseConfig.strategyId === strategyId) {
       return {
         ...strategy,
-        executionParams: {
-          ...strategy.executionParams,
-          [columnId]: newValue,
-        },
+        executionParams: setNestedProperty(
+          strategy.executionParams,
+          columnId,
+          newValue
+        ),
       };
     }
     return strategy;

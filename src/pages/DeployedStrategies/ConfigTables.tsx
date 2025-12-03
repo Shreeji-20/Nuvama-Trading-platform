@@ -1,13 +1,23 @@
 import { ReactTable } from "../table";
 import { HorizontalTabs } from "../../components/HorizontalTabs";
-import { RefreshCw, Settings, User } from "lucide-react";
+import { IndianRupee, RefreshCw, Settings, User } from "lucide-react";
 import {
   executionModeOptions,
+  expiryOptions,
+  getStrikeOptions,
+  orderTypeOptions,
+  targetOptions,
   underlyingOptions,
 } from "../../hooks/AdvancedOptionsBuilderFunctions";
-import { Popper, usePopper } from "../../components/Popper";
 import { FlexibleForm, FormField } from "../../components/Form";
-
+import { useState, useMemo } from "react";
+import FlexibleModal from "../../components/Modal";
+import { createActionFormFields, onActionFormFields } from "./ConfiguredForms";
+import { flattenObject } from "../../hooks/commonFunctions";
+import {
+  symbolOptions,
+  priceTypeOptions,
+} from "../../hooks/AdvancedOptionsBuilderFunctions";
 interface BaseConfigTableProps {
   data: any;
   onCellEdit?: onCellEditProps;
@@ -68,26 +78,12 @@ export const BaseConfigTable: React.FC<BaseConfigTableProps> = ({
 };
 
 export const LegsTable: React.FC<LegsTableProps> = ({ legs, onCellEdit }) => {
-  //   const popper = usePopper();
+  const legsData = useMemo(() => Object.values(legs), [legs]);
+  const [open, setOpen] = useState(false);
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [selectedRowData, setSelectedRowData] = useState<any>(null);
 
-  //   const fields: FormField[] = [
-  //     {
-  //       name: "field1",
-  //       label: "Field 1",
-  //       type: "text" as const,
-  //       required: true,
-  //     },
-  //     {
-  //       name: "field2",
-  //       label: "Field 2",
-  //       type: "select" as const,
-  //       options: [
-  //         { label: "Option 1", value: "opt1" },
-  //         { label: "Option 2", value: "opt2" },
-  //       ],
-  //     },
-  //   ];
-
+  console.log("LegsTable rendered with legs:", legsData);
   return (
     <>
       <ReactTable
@@ -95,18 +91,36 @@ export const LegsTable: React.FC<LegsTableProps> = ({ legs, onCellEdit }) => {
         padding={false}
         description="Details of each leg"
         fullHeight={false}
-        data={Object.values(legs)}
+        data={legsData}
         showHeader={true}
         showFooter={false}
         showFilters={false}
         headerStyle="inline"
         buttonColumns={{
-          onSquareOffAction: {
-            label: "Config",
-            variant: "secondary",
-            icon: <Settings className="h-4 w-4" />,
-            onClick: () => {},
-          },
+          configButtons: [
+            {
+              label: "OnSquareOff",
+              variant: "secondary",
+              icon: <Settings className="h-4 w-4" />,
+              onClick: (rowData: any, rowIndex: number) => {
+                setSelectedRowIndex(rowIndex);
+                setSelectedRowData(rowData);
+                setOpen(true);
+              },
+            },
+            {
+              label: "PremiumStrikeconfig",
+              variant: "primary",
+              icon: <IndianRupee className="h-4 w-4" />,
+              onClick: (rowData: any, rowIndex: number) => {
+                console.log(
+                  "PremiumStrikeconfig clicked for row:",
+                  rowData,
+                  rowIndex
+                );
+              },
+            },
+          ],
         }}
         editable={true}
         editableColumns={[
@@ -126,41 +140,98 @@ export const LegsTable: React.FC<LegsTableProps> = ({ legs, onCellEdit }) => {
           "waitAndTradeValue",
           "waitAndTradeLogic",
           "dynamicHedge",
-          "onTargetAction",
-          "onStoplossAction",
+        ]}
+        hideColumns={[
+          "onStoplossActionConfig.*",
+          "onTargetActionConfig.*",
+          "onSquareOffActionConfig.*",
+          "markedAsComplete",
+          "id",
+          "premiumBasedStrikeConfig.*",
+          "hedgeSelectedStrike.*",
+          "selectedStrike.*",
+          "reEnterCount",
+          "reEnterLogic",
+          "initialLegPrice",
+          "strategyName",
+          "hedgeSelectedStrike",
+          "selectedStrike",
         ]}
         cellInputType={{
-          legName: "text",
           strikeType: "text",
           strikeCriteria: "text",
           optionType: "select",
           lots: "number",
-          position: "select",
+          action: "select",
+          symbol: "select",
+          expiry: "select",
+          priceType: "select",
+          depthIndex: "select",
+          orderType: "select",
+          targetType: "select",
+          stoplossType: "select",
+          targetValue: "number",
+          stoplossValue: "number",
+          waitAndTradeValue: "number",
+          waitAndTradeLogic: "select",
+          dynamicHedge: "checkbox",
+          startTime: "text",
+          premiumBasedStrike: "checkbox",
+          strike: "select",
         }}
         dropdownOptions={{
+          symbol: symbolOptions,
+          expiry: expiryOptions,
+          priceType: priceTypeOptions,
+          depthIndex: [1, 2, 3, 4, 5],
+          orderType: orderTypeOptions,
+          action: ["BUY", "SELL"],
           optionType: ["CE", "PE"],
-          position: ["BUY", "SELL"],
+          // Dynamic strike options based on row's symbol
+          strike: (rowData: any) =>
+            getStrikeOptions(rowData?.symbol || "NIFTY"),
+          waitAndTradeLogic: targetOptions,
         }}
+        columnOrder={["onSquareOffActionConfig"]}
         onCellEdit={onCellEdit}
       />
 
-      {/* <Popper
-        open={popper.open}
-        onClose={popper.close}
-        title="Add Item"
-        placement="right"
-        width="600px"
-        showBackdrop={true}
+      <FlexibleModal
+        isOpen={open}
+        closeOnEsc={true}
+        onClose={() => setOpen(false)}
+        position="center"
+        width="500px"
       >
-        <FlexibleForm
-          fields={fields}
-          onSubmit={(data) => {
-            console.log(data);
-            popper.close();
-          }}
-          onCancel={popper.close}
-        />
-      </Popper> */}
+        {selectedRowData && (
+          <FlexibleForm
+            title="Leg Configuration"
+            initialData={flattenObject(
+              selectedRowData?.onSquareOffActionConfig || {},
+              "onSquareOffActionConfig"
+            )}
+            onSubmit={(data) => {
+              if (onCellEdit && selectedRowIndex !== null) {
+                const filteredData = Object.keys(data)
+                  .filter((key) => {
+                    const value = data[key];
+                    return typeof value !== "object" || value === null;
+                  })
+                  .reduce((acc, key) => {
+                    acc[key] = data[key];
+                    return acc;
+                  }, {} as Record<string, any>);
+
+                Object.keys(filteredData).forEach((key) => {
+                  onCellEdit(selectedRowIndex, key, filteredData[key]);
+                });
+              }
+              setOpen(false);
+            }}
+            fields={createActionFormFields("onSquareOffActionConfig")}
+          />
+        )}
+      </FlexibleModal>
     </>
   );
 };

@@ -117,7 +117,20 @@ export const FlexibleForm: React.FC<FlexibleFormProps> = ({
   className = "",
   validateOnChange = false,
 }) => {
-  const [formData, setFormData] = useState<Record<string, any>>(initialData);
+  // Initialize formData with default values from fields, then override with initialData
+  const getInitialFormData = () => {
+    const defaults: Record<string, any> = {};
+    fields.forEach((field) => {
+      if (field.defaultValue !== undefined) {
+        defaults[field.name] = field.defaultValue;
+      }
+    });
+    return { ...defaults, ...initialData };
+  };
+
+  const [formData, setFormData] = useState<Record<string, any>>(
+    getInitialFormData()
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 

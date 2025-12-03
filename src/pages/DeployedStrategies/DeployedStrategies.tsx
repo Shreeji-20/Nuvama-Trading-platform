@@ -9,7 +9,7 @@ import {
   deleteUser,
   loginUser,
 } from "../../hooks/UsersFunctions/usersApiService";
-
+import axios from "axios";
 import {
   Bell,
   Download,
@@ -22,19 +22,15 @@ import {
   StopCircle,
   icons,
 } from "lucide-react";
-import { HorizontalTabs } from "../../components/HorizontalTabs";
 
 import Accordion from "../../components/Accordion";
 import { SampleData } from "../../hooks/DeployedStrategiesFunctions/TradingStatesHooks";
 import { StrategyAccordionContent } from "./StrategyAccordionContent";
-import DropdownForm from "../../components/DropdownForm";
-import PopperFormExample from "../Examples/PopperFormExample";
-import { usePopper } from "../../components/Popper";
 
 const DeployedStrategies = () => {
   const toasts = useToast();
   const [strategies, setStrategies] = useState<any[]>(SampleData);
-  
+
   const [tradingState, setTradingState] = useState<{
     [key: string]: "running" | "paused" | "stopped";
   }>({});
@@ -99,11 +95,13 @@ const DeployedStrategies = () => {
       <Accordion
         variant="separated"
         allowMultiple={true}
+        // onToggle={() => {}}
+        // defaultOpenIds={[]}
         padding={false}
         items={strategies.map((strategy) => ({
           id: strategy.baseConfig.strategyId,
           title: (
-            <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center justify-between w-full gap-2 ">
               <span className="font-semibold">
                 {strategy.baseConfig.strategyName}
               </span>
@@ -121,6 +119,54 @@ const DeployedStrategies = () => {
                 >
                   {strategy.baseConfig.tradingState}
                 </span>
+              </div>
+              <div className="flex gap-2 items-center justify-center">
+                <span
+                  className="flex gap-2 items-center justify-center"
+                  // className="ml-2 p-1 bg-gray-500 text-white rounded text-xs"
+                >
+                  <input
+                    type="checkbox"
+                    checked={strategy.baseConfig.isSelectedForTrading}
+                    onChange={() => {
+                      requestAnimationFrame(() => {
+                        setStrategies((prevStrategies) =>
+                          prevStrategies.map((s) => {
+                            if (
+                              s.baseConfig.strategyId ===
+                              strategy.baseConfig.strategyId
+                            ) {
+                              return {
+                                ...s,
+                                baseConfig: {
+                                  ...s.baseConfig,
+                                  isSelectedForTrading:
+                                    !s.baseConfig.isSelectedForTrading,
+                                },
+                              };
+                            }
+                            return s;
+                          })
+                        );
+                      });
+                    }}
+                  />
+                  Selected
+                </span>
+                <button
+                  className="ml-2 p-1 bg-indigo-500 text-white rounded text-xs"
+                  onClick={async () => {
+                    const response = await axios.post(
+                      "http://100.64.231.34:8000/test",
+                      {
+                        data: strategy,
+                      }
+                    );
+                    console.log(response.data);
+                  }}
+                >
+                  Update
+                </button>
               </div>
             </div>
           ),

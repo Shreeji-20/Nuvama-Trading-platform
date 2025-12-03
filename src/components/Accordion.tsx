@@ -96,33 +96,25 @@ const Accordion: React.FC<AccordionProps> = ({
   return (
     <div
       className={`${
-        centered ? "max-w-[100rem] mx-auto" : "w-full"
+        centered ? "max-w-[115rem] mx-auto" : "w-full"
       } ${getPaddingClasses()}`}
     >
       <div className={`w-full ${styles.container} ${className}`}>
         {items.map((item) => {
           const isOpen = openIds.has(item.id);
           const isDisabled = item.disabled;
-
           return (
             <div key={item.id} className={styles.item}>
               {/* Accordion Header */}
-              <button
-                onClick={() => !isDisabled && toggle(item.id)}
-                disabled={isDisabled}
+              <div
                 className={`
-                w-full px-4 py-3 flex items-center justify-between 
+                w-full px-4 py-3 flex items-center justify-between
                 transition-all duration-200
                 ${styles.header}
-                ${
-                  isDisabled
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer"
-                }
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
               `}
               >
-                <div className="flex items-center gap-3 flex-1 text-left">
+                <div className="flex items-center gap-3 flex-1 text-left ">
                   {item.icon && (
                     <span className="flex-shrink-0 text-gray-600 dark:text-gray-400">
                       {item.icon}
@@ -133,11 +125,18 @@ const Accordion: React.FC<AccordionProps> = ({
                   </span>
                 </div>
 
-                <span
+                <button
+                  onClick={() => !isDisabled && toggle(item.id)}
+                  disabled={isDisabled}
                   className={`
                   flex-shrink-0 transition-transform duration-200 
                   text-gray-600 dark:text-gray-400
                   ${isOpen ? "transform rotate-0" : ""}
+                     ${
+                       isDisabled
+                         ? "cursor-not-allowed opacity-50"
+                         : "cursor-pointer"
+                     }
                 `}
                 >
                   {isOpen ? (
@@ -145,22 +144,26 @@ const Accordion: React.FC<AccordionProps> = ({
                   ) : (
                     <ChevronRight className="w-5 h-5" />
                   )}
-                </span>
-              </button>
+                </button>
+              </div>
 
               {/* Accordion Content */}
-              {isOpen && (
+              <div
+                className={`
+                  overflow-hidden transition-all duration-200 ease-in-out
+                  ${isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"}
+                `}
+              >
                 <div
                   className={`
-                  ${getPaddingClasses()}border-t border-gray-200 dark:border-gray-700
-                  ${styles.content}
-                  text-sm text-gray-700 dark:text-gray-300
-                  animate-in fade-in slide-in-from-top-2 duration-200
-                `}
+                    ${getPaddingClasses()} border-t border-gray-200 dark:border-gray-700
+                    ${styles.content}
+                    text-sm text-gray-700 dark:text-gray-300
+                  `}
                 >
                   {item.content}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

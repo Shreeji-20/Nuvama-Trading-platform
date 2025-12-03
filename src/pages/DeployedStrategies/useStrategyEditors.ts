@@ -25,6 +25,12 @@ export const useStrategyEditors = (
 
   const handleLegsEdit = useCallback(
     (rowIndex: number, columnId: string, newValue: any) => {
+      console.log("handleLegsEdit called:", {
+        strategyId,
+        rowIndex,
+        columnId,
+        newValue,
+      });
       setStrategies((prev) =>
         updateLegs(prev, strategyId, rowIndex, columnId, newValue)
       );
