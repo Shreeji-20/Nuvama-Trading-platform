@@ -515,7 +515,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
             {showHeader && headerStyle === "inline" && (
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xs font-semibold text-gray-900 dark:text-white">
                     {title}
                   </h2>
                   {description && (
@@ -585,7 +585,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                           {group.headers.map((header) => (
                             <th
                               key={header.id}
-                              className={`text-center px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
+                              className={`text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap first:rounded-tl-xl last:rounded-tr-xl ${
                                 scrollMode
                                   ? "bg-gray-50 dark:bg-gray-800"
                                   : "bg-gray-50/50 dark:bg-gray-800/50"
@@ -666,7 +666,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                     header.column.setFilterValue(e.target.value)
                                   }
                                   placeholder={`Filter...`}
-                                  className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
+                                  className="w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
                                 />
                               </th>
                             ))}
@@ -701,7 +701,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                           return (
                             <td
                               key={cell.id}
-                              className="px-4 text-center text-sm max-w-xs h-[2.5rem]"
+                              className="px-4 text-center text-xs max-w-xs h-[2.5rem]"
                               title={cellValue ? String(cellValue) : undefined}
                               onClick={() =>
                                 !isEditing &&
@@ -740,7 +740,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                       )
                                     }
                                     autoFocus
-                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-sm border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-xs border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
                                   >
                                     {(() => {
                                       const options =
@@ -779,7 +779,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                       )
                                     }
                                     autoFocus
-                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-sm border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                    className="max-w-[120px] h-[1.75rem] px-2 py-0.5 text-xs border border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
                                   />
                                 )
                               ) : (

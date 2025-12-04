@@ -53,9 +53,9 @@ export const NetPositionsTable = () => {
   const fetchOrders = async (): Promise<void> => {
     try {
       const response = await axios.get<ApiResponse>(
-        "http://100.64.231.34:8000/netPositions"
+        "http://100.64.231.34:8000/books/netPositions/70204607"
       );
-      const { pos, ...rest } = response.data;
+      const { pos, ...rest } = response.data.netPositions;
       currentDataRef.current = pos;
       netpnlDataRef.current = [rest];
       requestAnimationFrame(() => {
