@@ -1,4 +1,4 @@
-import { ReactTable } from "../table";
+import { ReactTable } from "../../components/table";
 import { useState, useEffect } from "react";
 
 import {
@@ -136,6 +136,7 @@ const Users = () => {
           totpSecret: "text",
           password: "password",
         }}
+        hideColumns={["authToken", "vendorSession", "reqId"]}
         editable={true}
         editableColumns={[
           "broker",

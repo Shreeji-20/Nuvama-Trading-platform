@@ -67,12 +67,13 @@ const AdvancedOptionsBuilder: React.FC = () => {
 
   // Base configuration state
   const [baseConfig, setBaseConfig] = useState<BaseConfig>({
-    strategyId: `STRATEGY_${Date.now().toString().slice(-6)}`,
-    strategyName: "",
-    lots: 1,
-    underlying: "Spot",
-    buyTradesFirst: false,
-    executionMode: "Live Mode",
+    strategy_id: `STRATEGY_${Date.now().toString().slice(-6)}`,
+    strategy_name: "",
+    multiplier: 1,
+    underlying: "SPOT",
+    buy_trades_first: false,
+    execution_mode: "LIVE MODE",
+    is_selected_for_trading: false,
   });
 
   // Legs state - Changed from array to dictionary
@@ -93,14 +94,14 @@ const AdvancedOptionsBuilder: React.FC = () => {
   // Execution parameters state
   const [executionParams, setExecutionParams] = useState<ExecutionParams>({
     product: "NRML",
-    strategyTag: "",
-    legsExecution: "Parallel",
-    portfolioExecutionMode: "startTime",
-    entryOrderType: "LIMIT",
-    runOnDays: [],
-    startTime: "",
-    endTime: "",
-    squareoffTime: "",
+    strategy_tag: "",
+    legs_execution: "PARALLEL",
+    portfolio_execution_mode: "START_TIME",
+    entry_order_type: "LIMIT",
+    run_on_days: [],
+    start_time: "",
+    end_time: "",
+    squareoff_time: "",
   });
 
   // API Base URL
@@ -108,39 +109,39 @@ const AdvancedOptionsBuilder: React.FC = () => {
 
   // Target settings state
   const [targetSettings, setTargetSettings] = useState<TargetSettings>({
-    targetType: "CombinedProfit",
-    targetValue: 0,
+    target_type: "COMBINED_PROFIT",
+    target_value: 0,
   });
 
   // Stoploss settings state
   const [stoplossSettings, setStoplossSettings] = useState<StoplossSettings>({
-    stoplossType: "CombinedProfit",
-    stoplossValue: 0,
-    stoplossWait: 0,
-    sqrOffOnlyLossLegs: false,
-    sqrOffOnlyProfitLegs: false,
+    stoploss_type: "COMBINED_PROFIT",
+    stoploss_value: 0,
+    stoploss_wait: 0,
+    sqr_off_only_loss_legs: false,
+    sqr_off_only_profit_legs: false,
   });
 
   // Exit settings state
   const [exitSettings, setExitSettings] = useState<ExitSettings>({
-    exitOrderType: "LIMIT",
-    exitSellFirst: false,
-    holdBuyTime: 0,
-    waitBtwnRetry: 0,
-    maxWaitTime: 0,
+    exit_order_type: "LIMIT",
+    exit_sell_first: false,
+    hold_buy_time: 0,
+    wait_btwn_retry: 0,
+    max_wait_time: 0,
   });
 
   // Dynamic hedge settings state
   const [dynamicHedgeSettings, setDynamicHedgeSettings] =
     useState<DynamicHedgeSettings>({
-      hedgeType: "premium Based",
-      minHedgeDistance: 0,
-      maxHedgeDistance: 0,
-      minPremium: 0.0,
-      maxPremium: 0.0,
-      strikeSteps: {},
-      strike500: false,
-      strikeDistance: 1,
+      hedge_type: "PREMIUM_BASED",
+      min_hedge_distance: 0,
+      max_hedge_distance: 0,
+      min_premium: 0.0,
+      max_premium: 0.0,
+      strike_steps: {},
+      strike_500: false,
+      strike_distance: 1,
     });
 
   // Effect to auto-populate strikeSteps with default values when legs change
@@ -158,7 +159,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
     };
 
     // Check if strikeSteps needs updating
-    const currentStrikeSteps = dynamicHedgeSettings.strikeSteps || {};
+    const currentStrikeSteps = dynamicHedgeSettings.strike_steps || {};
     let needsUpdate = false;
     const updatedStrikeSteps: Record<string, number> = {
       ...currentStrikeSteps,
@@ -176,7 +177,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
     if (needsUpdate) {
       setDynamicHedgeSettings((prev) => ({
         ...prev,
-        strikeSteps: updatedStrikeSteps,
+        strike_steps: updatedStrikeSteps,
       }));
     }
   }, [legs]); // Run whenever legs change
@@ -291,9 +292,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={baseConfig.strategyName}
+                value={baseConfig.strategy_name}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  handleBaseConfigChange("strategyName", e.target.value)
+                  handleBaseConfigChange("strategy_name", e.target.value)
                 }
                 placeholder="Enter strategy name (required)"
                 required
@@ -302,13 +303,16 @@ const AdvancedOptionsBuilder: React.FC = () => {
             </div>
             <div>
               <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Lots
+                Multiplier
               </label>
               <input
                 type="number"
-                value={baseConfig.lots}
+                value={baseConfig.multiplier}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  handleBaseConfigChange("lots", parseInt(e.target.value) || 1)
+                  handleBaseConfigChange(
+                    "multiplier",
+                    parseInt(e.target.value) || 1
+                  )
                 }
                 className="w-full text-[0.7rem] p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="1"
@@ -340,10 +344,10 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 Execution Mode
               </label>
               <select
-                value={baseConfig.executionMode}
+                value={baseConfig.execution_mode}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                   handleBaseConfigChange(
-                    "executionMode",
+                    "execution_mode",
                     e.target.value as ExecutionMode
                   )
                 }
@@ -361,9 +365,9 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 <input
                   type="checkbox"
                   id="buyTradesFirst"
-                  checked={baseConfig.buyTradesFirst}
+                  checked={baseConfig.buy_trades_first}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleBaseConfigChange("buyTradesFirst", e.target.checked)
+                    handleBaseConfigChange("buy_trades_first", e.target.checked)
                   }
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 />
@@ -447,7 +451,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
               priceTypeOptions={priceTypeOptions}
               actionOptions={actionOptions}
               orderTypeOptions={orderTypeOptions}
-              strategyId={baseConfig.strategyId}
+              strategyId={baseConfig.strategy_id}
             />
           )}
         </div>
@@ -565,7 +569,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   Strategy ID
                 </div>
                 <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
-                  {baseConfig.strategyId}
+                  {baseConfig.strategy_id}
                 </div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
@@ -581,7 +585,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   Execution Mode
                 </div>
                 <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
-                  {executionParams.legsExecution}
+                  {executionParams.legs_execution}
                 </div>
               </div>
               <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg text-center">
@@ -589,7 +593,7 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   Target Type
                 </div>
                 <div className="text-[0.7rem] font-semibold text-gray-900 dark:text-white">
-                  {targetSettings.targetType}
+                  {targetSettings.target_type}
                 </div>
               </div>
             </div>
@@ -640,53 +644,56 @@ const AdvancedOptionsBuilder: React.FC = () => {
                   ) {
                     // Reset all states
                     setBaseConfig({
-                      strategyId: `STRATEGY_${Date.now().toString().slice(-6)}`,
-                      strategyName: "",
-                      lots: 1,
-                      underlying: "Spot",
-                      buyTradesFirst: false,
-                      executionMode: "Live Mode",
+                      strategy_id: `STRATEGY_${Date.now()
+                        .toString()
+                        .slice(-6)}`,
+                      strategy_name: "",
+                      multiplier: 1,
+                      underlying: "SPOT",
+                      buy_trades_first: false,
+                      execution_mode: "LIVE MODE",
+                      is_selected_for_trading: false,
                     });
                     setLegs({});
                     setLegCounter(1);
                     setExecutionParams({
                       product: "NRML",
-                      strategyTag: "",
-                      legsExecution: "Parallel",
-                      portfolioExecutionMode: "startTime",
-                      entryOrderType: "LIMIT",
-                      runOnDays: [],
-                      startTime: "",
-                      endTime: "",
-                      squareoffTime: "",
+                      strategy_tag: "",
+                      legs_execution: "PARALLEL",
+                      portfolio_execution_mode: "START_TIME",
+                      entry_order_type: "LIMIT",
+                      run_on_days: [],
+                      start_time: "",
+                      end_time: "",
+                      squareoff_time: "",
                     });
                     setTargetSettings({
-                      targetType: "CombinedProfit",
-                      targetValue: 0,
+                      target_type: "COMBINED_PROFIT",
+                      target_value: 0,
                     });
                     setStoplossSettings({
-                      stoplossType: "CombinedLoss",
-                      stoplossValue: 0,
-                      stoplossWait: 0,
-                      sqrOffOnlyLossLegs: false,
-                      sqrOffOnlyProfitLegs: false,
+                      stoploss_type: "COMBINED_LOSS",
+                      stoploss_value: 0,
+                      stoploss_wait: 0,
+                      sqr_off_only_loss_legs: false,
+                      sqr_off_only_profit_legs: false,
                     });
                     setExitSettings({
-                      exitOrderType: "LIMIT",
-                      exitSellFirst: false,
-                      holdBuyTime: 0,
-                      waitBtwnRetry: 0,
-                      maxWaitTime: 0,
+                      exit_order_type: "LIMIT",
+                      exit_sell_first: false,
+                      hold_buy_time: 0,
+                      wait_btwn_retry: 0,
+                      max_wait_time: 0,
                     });
                     setDynamicHedgeSettings({
-                      hedgeType: "premium Based",
-                      minHedgeDistance: 0,
-                      maxHedgeDistance: 0,
-                      minPremium: 0.0,
-                      maxPremium: 0.0,
-                      strikeSteps: {},
-                      strike500: false,
-                      strikeDistance: 1,
+                      hedge_type: "PREMIUM_BASED",
+                      min_hedge_distance: 0,
+                      max_hedge_distance: 0,
+                      min_premium: 0.0,
+                      max_premium: 0.0,
+                      strike_steps: {},
+                      strike_500: false,
+                      strike_distance: 1,
                     });
                     setAtBrokerSettings({
                       legSlAtBroker: false,
@@ -805,13 +812,13 @@ const AdvancedOptionsBuilder: React.FC = () => {
                 // Determine which config to update
                 const configKey =
                   actionType === "target"
-                    ? "onTargetActionConfig"
+                    ? "on_target_action_config"
                     : actionType === "stoploss"
-                    ? "onStoplossActionConfig"
-                    : "onSquareOffActionConfig";
+                    ? "on_stoploss_action_config"
+                    : "on_squareoff_action_config";
 
                 // Ensure action config exists
-                let updatedLeg = { ...prev[legId] };
+                let updatedLeg = { ...prev[legId] } as any;
                 if (!updatedLeg[configKey]) {
                   updatedLeg[configKey] = {
                     actionType: "NONE",
@@ -831,17 +838,6 @@ const AdvancedOptionsBuilder: React.FC = () => {
                     [field]: value,
                   },
                 };
-
-                // Also update the legacy field for backward compatibility
-                if (field === "actionType") {
-                  if (actionType === "target") {
-                    updatedLeg.onTargetAction = value;
-                  } else if (actionType === "stoploss") {
-                    updatedLeg.onStoplossAction = value;
-                  } else if (actionType === "squareoff") {
-                    updatedLeg.onSquareOffAction = value;
-                  }
-                }
 
                 return {
                   ...prev,

@@ -5,14 +5,14 @@ import React from "react";
  * Used in both AdvancedOptionsBuilder and DeployedStrategies
  */
 
-type StrikeType = "NearestPremium" | "premium";
+type StrikeType = "NEAREST_PREMIUM" | "PREMIUM";
 type SearchSide = "ITM" | "OTM" | "BOTH";
-type Condition = "Greaterthanequal" | "lessthanequal";
+type Condition = "GREATER_THAN_EQUAL" | "LESS_THAN_EQUAL";
 
 interface PremiumBasedStrikeConfig {
-  strikeType: StrikeType;
-  maxDepth: number | string;
-  searchSide: SearchSide;
+  strike_type: StrikeType;
+  max_depth: number | string;
+  search_side: SearchSide;
   value: number | string;
   condition: Condition;
   between: number | string;
@@ -20,8 +20,8 @@ interface PremiumBasedStrikeConfig {
 }
 
 interface Leg {
-  legId: string;
-  premiumBasedStrikeConfig?: PremiumBasedStrikeConfig;
+  leg_id: string;
+  premium_based_strike_config?: PremiumBasedStrikeConfig | null;
   [key: string]: any;
 }
 
@@ -40,13 +40,13 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
 }) => {
   if (!isOpen || !leg) return null;
 
-  // Ensure premiumBasedStrikeConfig exists with defaults
-  const config: PremiumBasedStrikeConfig = leg.premiumBasedStrikeConfig || {
-    strikeType: "NearestPremium",
-    maxDepth: 5,
-    searchSide: "BOTH",
+  // Ensure premium_based_strike_config exists with defaults
+  const config: PremiumBasedStrikeConfig = leg.premium_based_strike_config || {
+    strike_type: "NEAREST_PREMIUM",
+    max_depth: 5,
+    search_side: "BOTH",
     value: 0,
-    condition: "Greaterthanequal",
+    condition: "GREATER_THAN_EQUAL",
     between: 0,
     and: 0,
   };
@@ -56,7 +56,7 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            Premium Based Strike - {leg.legId}
+            Premium Based Strike - {leg.leg_id}
           </h3>
           <button
             onClick={onClose}
@@ -85,12 +85,12 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
               Strike Type
             </label>
             <select
-              value={config.strikeType}
-              onChange={(e) => onConfigChange("strikeType", e.target.value)}
+              value={config.strike_type}
+              onChange={(e) => onConfigChange("strike_type", e.target.value)}
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="NearestPremium">Nearest Premium</option>
-              <option value="premium">Premium</option>
+              <option value="NEAREST_PREMIUM">Nearest Premium</option>
+              <option value="PREMIUM">Premium</option>
             </select>
           </div>
 
@@ -101,13 +101,13 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
             </label>
             <input
               type="number"
-              value={config.maxDepth}
+              value={config.max_depth}
               onChange={(e) => {
                 const value = e.target.value;
                 // Prevent negative sign but allow empty
                 if (value !== "-") {
                   onConfigChange(
-                    "maxDepth",
+                    "max_depth",
                     value === "" ? "" : parseInt(value) || 0
                   );
                 }
@@ -115,7 +115,7 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
               onBlur={(e) => {
                 const value = e.target.value;
                 if (value === "") {
-                  onConfigChange("maxDepth", 0);
+                  onConfigChange("max_depth", 0);
                 }
               }}
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -130,8 +130,8 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
               Search Side
             </label>
             <select
-              value={config.searchSide}
-              onChange={(e) => onConfigChange("searchSide", e.target.value)}
+              value={config.search_side}
+              onChange={(e) => onConfigChange("search_side", e.target.value)}
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             >
               <option value="ITM">ITM</option>
@@ -141,7 +141,7 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
           </div>
 
           {/* Conditional Fields based on Strike Type */}
-          {config.strikeType === "NearestPremium" ? (
+          {config.strike_type === "NEAREST_PREMIUM" ? (
             <>
               {/* Value */}
               <div>
@@ -184,10 +184,12 @@ const PremiumStrikeModal: React.FC<PremiumStrikeModalProps> = ({
                   onChange={(e) => onConfigChange("condition", e.target.value)}
                   className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="Greaterthanequal">
+                  <option value="GREATER_THAN_EQUAL">
                     Greater Than or Equal (≥)
                   </option>
-                  <option value="lessthanequal">Less Than or Equal (≤)</option>
+                  <option value="LESS_THAN_EQUAL">
+                    Less Than or Equal (≤)
+                  </option>
                 </select>
               </div>
             </>

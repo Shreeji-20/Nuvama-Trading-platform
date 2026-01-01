@@ -22,17 +22,17 @@ export const StrategyAccordionContent: React.FC<
 > = ({ strategy, setStrategies }) => {
   // Each strategy gets its own set of memoized handlers
   const editors = useStrategyEditors(
-    strategy.baseConfig.strategyId,
+    strategy.base_config.strategy_id,
     setStrategies
   );
 
   return (
     <div>
       <BaseConfigTable
-        data={strategy.baseConfig}
+        data={strategy.base_config}
         onCellEdit={editors.handleBaseConfigEdit}
       />
-      <LegsTable legs={strategy.legs} onCellEdit={editors.handleLegsEdit} />
+      <LegsTable legs={strategy.legs} onCellEdit={editors.handleLegsEdit} onLegDelete={editors.handleLegDelete} onLegCopy={editors.handleCopyLeg} onLegAdd={editors.handleAddLeg} />
       <HorizontalTabs
         padding={false}
         // rounded={false}
@@ -43,7 +43,7 @@ export const StrategyAccordionContent: React.FC<
             icon: <Settings className="h-4 w-4" />,
             content: (
               <ExecutionParamsTable
-                data={strategy.executionParams}
+                data={strategy.execution_params}
                 onCellEdit={editors.handleExecutionParamsEdit}
               />
             ),

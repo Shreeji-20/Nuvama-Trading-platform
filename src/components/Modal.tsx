@@ -118,7 +118,9 @@ export default function FlexibleModal({
       >
         <div className="flex items-start justify-between gap-4">
           {title ? (
-            <div className="text-lg font-semibold">{title}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {title}
+            </div>
           ) : (
             <div />
           )}
@@ -126,7 +128,7 @@ export default function FlexibleModal({
             <button
               aria-label="Close modal"
               onClick={onClose}
-              className="ml-auto inline-flex items-center justify-center rounded-full p-1 hover:bg-gray-100"
+              className="ml-auto inline-flex items-center justify-center rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

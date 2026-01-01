@@ -8,6 +8,7 @@ export const fetchUsers = async () => {
     const response = await fetch(config.buildUrl(config.ENDPOINTS.USERS));
     if (response.ok) {
       const usersData = await response.json();
+      console.log("Fetched users:", usersArray);
       const usersArray = Array.isArray(usersData) ? usersData : [];
 
       // Build userId -> username map
@@ -35,6 +36,7 @@ export const fetchUsers = async () => {
 export const fetchTags = async (API_BASE_URL) => {
   try {
     const response = await fetch(`${API_BASE_URL}/strategy-tags/list`);
+    console.log("Fetch tags response:", response);
     if (response.ok) {
       const data = await response.json();
       return { success: true, data: Array.isArray(data) ? data : [] };

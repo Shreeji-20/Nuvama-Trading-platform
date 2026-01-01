@@ -4,6 +4,8 @@ import {
   updateLegs,
   updateExecutionParams,
   Strategy,
+  copyLeg,
+  deleteLeg,
 } from "./EditFunctions";
 
 /**
@@ -25,18 +27,30 @@ export const useStrategyEditors = (
 
   const handleLegsEdit = useCallback(
     (rowIndex: number, columnId: string, newValue: any) => {
-      console.log("handleLegsEdit called:", {
-        strategyId,
-        rowIndex,
-        columnId,
-        newValue,
-      });
       setStrategies((prev) =>
         updateLegs(prev, strategyId, rowIndex, columnId, newValue)
       );
     },
     [strategyId, setStrategies]
   );
+
+  const handleLegDelete = useCallback(
+    (rowIndex: number) => {
+      setStrategies((prev) => deleteLeg(prev, strategyId, rowIndex));
+    },
+    [strategyId, setStrategies]
+  );
+
+  const handleCopyLeg = useCallback(
+    (rowIndex: number) => {
+      setStrategies((prev) => copyLeg(prev, strategyId, rowIndex));
+    },
+    [strategyId, setStrategies]
+  );
+
+  const handleAddLeg = useCallback(() => {
+    setStrategies((prev) => copyLeg(prev, strategyId, 0)); // Example: copying the first leg as a new leg
+  }, [strategyId, setStrategies]);
 
   const handleExecutionParamsEdit = useCallback(
     (rowIndex: number, columnId: string, newValue: any) => {
@@ -50,6 +64,9 @@ export const useStrategyEditors = (
   return {
     handleBaseConfigEdit,
     handleLegsEdit,
+    handleLegDelete,
+    handleAddLeg,
+    handleCopyLeg,
     handleExecutionParamsEdit,
   };
 };

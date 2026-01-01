@@ -108,12 +108,12 @@ export default function Navbar({
                 <NavLink to="/users" icon="👥">
                   Users
                 </NavLink>
-                <NavLink to="/OptionsBuilder" icon="🚀">
-                  Options Builder
-                </NavLink>
                 <NavLink to="/advanced-options-builder" icon="🔧">
                   Options Strategy Builder
                 </NavLink>
+                {/* <NavLink to="/advanced-options-builder-new" icon="🔧">
+                  Options Strategy Builder New
+                </NavLink> */}
                 <NavLink to="/deployed-strategies" icon="📊">
                   Deployed Strategies
                 </NavLink>

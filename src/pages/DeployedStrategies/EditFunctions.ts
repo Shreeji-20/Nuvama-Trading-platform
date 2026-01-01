@@ -10,14 +10,18 @@ export const updateBaseConfig = (
   columnId: string,
   newValue: any
 ): Strategy[] => {
-  return strategies.map((strategy) => {
-    if (strategy.baseConfig.strategyId === strategyId) {
+  return Object.keys(strategies).map((key: any) => {
+    if (strategies[key].base_config.strategy_id === strategyId) {
       return {
-        ...strategy,
-        baseConfig: setNestedProperty(strategy.baseConfig, columnId, newValue),
+        ...strategies[key],
+        base_config: setNestedProperty(
+          strategies[key].base_config,
+          columnId,
+          newValue
+        ),
       };
     }
-    return strategy;
+    return strategies[key];
   });
 };
 
@@ -28,23 +32,65 @@ export const updateLegs = (
   columnId: string,
   newValue: any
 ): Strategy[] => {
-  return strategies.map((strategy) => {
-    if (strategy.baseConfig.strategyId === strategyId) {
-      const legKey = Object.keys(strategy.legs)[rowIndex];
-
+  return Object.keys(strategies).map((key: any) => {
+    if (strategies[key].base_config.strategy_id === strategyId) {
+      const legKey = Object.keys(strategies[key].legs)[rowIndex];
+      // Patch request here (legKey ,columnId, newValue)
       return {
-        ...strategy,
+        ...strategies[key],
         legs: {
-          ...strategy.legs,
+          ...strategies[key].legs,
           [legKey]: setNestedProperty(
-            strategy.legs[legKey],
+            strategies[key].legs[legKey],
             columnId,
             newValue
           ),
         },
       };
     }
-    return strategy;
+    return strategies[key];
+  });
+};
+
+export const deleteLeg = (
+  strategies: Strategy[],
+  strategyId: string,
+  rowIndex: number
+): Strategy[] => {
+  return Object.keys(strategies).map((key: any) => {
+    if (strategies[key].base_config.strategy_id === strategyId) {
+      const legKey = Object.keys(strategies[key].legs)[rowIndex];
+      const { [legKey]: _, ...updatedLegs } = strategies[key].legs;
+      console.log("Deleting leg:", legKey);
+      console.log("Updated legs after deletion:", updatedLegs);
+      return {
+        ...strategies[key],
+        legs: updatedLegs,
+      };
+    }
+    return strategies[key];
+  });
+};
+
+export const copyLeg = (
+  strategies: Strategy[],
+  strategyId: string,
+  rowIndex: number
+): Strategy[] => {
+  return Object.keys(strategies).map((key: any) => {
+    if (strategies[key].base_config.strategy_id === strategyId) {
+      const legKey = Object.keys(strategies[key].legs)[rowIndex];
+      const legToCopy = strategies[key].legs[legKey];
+      const newLegKey = `leg_${Date.now()}`; // Simple unique key generation
+      return {
+        ...strategies[key],
+        legs: {
+          ...strategies[key].legs,
+          [newLegKey]: { ...legToCopy },
+        },
+      };
+    }
+    return strategies[key];
   });
 };
 
@@ -54,17 +100,17 @@ export const updateExecutionParams = (
   columnId: string,
   newValue: any
 ): Strategy[] => {
-  return strategies.map((strategy) => {
-    if (strategy.baseConfig.strategyId === strategyId) {
+  return Object.keys(strategies).map((key: any) => {
+    if (strategies[key].base_config.strategy_id === strategyId) {
       return {
-        ...strategy,
-        executionParams: setNestedProperty(
-          strategy.executionParams,
+        ...strategies[key],
+        execution_params: setNestedProperty(
+          strategies[key].execution_params,
           columnId,
           newValue
         ),
       };
     }
-    return strategy;
+    return strategies[key];
   });
 };

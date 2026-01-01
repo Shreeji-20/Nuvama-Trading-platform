@@ -14,7 +14,7 @@ export const createAddLegHandler = (
       // Find the next available leg ID
       const existingLegNumbers = Object.values(prev)
         .map((leg) => {
-          const match = leg.legId?.match(/LEG_(\d+)/);
+          const match = leg.leg_id?.match(/LEG_(\d+)/);
           return match ? parseInt(match[1], 10) : 0;
         })
         .sort((a, b) => a - b);
@@ -31,66 +31,66 @@ export const createAddLegHandler = (
       const legId = `LEG_${nextLegNumber.toString().padStart(3, "0")}`;
       const newLeg: Leg = {
         id: Date.now(),
-        legId: legId,
-        strategyId: baseConfig.strategyId,
-        strategyName: baseConfig.strategyName,
+        leg_id: legId,
+        strategy_id: baseConfig.strategy_id,
+        strategy_name: baseConfig.strategy_name,
         symbol: "NIFTY",
         expiry: 0,
         action: "BUY",
-        optionType: "CE",
+        option_type: "CE",
         lots: 1,
         strike: "ATM",
-        target: "NONE",
-        targetValue: 0,
-        stoploss: "NONE",
-        stoplossValue: 0,
-        priceType: "BIDASK",
-        depthIndex: 1,
-        orderType: "LIMIT",
-        startTime: "",
-        waitAndTrade: 0,
-        waitAndTradeLogic: "NONE",
-        dynamicHedge: false,
-        onTargetAction: "NONE",
-        onStoplossAction: "NONE",
-        onSquareOffAction: "NONE",
-        onTargetActionConfig: {
-          actionType: "NONE",
-          actionCount: 1,
-          orderAtBroker: false,
-          slOrderAdjust: {
-            minPoints: 0,
-            maxPercentage: 0,
+        tp_sl_config: {
+          target_logic_type: "NONE",
+          target_logic_value: 0,
+          stoploss_value_type: "NONE",
+          stoploss_value: 0,
+        },
+        price_type: "BIDASK",
+        depth_index: 1,
+        order_type: "LIMIT",
+        start_time: "",
+        wait_and_trade_value: 0,
+        wait_and_trade_logic_type: "NONE",
+        dynamic_hedge: false,
+        on_target_action_config: {
+          action_type: "NONE",
+          action_count: 1,
+          order_at_broker: false,
+          sl_order_adjust: {
+            min_points: 0,
+            max_percentage: 0,
           },
         },
-        onStoplossActionConfig: {
-          actionType: "NONE",
-          actionCount: 1,
-          orderAtBroker: false,
-          slOrderAdjust: {
-            minPoints: 0,
-            maxPercentage: 0,
+        on_stoploss_action_config: {
+          action_type: "NONE",
+          action_count: 1,
+          order_at_broker: false,
+          sl_order_adjust: {
+            min_points: 0,
+            max_percentage: 0,
           },
         },
-        onSquareOffActionConfig: {
-          actionType: "NONE",
-          actionCount: 1,
-          orderAtBroker: false,
-          slOrderAdjust: {
-            minPoints: 0,
-            maxPercentage: 0,
+        on_squareoff_action_config: {
+          action_type: "NONE",
+          action_count: 1,
+          order_at_broker: false,
+          sl_order_adjust: {
+            min_points: 0,
+            max_percentage: 0,
           },
         },
-        premiumBasedStrike: false,
-        premiumBasedStrikeConfig: {
-          strikeType: "NearestPremium",
-          maxDepth: 5,
-          searchSide: "BOTH",
+        premium_based_strike: false,
+        premium_based_strike_config: {
+          strike_type: "NEAREST_PREMIUM",
+          max_depth: 5,
+          search_side: "BOTH",
           value: 0,
-          condition: "Greaterthanequal",
+          condition: "GREATER_THAN_EQUAL",
           between: 0,
           and: 0,
         },
+        marked_as_complete: false,
       };
       return { ...prev, [legId]: newLeg };
     });
@@ -109,7 +109,7 @@ export const createCopyLegHandler = (
       // Find the next available leg ID
       const existingLegNumbers = Object.values(prev)
         .map((leg) => {
-          const match = leg.legId?.match(/LEG_(\d+)/);
+          const match = leg.leg_id?.match(/LEG_(\d+)/);
           return match ? parseInt(match[1], 10) : 0;
         })
         .sort((a, b) => a - b);
@@ -127,7 +127,7 @@ export const createCopyLegHandler = (
       const newLeg: Leg = {
         ...legToCopy,
         id: Date.now(),
-        legId: newLegId,
+        leg_id: newLegId,
       };
       return { ...prev, [newLegId]: newLeg };
     });
@@ -164,12 +164,21 @@ export const createUpdatePremiumStrikeConfigHandler = (
   ): void => {
     setLegs((prev) => {
       if (!prev[legId]) return prev;
+      const currentConfig = prev[legId].premium_based_strike_config || {
+        strike_type: "NEAREST_PREMIUM",
+        max_depth: 5,
+        search_side: "BOTH",
+        value: 0,
+        condition: "GREATER_THAN_EQUAL",
+        between: 0,
+        and: 0,
+      };
       return {
         ...prev,
         [legId]: {
           ...prev[legId],
-          premiumBasedStrikeConfig: {
-            ...prev[legId].premiumBasedStrikeConfig,
+          premium_based_strike_config: {
+            ...currentConfig,
             [field]: value,
           },
         },
@@ -200,13 +209,13 @@ export const createGenerateNewStrategyIdHandler = (
     const newStrategyId = `STRATEGY_${Date.now().toString().slice(-6)}`;
     setBaseConfig((prev) => ({
       ...prev,
-      strategyId: newStrategyId,
+      strategy_id: newStrategyId,
     }));
 
     setLegs((prev) => {
       const updated: Record<string, Leg> = {};
       Object.entries(prev).forEach(([legId, leg]) => {
-        updated[legId] = { ...leg, strategyId: newStrategyId };
+        updated[legId] = { ...leg, strategy_id: newStrategyId };
       });
       return updated;
     });

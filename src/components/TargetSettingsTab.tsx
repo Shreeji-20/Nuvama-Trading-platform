@@ -1,8 +1,8 @@
 import React from "react";
 
 interface TargetSettings {
-  targetType: string;
-  targetValue: number;
+  target_type: string;
+  target_value: number;
 }
 
 interface TargetSettingsTabProps {
@@ -65,9 +65,9 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                 <td className="p-3">
                   {isEditing ? (
                     <select
-                      value={targetSettings.targetType || "CombinedProfit"}
+                      value={targetSettings.target_type || "COMBINED_PROFIT"}
                       onChange={(e) =>
-                        handleChange("targetType", e.target.value)
+                        handleChange("target_type", e.target.value)
                       }
                       className="w-full text-[0.6rem] text-center p-3 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     >
@@ -79,7 +79,7 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                     </select>
                   ) : (
                     <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white text-center">
-                      {targetSettings.targetType || "N/A"}
+                      {targetSettings.target_type || "N/A"}
                     </div>
                   )}
                 </td>
@@ -92,11 +92,11 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                   {isEditing ? (
                     <input
                       type="number"
-                      value={targetSettings.targetValue ?? ""}
+                      value={targetSettings.target_value ?? ""}
                       onChange={(e) => {
                         const value = e.target.value;
                         handleChange(
-                          "targetValue",
+                          "target_value",
                           value === "" || value === "-"
                             ? value
                             : parseFloat(value) || 0
@@ -105,7 +105,7 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                       onBlur={(e) => {
                         const value = e.target.value;
                         if (value === "" || value === "-") {
-                          handleChange("targetValue", 0);
+                          handleChange("target_value", 0);
                         }
                       }}
                       className="w-24 text-[0.6rem] text-center p-1 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mx-auto"
@@ -114,7 +114,7 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
                     />
                   ) : (
                     <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white text-center">
-                      {targetSettings.targetValue ?? "N/A"}
+                      {targetSettings.target_value ?? "N/A"}
                     </div>
                   )}
                 </td>
@@ -130,8 +130,8 @@ const TargetSettingsTab: React.FC<TargetSettingsTabProps> = ({
               Current Target Configuration
             </div>
             <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white mt-1">
-              {targetSettings.targetType || "N/A"}:{" "}
-              {targetSettings.targetValue ?? 0}
+              {targetSettings.target_type || "N/A"}:{" "}
+              {targetSettings.target_value ?? 0}
             </div>
           </div>
         </div>

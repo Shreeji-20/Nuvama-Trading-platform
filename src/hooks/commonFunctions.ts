@@ -4,7 +4,6 @@ import { produce } from "immer";
 // Helper function to set nested property immutably
 export const setNestedProperty = (obj: any, path: string, value: any): any => {
   const keys = path.split(".");
-
   if (keys.length === 1) {
     return { ...obj, [path]: value };
   }
@@ -191,4 +190,39 @@ export const getChangedKeysDeep = (
   return Array.from(new Set(changed));
 };
 
-// src/utils/applyChangedKeys.ts
+// utils/getChangedKeysDeep.ts
+
+export function getChangedKeysDeepWithValues(
+  original: any,
+  updated: any,
+  parentKey = ""
+): Record<string, any> {
+  let changes: Record<string, any> = {};
+
+  for (const key in updated) {
+    const fullKey = parentKey ? `${parentKey}.${key}` : key;
+
+    const oldVal = original?.[key];
+    const newVal = updated[key];
+
+    const bothObjects =
+      typeof oldVal === "object" &&
+      typeof newVal === "object" &&
+      oldVal !== null &&
+      newVal !== null &&
+      !Array.isArray(oldVal) &&
+      !Array.isArray(newVal);
+
+    // Recursively check nested objects
+    if (bothObjects) {
+      const nestedChanges = getChangedKeysDeep(oldVal, newVal, fullKey);
+      Object.assign(changes, nestedChanges);
+    } else {
+      if (oldVal !== newVal) {
+        changes[fullKey] = newVal;
+      }
+    }
+  }
+
+  return changes;
+}

@@ -22,6 +22,25 @@ import {
   ChevronsRight,
 } from "lucide-react";
 
+// Helper function to get nested value by dot notation path
+const getNestedValue = (obj: any, path: string): any => {
+  if (!path || !obj) return undefined;
+  return path.split(".").reduce((acc, part) => acc?.[part], obj);
+};
+
+// Helper function to set nested value by dot notation path
+const setNestedValue = (obj: any, path: string, value: any): any => {
+  if (!path || !obj) return obj;
+  const keys = path.split(".");
+  const lastKey = keys.pop()!;
+  const target = keys.reduce((acc, key) => {
+    if (!acc[key]) acc[key] = {};
+    return acc[key];
+  }, obj);
+  target[lastKey] = value;
+  return obj;
+};
+
 // Types
 interface CellStyle {
   bgColor?: string;
@@ -82,6 +101,7 @@ interface ReactTableProps {
   fullHeight?: boolean;
   columnLabels?: Record<string, string>;
   scrollMode?: boolean;
+
   maxScrollHeight?: string;
   editable?: boolean;
   editableColumns?: string[];
@@ -96,7 +116,13 @@ interface ReactTableProps {
   ) => void;
   cellInputType?: Record<
     string,
-    "text" | "number" | "select" | "checkbox" | "password"
+    | "text"
+    | "number"
+    | "select"
+    | "multiselect"
+    | "checkbox"
+    | "password"
+    | "datetime-local"
   >;
   dropdownOptions?: Record<string, string[] | ((rowData: any) => string[])>;
   buttonColumns?: Record<string, ButtonConfig | ButtonConfig[]>;
@@ -121,6 +147,8 @@ const generateColumns = (data: any[]): ColumnDef<any>[] => {
   const columns: ColumnDef<any>[] = [];
 
   const processObject = (obj: any, prefix = ""): void => {
+    if (!obj || typeof obj !== "object") return;
+
     Object.keys(obj).forEach((key) => {
       const value = obj[key];
       const accessorKey = prefix ? `${prefix}.${key}` : key;
@@ -135,6 +163,8 @@ const generateColumns = (data: any[]): ColumnDef<any>[] => {
       } else {
         // Primitive value or array - create column
         columns.push({
+          // Ensure column id is stable and matches config keys (supports dot notation)
+          id: accessorKey,
           accessorKey: accessorKey,
           header: key
             .replace(/([A-Z])/g, " $1") // Add space before capital letters
@@ -202,6 +232,31 @@ export const ReactTable: React.FC<ReactTableProps> = ({
   // Auto-generate columns from data
   const columns = useMemo(() => {
     let generatedColumns = generateColumns(data);
+
+    // Add any explicitly editable columns that don't exist in generated columns
+    if (editableColumns && editableColumns.length > 0) {
+      const existingKeys = new Set(
+        generatedColumns.map((col: any) => col.accessorKey)
+      );
+
+      editableColumns.forEach((colKey) => {
+        if (!existingKeys.has(colKey)) {
+          // Column doesn't exist in data but is specified as editable - add it
+          const parts = colKey.split(".");
+          const header = parts[parts.length - 1]
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (str) => str.toUpperCase())
+            .trim();
+
+          generatedColumns.push({
+            // Ensure column id is stable and matches config keys (supports dot notation)
+            id: colKey,
+            accessorKey: colKey,
+            header: header,
+          });
+        }
+      });
+    }
 
     // Filter out hidden columns (supports exact match and wildcard patterns like "parent.*")
     if (hideColumns && hideColumns.length > 0) {
@@ -278,29 +333,44 @@ export const ReactTable: React.FC<ReactTableProps> = ({
     return style;
   };
 
-  // Helper function to check if a column is editable
+  // Helper function to check if a column is editable (supports nested paths)
   const isColumnEditable = (columnId: string): boolean => {
     if (!editable) return false;
     if (editableColumns.length === 0) return true; // All columns editable if none specified
     return editableColumns.includes(columnId);
   };
 
-  // Handle cell click to enter edit mode
+  // Handle cell click to enter edit mode (supports nested fields)
   const handleCellClick = (
     rowIndex: number,
     columnId: string,
-    currentValue: any
+    currentValue: any,
+    rowData: any
   ): void => {
     if (isColumnEditable(columnId)) {
+      // Get the actual value (nested or top-level)
+      const actualValue = columnId.includes(".")
+        ? getNestedValue(rowData, columnId)
+        : currentValue;
+
       // For checkbox type, toggle immediately without entering edit mode
       if (cellInputType[columnId] === "checkbox") {
-        const newValue = currentValue === true || currentValue === "true";
+        const newValue = actualValue === true || actualValue === "true";
         if (onCellEdit && typeof onCellEdit === "function") {
-          onCellEdit(rowIndex, columnId, !newValue, data[rowIndex]);
+          onCellEdit(rowIndex, columnId, !newValue, rowData);
         }
       } else {
         setEditingCell({ rowIndex, columnId });
-        setEditValue(currentValue?.toString() || "");
+        // For multiselect, handle array values
+        if (cellInputType[columnId] === "multiselect") {
+          if (Array.isArray(actualValue)) {
+            setEditValue(actualValue.join(","));
+          } else {
+            setEditValue(actualValue?.toString() || "");
+          }
+        } else {
+          setEditValue(actualValue?.toString() || "");
+        }
       }
     }
   };
@@ -319,7 +389,15 @@ export const ReactTable: React.FC<ReactTableProps> = ({
     rowData: any
   ): void => {
     if (onCellEdit && typeof onCellEdit === "function") {
-      onCellEdit(rowIndex, columnId, editValue, rowData);
+      // For multiselect, convert back to array
+      let valueToSave = editValue;
+      if (cellInputType[columnId] === "multiselect") {
+        valueToSave = editValue
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => v);
+      }
+      onCellEdit(rowIndex, columnId, valueToSave, rowData);
     }
     setEditingCell(null);
     setEditValue("");
@@ -449,15 +527,15 @@ export const ReactTable: React.FC<ReactTableProps> = ({
       <div
         className={`${
           fullHeight ? " min-h-screen" : ""
-        } bg-gray-50 dark:bg-gray-900 ${getPaddingClasses()}`}
+        } ${getPaddingClasses()}`}
       >
         <div className="">
           {/* Header Card - Only show if headerStyle is "card" */}
           {showHeader && headerStyle === "card" && (
             <div
-              className={`bg-white shadow-lg border border-gray-200 dark:bg-gray-800 p-4 sm:p-5 md:p-6 ${
+              className={`bg-white shadow-lg dark:bg-gray-800 p-4 sm:p-5 md:p-6 ${
                 headerGap
-                  ? "rounded-lg sm:rounded-xl mb-4 sm:mb-5 md:mb-6 shadow-lg border border-gray-200 dark:border-gray-700"
+                  ? "rounded-lg sm:rounded-xl mb-4 sm:mb-5 md:mb-6 shadow-lg dark:border-gray-700"
                   : ""
               }`}
             >
@@ -505,7 +583,9 @@ export const ReactTable: React.FC<ReactTableProps> = ({
 
           {/* Table Card */}
           <div
-            className={`bg-white dark:bg-gray-800 overflow-hidden ${
+            className={`bg-indigo-100 dark:bg-indigo-500/10 overflow-hidden ${
+              rounded ? "rounded-3xl" : ""
+            } ${
               showHeader && headerStyle === "card" && !headerGap
                 ? "rounded-b-xl shadow-lg border border-gray-200 dark:border-gray-700"
                 : "shadow-lg border border-gray-200 dark:border-gray-700"
@@ -513,18 +593,20 @@ export const ReactTable: React.FC<ReactTableProps> = ({
           >
             {/* Inline Header - Only show if headerStyle is "inline" */}
             {showHeader && headerStyle === "inline" && (
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xs font-semibold text-gray-900 dark:text-white">
-                    {title}
-                  </h2>
-                  {description && (
-                    <p className="text-[0.65rem] text-gray-600 dark:text-gray-400 mt-0.5">
-                      {description}
-                    </p>
-                  )}
+              <div className="px-4 py-3 dark:border-gray-700 flex items-center justify-between relative">
+                <div className="flex-1 flex items-center justify-center">
+                  <div>
+                    <h1 className="text-md font-semibold text-gray-900 dark:text-white text-center">
+                      {title}
+                    </h1>
+                    {description && (
+                      <p className="text-[0.65rem] text-gray-600 dark:text-gray-400 mt-0.5 text-center">
+                        {description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="absolute right-4 flex items-center gap-2">
                   {headerButtons.map((button, idx) => (
                     <button
                       key={idx}
@@ -701,7 +783,7 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                           return (
                             <td
                               key={cell.id}
-                              className="px-4 text-center text-xs max-w-xs h-[2.5rem]"
+                              className="px-4 text-center text-xs max-w-full h-[2.5rem]"
                               title={cellValue ? String(cellValue) : undefined}
                               onClick={() =>
                                 !isEditing &&
@@ -709,7 +791,8 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                 handleCellClick(
                                   row.index,
                                   cell.column.id,
-                                  cellValue
+                                  cellValue,
+                                  row.original
                                 )
                               }
                             >
@@ -749,11 +832,160 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                         typeof options === "function"
                                           ? options(row.original)
                                           : options;
-                                      return optionsArray?.map((option) => (
-                                        <option key={option} value={option}>
-                                          {option}
-                                        </option>
-                                      ));
+                                      if (!optionsArray) return null;
+                                      // Support both string[] and {label, value}[]
+                                      if (
+                                        typeof optionsArray[0] === "object" &&
+                                        optionsArray[0] !== null &&
+                                        "value" in optionsArray[0]
+                                      ) {
+                                        return optionsArray.map(
+                                          (option: any) => (
+                                            <option
+                                              key={option.value}
+                                              value={option.value}
+                                            >
+                                              {option.label}
+                                            </option>
+                                          )
+                                        );
+                                      } else {
+                                        return optionsArray.map(
+                                          (option: any) => (
+                                            <option key={option} value={option}>
+                                              {option}
+                                            </option>
+                                          )
+                                        );
+                                      }
+                                    })()}
+                                  </select>
+                                ) : cellInputType[cell.column.id] ===
+                                  "multiselect" ? (
+                                  <select
+                                    multiple
+                                    size={(() => {
+                                      const options =
+                                        dropdownOptions[cell.column.id];
+                                      const optionsArray =
+                                        typeof options === "function"
+                                          ? options(row.original)
+                                          : options;
+                                      return optionsArray
+                                        ? Math.min(optionsArray.length, 8)
+                                        : 5;
+                                    })()}
+                                    value={editValue
+                                      .split(",")
+                                      .map((v) => v.trim())
+                                      .filter((v) => v)}
+                                    onChange={(e) => {
+                                      const selected = Array.from(
+                                        e.target.selectedOptions,
+                                        (option) => option.value
+                                      );
+                                      setEditValue(selected.join(","));
+                                    }}
+                                    onBlur={() =>
+                                      handleSave(
+                                        row.index,
+                                        cell.column.id,
+                                        row.original
+                                      )
+                                    }
+                                    onKeyDown={(e) =>
+                                      handleKeyDown(
+                                        e,
+                                        row.index,
+                                        cell.column.id,
+                                        row.original
+                                      )
+                                    }
+                                    autoFocus
+                                    className="max-w-[200px] px-2 py-1 text-xs border-2 border-blue-500 dark:border-blue-400 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50"
+                                    style={{
+                                      scrollbarWidth: "thin",
+                                      scrollbarColor: "#3b82f6 transparent",
+                                    }}
+                                  >
+                                    {(() => {
+                                      const options =
+                                        dropdownOptions[cell.column.id];
+                                      const optionsArray =
+                                        typeof options === "function"
+                                          ? options(row.original)
+                                          : options;
+                                      if (!optionsArray) return null;
+                                      const selectedValues = editValue
+                                        .split(",")
+                                        .map((v) => v.trim())
+                                        .filter((v) => v);
+                                      // Support both string[] and {label, value}[]
+                                      if (
+                                        typeof optionsArray[0] === "object" &&
+                                        optionsArray[0] !== null &&
+                                        "value" in optionsArray[0]
+                                      ) {
+                                        return optionsArray.map(
+                                          (option: any) => {
+                                            const isSelected =
+                                              selectedValues.includes(
+                                                option.value
+                                              );
+                                            return (
+                                              <option
+                                                key={option.value}
+                                                value={option.value}
+                                                style={{
+                                                  padding: "6px 8px",
+                                                  cursor: "pointer",
+                                                  backgroundColor: isSelected
+                                                    ? "#3b82f6"
+                                                    : undefined,
+                                                  color: isSelected
+                                                    ? "white"
+                                                    : undefined,
+                                                  fontWeight: isSelected
+                                                    ? "600"
+                                                    : "400",
+                                                }}
+                                              >
+                                                {isSelected ? "✓ " : "  "}
+                                                {option.label}
+                                              </option>
+                                            );
+                                          }
+                                        );
+                                      } else {
+                                        return optionsArray.map(
+                                          (option: any) => {
+                                            const isSelected =
+                                              selectedValues.includes(option);
+                                            return (
+                                              <option
+                                                key={option}
+                                                value={option}
+                                                style={{
+                                                  padding: "6px 8px",
+                                                  cursor: "pointer",
+                                                  backgroundColor: isSelected
+                                                    ? "#3b82f6"
+                                                    : undefined,
+                                                  color: isSelected
+                                                    ? "white"
+                                                    : undefined,
+                                                  fontWeight: isSelected
+                                                    ? "600"
+                                                    : "400",
+                                                }}
+                                              >
+                                                {isSelected ? "✓ " : "  "}
+                                                {option}
+                                              </option>
+                                            );
+                                          }
+                                        );
+                                      }
                                     })()}
                                   </select>
                                 ) : (
@@ -784,9 +1016,12 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                 )
                               ) : (
                                 <div
-                                  className={`truncate ${
-                                    cellStyle.bgColor || ""
-                                  } ${
+                                  className={`${
+                                    cellInputType[cell.column.id] ===
+                                    "multiselect"
+                                      ? ""
+                                      : "truncate"
+                                  } ${cellStyle.bgColor || ""} ${
                                     cellStyle.textColor ||
                                     "text-gray-900 dark:text-gray-100"
                                   } ${cellStyle.rounded || ""} ${
@@ -798,9 +1033,88 @@ export const ReactTable: React.FC<ReactTableProps> = ({
                                   }`}
                                 >
                                   {cellInputType[cell.column.id] === "checkbox"
-                                    ? cellValue === true || cellValue === "true"
-                                      ? "✓ True"
-                                      : "✗ False"
+                                    ? (() => {
+                                        const actualVal =
+                                          cell.column.id.includes(".")
+                                            ? getNestedValue(
+                                                row.original,
+                                                cell.column.id
+                                              )
+                                            : cellValue;
+                                        return actualVal === true ||
+                                          actualVal === "true"
+                                          ? "✓ True"
+                                          : "✗ False";
+                                      })()
+                                    : cellInputType[cell.column.id] ===
+                                      "multiselect"
+                                    ? (() => {
+                                        const actualVal =
+                                          cell.column.id.includes(".")
+                                            ? getNestedValue(
+                                                row.original,
+                                                cell.column.id
+                                              )
+                                            : cellValue;
+                                        const selectedValues = Array.isArray(
+                                          actualVal
+                                        )
+                                          ? actualVal
+                                          : actualVal
+                                          ? String(actualVal)
+                                              .split(",")
+                                              .map((v) => v.trim())
+                                          : [];
+
+                                        const options =
+                                          dropdownOptions[cell.column.id];
+                                        const optionsArray =
+                                          typeof options === "function"
+                                            ? options(row.original)
+                                            : options;
+
+                                        if (!optionsArray) {
+                                          return selectedValues.join(", ");
+                                        }
+
+                                        // Render all options with badges
+                                        return (
+                                          <div className="flex flex-wrap gap-1 py-1">
+                                            {optionsArray.map((option: any) => {
+                                              const optionValue =
+                                                typeof option === "object" &&
+                                                option !== null &&
+                                                "value" in option
+                                                  ? option.value
+                                                  : option;
+                                              const optionLabel =
+                                                typeof option === "object" &&
+                                                option !== null &&
+                                                "label" in option
+                                                  ? option.label
+                                                  : option;
+                                              const isSelected =
+                                                selectedValues.includes(
+                                                  optionValue
+                                                );
+
+                                              return (
+                                                <span
+                                                  key={optionValue}
+                                                  className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                                                    isSelected
+                                                      ? "bg-blue-500 text-white border-blue-600 font-semibold"
+                                                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                                                  }`}
+                                                >
+                                                  {isSelected ? "✓ " : ""}
+                                                  {optionLabel}
+                                                </span>
+                                              );
+                                            })}
+                                          </div>
+                                        );
+                                      })()
                                     : (cellValue as string)}
                                 </div>
                               )}

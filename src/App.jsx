@@ -8,13 +8,10 @@ import { NetPositionsTable } from "./components/NetPositionsTable";
 import AdvancedOptionsBuilder from "./pages/AdvancedOptionsBuilder";
 import DeployedStrategies from "./pages/DeployedStrategies/DeployedStrategies";
 import StrategyTags from "./pages/StrategyTags";
+import OptionsBuilder from "./pages/OptionsBuilder";
 import Dashboard from "./pages/Dashboard";
-import OrdersTableNew from "./pages/OrdersTable_New";
-import AutoLogin from "./pages/AutoLogin";
-import { OptionsStrategyBuilder } from "./pages/OptionsBuilder/OptionsStrategyBuilder";
 
 function App() {
-  const [count, setCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState(() => {
     try {
@@ -30,6 +27,7 @@ function App() {
       return "light";
     }
   });
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     try {
@@ -41,7 +39,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={closeSidebar}
@@ -68,17 +66,16 @@ function App() {
                 path="/advanced-options-builder"
                 element={<AdvancedOptionsBuilder />}
               />
+              {/* <Route 
+                path="/advanced-options-builder-new"
+                element={<OptionsBuilder />}
+              /> */}
               <Route
                 path="/deployed-strategies"
                 element={<DeployedStrategies />}
               />
-              <Route
-                path="/OptionsBuilder"
-                element={<OptionsStrategyBuilder />}
-              />
               <Route path="/strategy-tags" element={<StrategyTags />} />
-              <Route path="/orders-new" element={<OrdersTableNew />} />
-              <Route path="/auto-login" element={<AutoLogin />} />
+
               <Route path="/OrderBook" element={<OrderBookTable />} />
               <Route path="/NetPosition" element={<NetPositionsTable />} />
             </Routes>

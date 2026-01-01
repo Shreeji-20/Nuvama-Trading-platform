@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ReactTable } from "../pages/table";
+import { ReactTable } from "./table";
 import {
   useState,
   useRef,

@@ -34,10 +34,10 @@ export const dynamicExpiryOptions: string[] = [
   "Next Week+1",
   "Monthly",
 ];
-export const underlyingOptions: Underlying[] = ["Spot", "Futures"];
+export const underlyingOptions: Underlying[] = ["SPOT", "FUTURES"];
 export const executionModeOptions: ExecutionMode[] = [
-  "Live Mode",
-  "Simulation Mode",
+  "LIVE MODE",
+  "SIMULATION MODE",
 ];
 export const priceTypeOptions: PriceType[] = ["LTP", "BIDASK", "BID", "ASK"];
 export const orderTypeOptions: OrderType[] = ["LIMIT", "MARKET"];
@@ -71,20 +71,20 @@ export const tabs: Tab[] = [
 // Options for execution parameters
 export const productOptions: Product[] = ["NRML", "MIS", "CNC"];
 export const legsExecutionOptions: LegsExecution[] = [
-  "Parallel",
-  "One by One",
-  "Sequential",
+  "PARALLEL",
+  "ONE_BY_ONE",
+  "SEQUENTIAL",
 ];
 export const portfolioExecutionModeOptions: PortfolioExecutionMode[] = [
-  "startTime",
-  "underlyingPremium",
-  "combinedPremium",
+  "START_TIME",
+  "UNDERLYING_PREMIUM",
+  "COMBINED_PREMIUM",
 ];
 export const entryOrderTypeOptions: EntryOrderType[] = [
   "LIMIT",
   "MARKET",
-  "SL",
-  "SL-M",
+  "SL_LIMIT",
+  "SL_MARKET",
 ];
 export const daysOptions: DayOfWeek[] = [
   "Monday",
@@ -98,33 +98,32 @@ export const daysOptions: DayOfWeek[] = [
 
 // Options for target settings
 export const targetTypeOptions: TargetType[] = [
-  "CombinedProfit",
-  "IndividualLegProfit",
-  "PercentageProfit",
-  "PremiumTarget",
-  "UnderlyingMovement",
+  "COMBINED_PROFIT",
+  "INDIVIDUAL_LEG_PROFIT",
+  "PERCENTAGE_PROFIT",
+  "PREMIUM_TARGET",
+  "UNDERLYING_MOVEMENT",
 ];
 
 // Options for stoploss settings
 export const stoplossTypeOptions: StoplossType[] = [
-  "CombinedLoss",
-  "IndividualLegLoss",
-  "PercentageLoss",
-  "PremiumLoss",
-  "UnderlyingMovement",
+  "COMBINED_LOSS",
+  "INDIVIDUAL_LEG_LOSS",
+  "PERCENTAGE_LOSS",
+  "PREMIUM_LOSS",
+  "UNDERLYING_MOVEMENT",
 ];
 
 // Options for exit settings
 export const exitOrderTypeOptions: ExitOrderType[] = [
   "LIMIT",
   "MARKET",
-  "SL",
-  "SL-M",
-  "SL-L",
+  "SL_LIMIT",
+  "SL_MARKET",
 ];
 
 // Options for dynamic hedge settings
 export const hedgeTypeOptions: HedgeType[] = [
-  "premium Based",
-  "fixed Distance",
+  "PREMIUM_BASED",
+  "FIXED_DISTANCE",
 ];

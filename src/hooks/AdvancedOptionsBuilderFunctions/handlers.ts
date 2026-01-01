@@ -18,7 +18,7 @@ export const createBaseConfigChangeHandler = (
   return <K extends keyof BaseConfig>(field: K, value: BaseConfig[K]): void => {
     setBaseConfig((prev) => ({ ...prev, [field]: value }));
 
-    if (field === "strategyId" || field === "strategyName") {
+    if (field === "strategy_id" || field === "strategy_name") {
       setLegs((prev) => {
         const updated: Record<string, Leg> = {};
         Object.entries(prev).forEach(([legId, leg]) => {
@@ -49,9 +49,9 @@ export const createDaysChangeHandler = (
   return (day: DayOfWeek): void => {
     setExecutionParams((prev) => ({
       ...prev,
-      runOnDays: prev.runOnDays.includes(day)
-        ? prev.runOnDays.filter((d) => d !== day)
-        : [...prev.runOnDays, day],
+      run_on_days: prev.run_on_days.includes(day)
+        ? prev.run_on_days.filter((d: DayOfWeek) => d !== day)
+        : [...prev.run_on_days, day],
     }));
   };
 };

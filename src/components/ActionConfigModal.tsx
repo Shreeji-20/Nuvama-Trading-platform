@@ -9,22 +9,22 @@ import React from "react";
 type ActionType = "NONE" | "REENTRY" | "REEXECUTE";
 
 interface SLOrderAdjust {
-  minPoints: number | string;
-  maxPercentage: number | string;
+  min_points: number | string;
+  max_percentage: number | string;
 }
 
 interface ActionConfig {
-  actionType: ActionType;
-  actionCount: number | string;
-  orderAtBroker: boolean;
-  slOrderAdjust: SLOrderAdjust;
+  action_type: ActionType;
+  action_count: number | string;
+  order_at_broker: boolean;
+  sl_order_adjust: SLOrderAdjust;
 }
 
 interface Leg {
-  legId: string;
-  onTargetActionConfig?: ActionConfig;
-  onStoplossActionConfig?: ActionConfig;
-  onSquareOffActionConfig?: ActionConfig;
+  leg_id: string;
+  on_target_action_config?: ActionConfig | null;
+  on_stoploss_action_config?: ActionConfig | null;
+  on_squareoff_action_config?: ActionConfig | null;
   [key: string]: any;
 }
 
@@ -49,13 +49,13 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   const getConfigKey = () => {
     switch (actionType) {
       case "target":
-        return "onTargetActionConfig";
+        return "on_target_action_config";
       case "stoploss":
-        return "onStoplossActionConfig";
+        return "on_stoploss_action_config";
       case "squareoff":
-        return "onSquareOffActionConfig";
+        return "on_squareoff_action_config";
       default:
-        return "onTargetActionConfig";
+        return "on_target_action_config";
     }
   };
 
@@ -63,12 +63,12 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   // Ensure action config exists with defaults
   const config: ActionConfig = leg[configKey] || {
-    actionType: "NONE",
-    actionCount: 1,
-    orderAtBroker: false,
-    slOrderAdjust: {
-      minPoints: 0,
-      maxPercentage: 0,
+    action_type: "NONE",
+    action_count: 1,
+    order_at_broker: false,
+    sl_order_adjust: {
+      min_points: 0,
+      max_percentage: 0,
     },
   };
 
@@ -88,14 +88,14 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   // Handle close with validation
   const handleClose = () => {
-    // Ensure actionCount is at least 1 before closing
+    // Ensure action_count is at least 1 before closing
     const currentCount =
-      typeof config.actionCount === "string"
-        ? parseInt(config.actionCount)
-        : config.actionCount;
+      typeof config.action_count === "string"
+        ? parseInt(config.action_count)
+        : config.action_count;
 
     if (!currentCount || currentCount <= 0) {
-      onConfigChange("actionCount", 1);
+      onConfigChange("action_count", 1);
     }
 
     onClose();
@@ -106,7 +106,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {getTitle()} - {leg.legId}
+            {getTitle()} - {leg.leg_id}
           </h3>
           <button
             onClick={handleClose}
@@ -135,9 +135,9 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               Action Type
             </label>
             <select
-              value={config.actionType}
+              value={config.action_type}
               onChange={(e) =>
-                onConfigChange("actionType", e.target.value as ActionType)
+                onConfigChange("action_type", e.target.value as ActionType)
               }
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             >
@@ -154,7 +154,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
             </label>
             <input
               type="number"
-              value={config.actionCount}
+              value={config.action_count}
               onChange={(e) => {
                 const value = e.target.value;
                 const parsedValue = parseInt(value);
@@ -162,11 +162,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                 // Allow empty string or parse to number
                 // If parsed value is 0 or less, set to 1
                 if (value === "") {
-                  onConfigChange("actionCount", "");
+                  onConfigChange("action_count", "");
                 } else if (parsedValue <= 0) {
-                  onConfigChange("actionCount", 1);
+                  onConfigChange("action_count", 1);
                 } else {
-                  onConfigChange("actionCount", parsedValue || 1);
+                  onConfigChange("action_count", parsedValue || 1);
                 }
               }}
               onBlur={(e) => {
@@ -175,7 +175,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
                 // Default to 1 if empty, 0, or less than 0 on blur
                 if (value === "" || parsedValue <= 0) {
-                  onConfigChange("actionCount", 1);
+                  onConfigChange("action_count", 1);
                 }
               }}
               className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -192,9 +192,9 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={config.orderAtBroker}
+                checked={config.order_at_broker}
                 onChange={(e) =>
-                  onConfigChange("orderAtBroker", e.target.checked)
+                  onConfigChange("order_at_broker", e.target.checked)
                 }
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
               />
@@ -221,20 +221,21 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               <input
                 type="number"
                 step="0.01"
-                value={config.slOrderAdjust?.minPoints ?? 0}
+                value={config.sl_order_adjust?.min_points ?? 0}
                 onChange={(e) => {
                   const value = e.target.value;
-                  onConfigChange("slOrderAdjust", {
-                    minPoints: value === "" ? "" : parseFloat(value) || 0,
-                    maxPercentage: config.slOrderAdjust?.maxPercentage ?? 0,
+                  onConfigChange("sl_order_adjust", {
+                    min_points: value === "" ? "" : parseFloat(value) || 0,
+                    max_percentage: config.sl_order_adjust?.max_percentage ?? 0,
                   });
                 }}
                 onBlur={(e) => {
                   const value = e.target.value;
                   if (value === "") {
-                    onConfigChange("slOrderAdjust", {
-                      minPoints: 0,
-                      maxPercentage: config.slOrderAdjust?.maxPercentage ?? 0,
+                    onConfigChange("sl_order_adjust", {
+                      min_points: 0,
+                      max_percentage:
+                        config.sl_order_adjust?.max_percentage ?? 0,
                     });
                   }
                 }}
@@ -254,20 +255,20 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
               <input
                 type="number"
                 step="0.01"
-                value={config.slOrderAdjust?.maxPercentage ?? 0}
+                value={config.sl_order_adjust?.max_percentage ?? 0}
                 onChange={(e) => {
                   const value = e.target.value;
-                  onConfigChange("slOrderAdjust", {
-                    minPoints: config.slOrderAdjust?.minPoints ?? 0,
-                    maxPercentage: value === "" ? "" : parseFloat(value) || 0,
+                  onConfigChange("sl_order_adjust", {
+                    min_points: config.sl_order_adjust?.min_points ?? 0,
+                    max_percentage: value === "" ? "" : parseFloat(value) || 0,
                   });
                 }}
                 onBlur={(e) => {
                   const value = e.target.value;
                   if (value === "") {
-                    onConfigChange("slOrderAdjust", {
-                      minPoints: config.slOrderAdjust?.minPoints ?? 0,
-                      maxPercentage: 0,
+                    onConfigChange("sl_order_adjust", {
+                      min_points: config.sl_order_adjust?.min_points ?? 0,
+                      max_percentage: 0,
                     });
                   }
                 }}

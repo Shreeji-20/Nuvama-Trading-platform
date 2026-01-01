@@ -56,15 +56,15 @@ export const createDeployStrategyHandler = (
       setDeploymentStatus(null);
       setDeploymentMessage("");
 
-      if (!baseConfig.strategyName || baseConfig.strategyName.trim() === "") {
+      if (!baseConfig.strategy_name || baseConfig.strategy_name.trim() === "") {
         throw new Error(
           "Strategy Name is required. Please enter a strategy name in Base Configuration."
         );
       }
 
       if (
-        !executionParams.strategyTag ||
-        executionParams.strategyTag.trim() === ""
+        !executionParams.strategy_tag ||
+        executionParams.strategy_tag.trim() === ""
       ) {
         throw new Error(
           "Strategy Tag is required. Please select a Strategy Tag in the Execution Parameters tab."
@@ -78,120 +78,153 @@ export const createDeployStrategyHandler = (
 
       for (const leg of legsArray) {
         if (!leg.symbol) {
-          throw new Error(`Symbol is required for Leg ${leg.legId}`);
+          throw new Error(`Symbol is required for Leg ${leg.leg_id}`);
         }
         if (leg.expiry === undefined || leg.expiry === null) {
-          throw new Error(`Expiry is required for Leg ${leg.legId}`);
+          throw new Error(`Expiry is required for Leg ${leg.leg_id}`);
         }
-        if (!leg.priceType) {
-          throw new Error(`Price Type is required for Leg ${leg.legId}`);
+        if (!leg.price_type) {
+          throw new Error(`Price Type is required for Leg ${leg.leg_id}`);
         }
         if (!leg.action) {
-          throw new Error(`Action is required for Leg ${leg.legId}`);
+          throw new Error(`Action is required for Leg ${leg.leg_id}`);
         }
-        if (!leg.orderType) {
-          throw new Error(`Order Type is required for Leg ${leg.legId}`);
+        if (!leg.order_type) {
+          throw new Error(`Order Type is required for Leg ${leg.leg_id}`);
         }
       }
 
-      // Transform legs array to dict format with legId as key
+      // Transform legs array to dict format with leg_id as key
       const transformedLegsDict: Record<string, any> = {};
       legsArray.forEach((leg) => {
         const transformed: any = { ...leg };
 
         console.log("Original leg:", leg);
 
-        if (
-          transformed.orderType === "BUY" ||
-          transformed.orderType === "SELL"
-        ) {
-          console.log("Transforming old structure leg...");
-          transformed.action = transformed.orderType;
-          transformed.orderType =
-            transformed.legOrderType || leg.orderType || "LIMIT";
-          delete transformed.legOrderType;
-        }
-
+        // The data should already be in snake_case from the state
+        // Just ensure required defaults are set
         transformed.action = transformed.action || "BUY";
-        transformed.orderType = transformed.orderType || "LIMIT";
-        transformed.target = transformed.target || "NONE";
-        transformed.targetValue =
-          transformed.targetValue !== undefined ? transformed.targetValue : 0;
-        transformed.stoploss = transformed.stoploss || "NONE";
-        transformed.stoplossValue =
-          transformed.stoplossValue !== undefined
-            ? transformed.stoplossValue
-            : 0;
-        transformed.priceType = transformed.priceType || "BIDASK";
-        transformed.depthIndex = transformed.depthIndex || 1;
-        transformed.waitAndTrade =
-          transformed.waitAndTrade !== undefined ? transformed.waitAndTrade : 0;
-        transformed.waitAndTradeLogic = transformed.waitAndTradeLogic || "NONE";
-        transformed.onTargetAction = transformed.onTargetAction || "NONE";
-        transformed.onStoplossAction = transformed.onStoplossAction || "NONE";
-        transformed.dynamicHedge =
-          transformed.dynamicHedge !== undefined
-            ? transformed.dynamicHedge
-            : false;
-        transformed.premiumBasedStrike =
-          transformed.premiumBasedStrike !== undefined
-            ? transformed.premiumBasedStrike
-            : false;
+        transformed.order_type = transformed.order_type || "LIMIT";
+        transformed.price_type = transformed.price_type || "BIDASK";
+        transformed.depth_index = transformed.depth_index || 1;
 
-        // Sanitize action configs - ensure numbers are numbers, not strings
-        const sanitizeActionConfig = (config: any) => {
-          if (!config) return config;
-          return {
-            ...config,
-            actionCount:
-              typeof config.actionCount === "string"
-                ? parseInt(config.actionCount) || 1
-                : config.actionCount,
-            slOrderAdjust: config.slOrderAdjust
-              ? {
-                  minPoints:
-                    typeof config.slOrderAdjust.minPoints === "string"
-                      ? parseFloat(config.slOrderAdjust.minPoints) || 0
-                      : config.slOrderAdjust.minPoints,
-                  maxPercentage:
-                    typeof config.slOrderAdjust.maxPercentage === "string"
-                      ? parseFloat(config.slOrderAdjust.maxPercentage) || 0
-                      : config.slOrderAdjust.maxPercentage,
-                }
-              : { minPoints: 0, maxPercentage: 0 },
-          };
-        };
+        // Transform premium_based_strike_config enum values
+        if (transformed.premium_based_strike_config) {
+          const config = transformed.premium_based_strike_config;
+          if (config.strike_type === "NEAREST_PREMIUM") {
+            config.strike_type = "NEAREST-PREMIUM";
+          } else if (config.strike_type === "PREMIUM") {
+            config.strike_type = "RANGE-PREMIUM";
+          }
 
-        if (transformed.onTargetActionConfig) {
-          transformed.onTargetActionConfig = sanitizeActionConfig(
-            transformed.onTargetActionConfig
-          );
-        }
-        if (transformed.onStoplossActionConfig) {
-          transformed.onStoplossActionConfig = sanitizeActionConfig(
-            transformed.onStoplossActionConfig
-          );
-        }
-        if (transformed.onSquareOffActionConfig) {
-          transformed.onSquareOffActionConfig = sanitizeActionConfig(
-            transformed.onSquareOffActionConfig
-          );
+          if (config.condition === "GREATER_THAN_EQUAL") {
+            config.condition = "Greaterthanequal";
+          } else if (config.condition === "LESS_THAN_EQUAL") {
+            config.condition = "lessthanequal";
+          }
         }
 
-        transformedLegsDict[leg.legId] = transformed;
+        transformedLegsDict[leg.leg_id] = transformed;
       });
 
-      const strategyData: StrategyConfiguration = {
-        baseConfig,
+      // Transform baseConfig enum values - underlying and execution_mode now match backend directly
+      const transformedBaseConfig: any = { ...baseConfig };
+
+      // Transform executionParams enum values
+      const transformedExecutionParams: any = { ...executionParams };
+      if (transformedExecutionParams.legs_execution === "PARALLEL") {
+        transformedExecutionParams.legs_execution = "Parallel";
+      } else if (transformedExecutionParams.legs_execution === "ONE_BY_ONE") {
+        transformedExecutionParams.legs_execution = "One by One";
+      } else if (transformedExecutionParams.legs_execution === "SEQUENTIAL") {
+        transformedExecutionParams.legs_execution = "Sequential";
+      }
+
+      if (
+        transformedExecutionParams.portfolio_execution_mode === "START_TIME"
+      ) {
+        transformedExecutionParams.portfolio_execution_mode = "startTime";
+      } else if (
+        transformedExecutionParams.portfolio_execution_mode ===
+        "UNDERLYING_PREMIUM"
+      ) {
+        transformedExecutionParams.portfolio_execution_mode =
+          "underlyingPremium";
+      } else if (
+        transformedExecutionParams.portfolio_execution_mode ===
+        "COMBINED_PREMIUM"
+      ) {
+        transformedExecutionParams.portfolio_execution_mode = "combinedPremium";
+      }
+
+      // Transform targetSettings enum values
+      const transformedTargetSettings: any = { ...targetSettings };
+      const targetTypeMap: Record<string, string> = {
+        COMBINED_PROFIT: "CombinedProfit",
+        INDIVIDUAL_LEG_PROFIT: "IndividualLegProfit",
+        PERCENTAGE_PROFIT: "PercentageProfit",
+        PREMIUM_TARGET: "PremiumTarget",
+        UNDERLYING_MOVEMENT: "UnderlyingMovement",
+      };
+      if (transformedTargetSettings.target_type in targetTypeMap) {
+        transformedTargetSettings.target_type =
+          targetTypeMap[transformedTargetSettings.target_type];
+      }
+
+      // Transform stoplossSettings enum values
+      const transformedStoplossSettings: any = { ...stoplossSettings };
+      const stoplossTypeMap: Record<string, string> = {
+        COMBINED_LOSS: "CombinedLoss",
+        COMBINED_PROFIT: "CombinedProfit",
+        INDIVIDUAL_LEG_LOSS: "IndividualLegLoss",
+        PERCENTAGE_LOSS: "PercentageLoss",
+        PREMIUM_LOSS: "PremiumLoss",
+        UNDERLYING_MOVEMENT: "UnderlyingMovement",
+      };
+      if (transformedStoplossSettings.stoploss_type in stoplossTypeMap) {
+        transformedStoplossSettings.stoploss_type =
+          stoplossTypeMap[transformedStoplossSettings.stoploss_type];
+      }
+
+      // Transform dynamicHedgeSettings enum values
+      const transformedDynamicHedgeSettings: any = { ...dynamicHedgeSettings };
+      if (transformedDynamicHedgeSettings.hedge_type === "PREMIUM_BASED") {
+        transformedDynamicHedgeSettings.hedge_type = "premium Based";
+      } else if (
+        transformedDynamicHedgeSettings.hedge_type === "FIXED_DISTANCE"
+      ) {
+        transformedDynamicHedgeSettings.hedge_type = "fixed Distance";
+      }
+
+      // Transform atBrokerSettings to snake_case
+      const transformedAtBrokerSettings: any = {
+        leg_sl_at_broker: atBrokerSettings.legSlAtBroker,
+        leg_tp_at_broker: atBrokerSettings.legTpAtBroker,
+        leg_re_entry_at_broker: atBrokerSettings.legReEntryAtBroker,
+        leg_wn_t_at_broker: atBrokerSettings.legWnTAtBroker,
+        sl_order_trigger_adjust: {
+          min_points: atBrokerSettings.slOrderTriggerAdjust.minPoint,
+          max_percentage: atBrokerSettings.slOrderTriggerAdjust.maxPercentage,
+        },
+      };
+
+      // Build the strategy data with snake_case root-level keys for backend
+      const strategyData: any = {
+        base_config: transformedBaseConfig,
         legs: transformedLegsDict,
-        executionParams,
-        targetSettings,
-        stoplossSettings,
-        exitSettings,
-        dynamicHedgeSettings,
-        atBrokerSettings,
+        execution_params: transformedExecutionParams,
+        target_settings: transformedTargetSettings,
+        stoploss_settings: transformedStoplossSettings,
+        exit_settings: exitSettings,
+        dynamic_hedge_settings: transformedDynamicHedgeSettings,
+        at_broker_settings: transformedAtBrokerSettings,
         timestamp: new Date().toISOString(),
       };
+
+      console.log(
+        "Sending strategy configuration:",
+        JSON.stringify(strategyData, null, 2)
+      );
 
       try {
         const response = await axios.post(

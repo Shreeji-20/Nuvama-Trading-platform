@@ -123,9 +123,9 @@ const ExecutionParametersTab: React.FC<ExecutionParametersTabProps> = ({
                   <td className="p-2">
                     {isEditing ? (
                       <select
-                        value={executionParams.strategyTag || ""}
+                        value={executionParams.strategy_tag || ""}
                         onChange={(e) =>
-                          handleChange("strategyTag", e.target.value)
+                          handleChange("strategy_tag", e.target.value)
                         }
                         className="w-full text-[0.6rem] text-center p-2 border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={loadingTags}
@@ -144,14 +144,14 @@ const ExecutionParametersTab: React.FC<ExecutionParametersTabProps> = ({
                     ) : (
                       <div className="text-[0.6rem] font-semibold text-gray-900 dark:text-white text-center">
                         {(() => {
-                          const tagId = executionParams.strategyTag;
+                          const tagId = executionParams.strategy_tag;
                           if (tagId && availableTags.length > 0) {
                             const tag = availableTags.find(
                               (t) => t.id === tagId
                             );
                             return tag?.tagName || tagId;
                           }
-                          return executionParams.strategyTag || "None";
+                          return executionParams.strategy_tag || "None";
                         })()}
                       </div>
                     )}
