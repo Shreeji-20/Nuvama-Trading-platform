@@ -117,7 +117,7 @@ const DeployedStrategies = () => {
               }
               onClick={async () => {
                 const response = await axios.put(
-                  "http://100.64.231.34:8000/trading_state/",
+                  "http://localhost:8000/trading_state/",
                   { action: "START" }
                 );
                 requestAnimationFrame(() => {
@@ -135,7 +135,7 @@ const DeployedStrategies = () => {
               }
               onClick={async () => {
                 const response = await axios.put(
-                  "http://100.64.231.34:8000/trading_state/",
+                  "http://localhost:8000/trading_state/",
                   {
                     action: "PAUSE",
                   }
@@ -155,7 +155,7 @@ const DeployedStrategies = () => {
               }
               onClick={async () => {
                 const response = await axios.put(
-                  "http://100.64.231.34:8000/trading_state/",
+                  "http://localhost:8000/trading_state/",
                   {
                     action: "RESUME",
                   }
@@ -176,7 +176,7 @@ const DeployedStrategies = () => {
               className="px-4 py-1 text-sm btn-outline-rose rounded-xl"
               onClick={async () => {
                 const response = await axios.put(
-                  "http://100.64.231.34:8000/trading_state/",
+                  "http://localhost:8000/trading_state/",
                   { action: "STOP" }
                 );
                 requestAnimationFrame(() => {
@@ -229,7 +229,7 @@ const DeployedStrategies = () => {
                     }
                     onChange={async () => {
                       const response = await axios.put(
-                        "http://100.64.231.34:8000/trading_state/trading_selection",
+                        "http://localhost:8000/trading_state/trading_selection",
                         {
                           data: {
                             ...strategies[key],
@@ -270,7 +270,7 @@ const DeployedStrategies = () => {
                   className="ml-2 px-4 py-0.5 rounded-xl text-xs md:text-sm btn-outline-violet"
                   onClick={async () => {
                     const response = await axios.put(
-                      "http://100.64.231.34:8000/strategy/update_strategy",
+                      "http://localhost:8000/strategy/update_strategy",
                       {
                         data: {
                           key: strategies[key].base_config.strategy_id,
@@ -292,7 +292,7 @@ const DeployedStrategies = () => {
                   className="ml-2 px-4 py-0.5 rounded-xl text-xs md:text-sm btn-outline-red"
                   onClick={async () => {
                     const response = await axios.delete(
-                      "http://100.64.231.34:8000/strategy/delete",
+                      "http://localhost:8000/strategy/delete",
                       {
                         data: {
                           key: strategies[key].base_config.strategy_id,
@@ -326,7 +326,7 @@ const DeployedStrategies = () => {
                   }
                   onClick={async () => {
                     const response = await axios.put(
-                      "http://100.64.231.34:8000/trading_state/strategy",
+                      "http://localhost:8000/trading_state/strategy",
                       {
                         key: strategies[key].base_config.strategy_id,
                         action: "START",
@@ -356,7 +356,7 @@ const DeployedStrategies = () => {
                   }
                   onClick={async () => {
                     const response = await axios.put(
-                      "http://100.64.231.34:8000/trading_state/strategy",
+                      "http://localhost:8000/trading_state/strategy",
                       {
                         key: strategies[key].base_config.strategy_id,
                         action: "PAUSE",
@@ -386,7 +386,7 @@ const DeployedStrategies = () => {
                   className="disabled:opacity-45"
                   onClick={async () => {
                     const response = await axios.put(
-                      "http://100.64.231.34:8000/trading_state/strategy",
+                      "http://localhost:8000/trading_state/strategy",
                       {
                         key: strategies[key].base_config.strategy_id,
                         action: "RESUME",
@@ -415,7 +415,7 @@ const DeployedStrategies = () => {
                   className="disabled:opacity-45"
                   onClick={async () => {
                     const response = await axios.put(
-                      "http://100.64.231.34:8000/trading_state/strategy",
+                      "http://localhost:8000/trading_state/strategy",
                       {
                         key: strategies[key].base_config.strategy_id,
                         action: "STOP",

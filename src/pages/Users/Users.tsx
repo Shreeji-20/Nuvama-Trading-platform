@@ -27,8 +27,6 @@ import {
   User,
 } from "lucide-react";
 import { HorizontalTabs } from "../../components/HorizontalTabs";
-
-import Accordion from "../../components/Accordion";
 const Users = () => {
   const defaultRowValue = {
     userId: "user id ",
@@ -145,6 +143,7 @@ const Users = () => {
           "apikey",
           "totpSecret",
           "password",
+          "userId",
         ]}
         columnOrder={[
           "userId",
@@ -205,7 +204,13 @@ const Users = () => {
                   const isAnyDefaultValue = isAnyDefault(
                     rowData,
                     defaultRowValue,
-                    ["actions", "lastLogin"]
+                    [
+                      "actions",
+                      "lastLogin",
+                      "authToken",
+                      "vendorSession",
+                      "reqId",
+                    ]
                   );
 
                   if (isAnyDefaultValue) {

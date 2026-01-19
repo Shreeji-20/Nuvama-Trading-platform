@@ -12,9 +12,14 @@ const StrategyTags = () => {
     tagName: "",
     description: "",
     userMultipliers: {}, // Dictionary userId: multiplier
-    users: [], // Array of {userId, multiplier}
+    users: [], // Array of {userId, multiplier} 
     globalSettings: {
       marketOrdersAllowed: false,
+      tp_at_broker: false,
+      sl_at_broker: false,
+      w_n_t_at_broker: false,
+      monitor_decay_wait_value: 0,
+      monitor_decay_type: "Points",
       onOrderFailure: {
         retryAfter: 0,
         retryCount: 0,
@@ -164,6 +169,12 @@ const StrategyTags = () => {
       // Prepare global settings with default value for betterPriceLogicValue if empty
       const globalSettings = {
         ...formData.globalSettings,
+        tp_at_broker: formData.globalSettings.tp_at_broker || false,
+        sl_at_broker: formData.globalSettings.sl_at_broker || false,
+        w_n_t_at_broker: formData.globalSettings.w_n_t_at_broker || false,
+        monitor_decay_wait_value:
+          parseFloat(formData.globalSettings.monitor_decay_wait_value) || 0,
+        monitor_decay_type: formData.globalSettings.monitor_decay_type || "Points",
         modifyOptions: {
           ...formData.globalSettings.modifyOptions,
           betterPriceLogicType:
@@ -218,14 +229,20 @@ const StrategyTags = () => {
       tagName: tag.tagName,
       description: tag.description || "",
       userMultipliers: tag.userMultipliers || {},
-      globalSettings: tag.globalSettings || {
+      globalSettings: {
         marketOrdersAllowed: false,
-        onOrderFailure: {
+        tp_at_broker: false,
+        sl_at_broker: false,
+        w_n_t_at_broker: false,
+        monitor_decay_wait_value: 0,
+        monitor_decay_type: "Points",
+        ...tag.globalSettings,
+        onOrderFailure: tag.globalSettings?.onOrderFailure || {
           retryAfter: 0,
           retryCount: 0,
           marketAtLast: false,
         },
-        modifyOptions: {
+        modifyOptions: tag.globalSettings?.modifyOptions || {
           betterPriceLogicType: "NONE",
           betterPriceLogicValue: 0,
         },
@@ -257,6 +274,9 @@ const StrategyTags = () => {
 
       const globalSettings = {
         ...inlineEditData.globalSettings,
+        monitor_decay_wait_value:
+          parseFloat(inlineEditData.globalSettings.monitor_decay_wait_value) ||
+          0,
         modifyOptions: {
           ...inlineEditData.globalSettings.modifyOptions,
           betterPriceLogicType:
@@ -317,6 +337,11 @@ const StrategyTags = () => {
       userMultipliers: {},
       globalSettings: {
         marketOrdersAllowed: false,
+        tp_at_broker: false,
+        sl_at_broker: false,
+        w_n_t_at_broker: false,
+        monitor_decay_wait_value: 0,
+        monitor_decay_type: "Points",
         onOrderFailure: {
           retryAfter: 0,
           retryCount: 0,
@@ -580,25 +605,138 @@ const StrategyTags = () => {
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-4 space-y-4">
                 {/* Market Orders Allowed */}
                 <div className="pb-3 border-b border-gray-200 dark:border-gray-600">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.globalSettings.marketOrdersAllowed}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          globalSettings: {
-                            ...formData.globalSettings,
-                            marketOrdersAllowed: e.target.checked,
-                          },
-                        })
-                      }
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-[0.7rem] text-gray-700 dark:text-gray-300 font-medium">
-                      Allow Market Orders
-                    </span>
-                  </label>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.globalSettings.marketOrdersAllowed}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              marketOrdersAllowed: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-[0.7rem] text-gray-700 dark:text-gray-300 font-medium">
+                        Allow Market Orders
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.globalSettings.tp_at_broker}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              tp_at_broker: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-[0.7rem] text-gray-700 dark:text-gray-300 font-medium">
+                        TP @ Broker
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.globalSettings.sl_at_broker}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              sl_at_broker: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-[0.7rem] text-gray-700 dark:text-gray-300 font-medium">
+                        SL @ Broker
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.globalSettings.w_n_t_at_broker}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              w_n_t_at_broker: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-[0.7rem] text-gray-700 dark:text-gray-300 font-medium">
+                        Wait & Trade @ Broker
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Monitor Decay Settings */}
+                <div className="pb-3 border-b border-gray-200 dark:border-gray-600">
+                  <h4 className="text-[0.7rem] font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    📉 Monitor Decay Settings
+                  </h4>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Wait Value
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.globalSettings.monitor_decay_wait_value}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              monitor_decay_wait_value: e.target.value,
+                            },
+                          })
+                        }
+                        step="0.01"
+                        min="0"
+                        className="w-24 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[0.7rem] font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type
+                      </label>
+                      <select
+                        value={formData.globalSettings.monitor_decay_type}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            globalSettings: {
+                              ...formData.globalSettings,
+                              monitor_decay_type: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-32 px-3 py-2 text-[0.7rem] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                      >
+                        <option value="Points">Points</option>
+                        <option value="Percentage">Percentage</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Order Failure Handling */}
@@ -842,6 +980,9 @@ const StrategyTags = () => {
                     </th>
                     <th className="text-left p-2 font-semibold text-gray-700 dark:text-gray-300">
                       Modify Options
+                    </th>
+                    <th className="text-left p-2 font-semibold text-gray-700 dark:text-gray-300">
+                      Broker & Monitor
                     </th>
                     <th className="text-left p-2 font-semibold text-gray-700 dark:text-gray-300">
                       Created
@@ -1114,6 +1255,169 @@ const StrategyTags = () => {
                                   </span>
                                 )}
                               </>
+                            )}
+                          </td>
+
+                          {/* Broker & Monitor */}
+                          <td className="p-2">
+                            {editData.globalSettings && (
+                              <div className="flex flex-col gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <div className="flex flex-wrap gap-2 text-[0.65rem]">
+                                      <label className="flex items-center gap-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            editData.globalSettings.tp_at_broker
+                                          }
+                                          onChange={(e) =>
+                                            setInlineEditData({
+                                              ...inlineEditData,
+                                              globalSettings: {
+                                                ...inlineEditData.globalSettings,
+                                                tp_at_broker: e.target.checked,
+                                              },
+                                            })
+                                          }
+                                          className="w-3 h-3"
+                                        />
+                                        TP
+                                      </label>
+                                      <label className="flex items-center gap-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            editData.globalSettings.sl_at_broker
+                                          }
+                                          onChange={(e) =>
+                                            setInlineEditData({
+                                              ...inlineEditData,
+                                              globalSettings: {
+                                                ...inlineEditData.globalSettings,
+                                                sl_at_broker: e.target.checked,
+                                              },
+                                            })
+                                          }
+                                          className="w-3 h-3"
+                                        />
+                                        SL
+                                      </label>
+                                      <label className="flex items-center gap-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            editData.globalSettings
+                                              .w_n_t_at_broker
+                                          }
+                                          onChange={(e) =>
+                                            setInlineEditData({
+                                              ...inlineEditData,
+                                              globalSettings: {
+                                                ...inlineEditData.globalSettings,
+                                                w_n_t_at_broker:
+                                                  e.target.checked,
+                                              },
+                                            })
+                                          }
+                                          className="w-3 h-3"
+                                        />
+                                        W&T
+                                      </label>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <input
+                                        type="number"
+                                        value={
+                                          editData.globalSettings
+                                            .monitor_decay_wait_value
+                                        }
+                                        onChange={(e) =>
+                                          setInlineEditData({
+                                            ...inlineEditData,
+                                            globalSettings: {
+                                              ...inlineEditData.globalSettings,
+                                              monitor_decay_wait_value:
+                                                e.target.value,
+                                            },
+                                          })
+                                        }
+                                        step="0.01"
+                                        className="w-12 px-1 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
+                                        placeholder="Val"
+                                      />
+                                      <select
+                                        value={
+                                          editData.globalSettings
+                                            .monitor_decay_type
+                                        }
+                                        onChange={(e) =>
+                                          setInlineEditData({
+                                            ...inlineEditData,
+                                            globalSettings: {
+                                              ...inlineEditData.globalSettings,
+                                              monitor_decay_type:
+                                                e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="w-16 px-1 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[0.65rem]"
+                                      >
+                                        <option value="Points">Pts</option>
+                                        <option value="Percentage">%</option>
+                                      </select>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-[0.65rem] text-gray-700 dark:text-gray-300 space-y-0.5">
+                                    <div className="flex gap-1.5 flex-wrap">
+                                      <span
+                                        className={
+                                          tag.globalSettings.tp_at_broker
+                                            ? "text-green-600 dark:text-green-400 font-medium"
+                                            : "text-gray-400"
+                                        }
+                                      >
+                                        TP
+                                      </span>
+                                      <span
+                                        className={
+                                          tag.globalSettings.sl_at_broker
+                                            ? "text-red-600 dark:text-red-400 font-medium"
+                                            : "text-gray-400"
+                                        }
+                                      >
+                                        SL
+                                      </span>
+                                      <span
+                                        className={
+                                          tag.globalSettings.w_n_t_at_broker
+                                            ? "text-blue-600 dark:text-blue-400 font-medium"
+                                            : "text-gray-400"
+                                        }
+                                      >
+                                        W&T
+                                      </span>
+                                    </div>
+                                    <div>
+                                      {tag.globalSettings
+                                        .monitor_decay_wait_value > 0 ? (
+                                        <span>
+                                          Decay:{" "}
+                                          {
+                                            tag.globalSettings
+                                              .monitor_decay_wait_value
+                                          }{" "}
+                                          {tag.globalSettings.monitor_decay_type ===
+                                          "Percentage"
+                                            ? "%"
+                                            : "Pts"}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </td>
 
